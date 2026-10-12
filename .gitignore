@@ -1,0 +1,94 @@
+# =========================
+# Environment Variables (.env)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Flutter / Dart
+# =========================
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+build/
+.pub-cache/
+.pub/
+
+# IDE specific files for Flutter/Dart
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Flutter generated files (optional: ถ้าต้องการให้ Git ตามไฟล์ที่ Gen ให้ลบบรรทัดล่างออก)
+# pubspec.lock (แนะนำให้เก็บ pubspec.lock ไว้บน Git เสมอสำหรับ App เพื่อความนิ่งของเวอร์ชัน)
+
+# =========================
+# Node.js / Web (node_modules)
+# =========================
+# Dependencies
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Build outputs
+dist/
+out/
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+
+# =========================
+# Python / AI (เผื่อไว้ในอนาคต)
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+env/
+*.pt
+*.h5
+*.weights
+
+# =========================
+# OS & Editor Files
+# =========================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
