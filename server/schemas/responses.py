@@ -150,9 +150,9 @@ class TaskRow(_Row):
 # ---------- Response ของแต่ละ route ----------
 
 class ScanInputsResponse(BaseModel):
-    inventory_lots: list[InventoryLotRow] = Field(..., description="lot ทั้งหมดในสต็อก")
-    sales_history: list[SalesHistoryRow] = Field(..., description="ยอดขายรายวันทั้งหมด (แยกตามระดับส่วนลด)")
-    average_daily_sales: list[SalesVelocityRow] = Field(..., description="ยอดขายเฉลี่ยต่อวันของแต่ละสินค้า")
+    inventory_lots: list[InventoryLotRow] = Field(..., description="lot ที่ ai_status = IDLE (ยังไม่เคยถูกสแกน) เรียงตามวันหมดอายุ")
+    sales_history: list[SalesHistoryRow] = Field(..., description="ยอดขายรายวันของสินค้าใน inventory_lots (แยกตามระดับส่วนลด)")
+    average_daily_sales: list[SalesVelocityRow] = Field(..., description="ยอดขายเฉลี่ยต่อวันของสินค้าใน inventory_lots")
 
 
 class OptimizeInputsResponse(BaseModel):

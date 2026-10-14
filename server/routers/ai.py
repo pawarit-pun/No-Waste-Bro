@@ -7,6 +7,7 @@ from fastapi import APIRouter, Query
 from core.dates import today_bkk
 from db.helpers import fetch_all
 from db.supabase import supabase
+from schemas.enums import LotAIStatus
 from schemas.responses import OptimizeInputsResponse, ScanInputsResponse
 
 router = APIRouter(prefix="/ai", tags=["AI"])
@@ -17,31 +18,45 @@ router = APIRouter(prefix="/ai", tags=["AI"])
     response_model=ScanInputsResponse,
     summary="ข้อมูลสำหรับ Risk Scanner + Forecast",
     description="""
-**ขั้นที่ 2 ของ AI Pipeline** ดึงข้อมูลทั้งหมดที่ใช้ประเมินความเสี่ยงและพยากรณ์ยอดขาย
+**ขั้นที่ 1 ของ AI Pipeline** ดึงข้อมูลที่ใช้ประเมินความเสี่ยงและพยากรณ์ยอดขาย **เฉพาะ lot ที่ยังไม่เคยถูกสแกน**
 
-- `inventory_lots`: lot ทุกตัวในสต็อก (จำนวนคงเหลือ, วันหมดอายุ, ราคา, ตำแหน่ง)
-- `sales_history`: ยอดขายรายวันทั้งหมด แยกแถวตามระดับส่วนลด (`markdown_pct`) ใช้ประมาณผลของการลดราคาได้
-- `average_daily_sales`: ยอดขายเฉลี่ยต่อวัน 7 วัน / 30 วัน / 30 วันเฉพาะราคาปกติ
+- `inventory_lots`: เฉพาะ lot ที่ `ai_status = IDLE` (จำนวนคงเหลือ, วันหมดอายุ, ราคา, ตำแหน่ง)
+- `sales_history`: ยอดขายรายวัน **เฉพาะสินค้าของ lot ข้างบน** แยกแถวตามระดับส่วนลด (`markdown_pct`) ใช้ประมาณผลของการลดราคาได้
+- `average_daily_sales`: ยอดขายเฉลี่ยต่อวัน 7 วัน / 30 วัน / 30 วันเฉพาะราคาปกติ เฉพาะสินค้าของ lot ข้างบน
+
+**หลังเรียก route นี้ ให้ล็อก `lot_id` ที่ได้เป็น `PROCESSING` ทันที** (`PATCH /inventory-lots/ai-status`)
+lot แต่ละตัวถูกสแกนได้ครั้งเดียว เมื่อเป็น `PROCESSING` / `CHECKED` แล้วจะไม่กลับมาใน route นี้อีก
+ถ้าไม่มี lot ที่เป็น `IDLE` เลย ทุกส่วนจะเป็น `[]`
 
 ค่าเฉลี่ยคำนวณจากวันขายล่าสุดใน `sales_history` (ดู `reference_date` ในแต่ละแถว) ไม่ใช่วันนี้
 อ่านข้อมูลอย่างเดียว ไม่แก้ไขอะไร
 """,
 )
 def get_scan_inputs():
-    """ข้อมูล input สำหรับ Risk Scanner & Forecaster"""
-    lots = supabase.table("inventory_lots").select(
-        "lot_id, product_id, received_date, expiration_date, initial_quantity, "
-        "current_quantity, unit_cost, location_aisle, location_shelf, current_selling_price"
-    ).execute()
-    sales_history = fetch_all("sales_history")
+    """ข้อมูล input สำหรับ Risk Scanner & Forecaster เฉพาะ lot ที่ยังไม่เคยถูกสแกน (IDLE)"""
+    lots = (supabase.table("inventory_lots")
+              .select("lot_id, product_id, received_date, expiration_date, initial_quantity, "
+                      "current_quantity, unit_cost, location_aisle, location_shelf, "
+                      "current_selling_price, ai_status")
+              .eq("ai_status", LotAIStatus.IDLE.value)
+              .order("expiration_date")
+              .execute()).data
+    if not lots:
+        return {"inventory_lots": [], "sales_history": [], "average_daily_sales": []}
+
+    product_ids = sorted({lot["product_id"] for lot in lots})
+    sales_history = fetch_all("sales_history", in_filter=("product_id", product_ids),
+                              order_by=("product_id", "sale_date", "markdown_pct"))
     # TODO: reference_date ยึดวันขายล่าสุดใน sales_history ไม่ใช่ today_bkk()
-    velocity = supabase.table("daily_sales_velocity").select(
-        "product_id, avg_daily_sales_7d, avg_daily_sales_30d, avg_daily_sales_regular_30d, reference_date"
-    ).execute()
+    velocity = (supabase.table("daily_sales_velocity")
+                  .select("product_id, avg_daily_sales_7d, avg_daily_sales_30d, "
+                          "avg_daily_sales_regular_30d, reference_date")
+                  .in_("product_id", product_ids)
+                  .execute()).data
     return {
-        "inventory_lots": lots.data,
+        "inventory_lots": lots,
         "sales_history": sales_history,
-        "average_daily_sales": velocity.data,
+        "average_daily_sales": velocity,
     }
 
 

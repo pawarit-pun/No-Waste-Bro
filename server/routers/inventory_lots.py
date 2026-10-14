@@ -21,9 +21,9 @@ def create_inventory_lot(lot_model: InventoryLotCreate):
     response_model=LotAIStatusResponse,
     summary="เปลี่ยน ai_status ของหลาย lot พร้อมกัน",
     description="""
-**ขั้นที่ 1 และ 8 ของ AI Pipeline**
+**ขั้นที่ 2 และ 8 ของ AI Pipeline**
 
-- ก่อนสแกน: ตั้งเป็น `PROCESSING` เพื่อกันไม่ให้ lot ถูกสแกนซ้ำ
+- หลังดึง `GET /ai/scan-inputs`: ตั้ง lot ที่ได้เป็น `PROCESSING` เพื่อกันไม่ให้ถูกสแกนซ้ำ
 - สแกนและสร้าง task เสร็จ: ตั้งเป็น `CHECKED`
 - `IDLE` = ยังไม่สแกน (ค่าเริ่มต้นของ lot ใหม่)
 

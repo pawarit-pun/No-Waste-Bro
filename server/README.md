@@ -119,7 +119,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/v1/ai/scan-inputs` | Input data for the Risk Scanner & Forecaster (lots, sales history, sales velocity) |
+| `GET` | `/api/v1/ai/scan-inputs` | Input data for the Risk Scanner & Forecaster: lots with `ai_status = IDLE`, plus sales history and sales velocity for their products |
 | `GET` | `/api/v1/ai/optimize-inputs?run_id=&days_ahead=1` | Input data for the Optimizer (at-risk lots, product rules, recipes, kitchen capacity, donation partners) |
 
 ### Risk Assessments
@@ -146,8 +146,8 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 **Principle: the Optimizer owns the numbers, the LLM owns the text.** Every number on a task (discount, quantity, recipe, batch count, partner, due time) is copied from an Optimizer decision, so the LLM cannot invent or change them.
 
 ```
-1. PATCH /inventory-lots/ai-status   {"ai_status": "PROCESSING"}   lock the lots being scanned
-2. GET   /ai/scan-inputs                                          → Risk Scanner + Forecast
+1. GET   /ai/scan-inputs                                          → Risk Scanner + Forecast (IDLE lots only)
+2. PATCH /inventory-lots/ai-status   {"ai_status": "PROCESSING"}   lock the lots returned by step 1
 3. POST  /risk-assessments                                        ← run_id + assessment_id per lot
 4. GET   /ai/optimize-inputs?run_id=<run_id>                      → Optimizer decides the action per lot
 5. POST  /optimization-decisions                                  ← decision_id per decision
@@ -158,12 +158,14 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 
 | Step | Caller | Sends | Gets back |
 | --- | --- | --- | --- |
-| `scan-inputs` | Risk Scanner + Forecast | – | Inventory lots, full sales history, 7/30-day average daily sales |
+| `scan-inputs` | Risk Scanner + Forecast | – | Lots with `ai_status = IDLE` (sorted by expiry), plus sales history and 7/30-day average daily sales for those lots' products |
 | `risk-assessments` | Risk Scanner | One row per lot: days to expiry, forecast demand, predicted leftover, risk score (0–100), risk level. `run_id` is optional | `run_id` and the `assessment_id` of each lot |
 | `optimize-inputs` | Optimizer | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `MEDIUM`/`HIGH`/`CRITICAL`, product rules, active recipes with ingredients, kitchen capacity, active donation partners |
 | `optimization-decisions` (POST) | Optimizer | One or more decisions per assessment, with all numbers | `decision_id` of each decision |
 | `optimization-decisions` (GET) | LLM | `run_id` (optional, latest), `status=PENDING` | Decisions with assessment, lot (incl. shelf location), product, recipe, and partner context |
 | `tasks` | LLM | `decision_id`, `priority`, `ai_reasoning`, `staff_instructions` | Created tasks and the kitchen hours that were booked |
+
+Each lot is scanned once: `scan-inputs` only returns `IDLE` lots, and lots never return to `IDLE` once they are `PROCESSING` or `CHECKED`. Lock the returned lots right after step 1.
 
 `reference_date` is today in Thailand time, or `DEMO_DATE` if set in `.env`.
 
@@ -279,7 +281,7 @@ server/
 │   └── openapi.py              # Swagger page text and tag descriptions (Thai)
 ├── db/
 │   ├── supabase.py             # Supabase client (service role)
-│   └── helpers.py              # fetch_all() past the 1,000-row limit, fetch_by_ids()
+│   └── helpers.py              # fetch_all() past the 1,000-row limit (with filter/order), fetch_by_ids()
 ├── routers/                    # API endpoints, one file per tag
 │   ├── products.py
 │   ├── inventory_lots.py
@@ -306,4 +308,5 @@ server/
 ## Known Limitations
 
 - `DONATE` decisions cannot be created until the `donation_partners` table has data.
+- Lots are scanned only once by design (prototype): nothing resets `ai_status` back to `IDLE`.
 - There are no endpoints yet for staff to accept, complete, or reject tasks, so booked kitchen hours are only released automatically when task creation fails.
