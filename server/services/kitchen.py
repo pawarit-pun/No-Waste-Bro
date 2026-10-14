@@ -19,3 +19,12 @@ def book_hours(department_id: str, on: date, hours: float) -> bool:
         "p_hours": hours,
     }).execute()
     return bool(res.data)  # RPC คืนแถวที่อัปเดต ถ้าเต็มจะได้ list ว่าง
+
+
+def release_hours(department_id: str, on: date, hours: float) -> None:
+    """คืนชั่วโมงครัวที่จองไว้ (ไม่ติดลบ ฟังก์ชันใน DB กันไว้แล้ว)"""
+    supabase.rpc("release_kitchen_hours", {
+        "p_department_id": department_id,
+        "p_date": on.isoformat(),
+        "p_hours": hours,
+    }).execute()
