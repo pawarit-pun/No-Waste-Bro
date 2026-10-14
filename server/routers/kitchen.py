@@ -10,7 +10,7 @@ from services.kitchen import book_hours, department_exists
 router = APIRouter(tags=["Kitchen"])
 
 
-@router.get("/kitchen-capacity")
+@router.get("/kitchen-capacity", summary="ความจุครัวตั้งแต่วันนี้ถึง +days_ahead")
 def list_kitchen_capacity(days_ahead: int = Query(1, ge=0, le=30)) -> list[dict]:
     """ความจุครัวตั้งแต่วันนี้ถึง +days_ahead (สร้างแถวรายวันให้ก่อนถ้ายังไม่มี)"""
     start = today_bkk()
@@ -25,7 +25,7 @@ def list_kitchen_capacity(days_ahead: int = Query(1, ge=0, le=30)) -> list[dict]
     return res.data
 
 
-@router.post("/kitchen-bookings", status_code=201)
+@router.post("/kitchen-bookings", status_code=201, summary="จองชั่วโมงครัว")
 def create_kitchen_booking(payload: KitchenBookingRequest):
     if not department_exists(payload.department_id):
         raise HTTPException(status_code=404, detail="Booking unsuccessful: department not found")
