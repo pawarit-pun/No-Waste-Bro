@@ -1,7 +1,7 @@
 """ข้อความที่แสดงในหน้า Swagger UI (/docs) สำหรับ Team AI"""
 
 APP_TITLE = "No-Waste-Bro API"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 
 APP_DESCRIPTION = """
 API สำหรับระบบลด Food Waste ใน Hypermarket ใช้ร่วมกันระหว่าง **AI Agent**, **Admin Dashboard** และ **Staff Mobile App**
@@ -11,14 +11,19 @@ API สำหรับระบบลด Food Waste ใน Hypermarket ใช้
 
 AI Agent เรียก route ตามลำดับนี้ในการสแกน 1 รอบ (1 run)
 
-| ขั้น | Route | ทำอะไร | ค่าที่ต้องเก็บไว้ใช้ต่อ |
-| --- | --- | --- | --- |
-| 1 | `PATCH /inventory-lots/ai-status` | ล็อก lot ที่กำลังสแกนเป็น `PROCESSING` | – |
-| 2 | `GET /ai/scan-inputs` | ดึง lot + ยอดขาย ไปทำ **Risk Scanner + Forecast** | – |
-| 3 | `POST /risk-assessments` | บันทึกผลความเสี่ยงของแต่ละ lot | `run_id`, `assessment_id` ของแต่ละ lot |
-| 4 | `GET /ai/optimize-inputs?run_id=...` | ดึงข้อมูลให้ **Optimizer** ตัดสินใจ (ลดราคา / เข้าครัว / บริจาค / ทิ้ง) | – |
-| 5 | `POST /tasks` | ให้ **LLM** สร้าง task ให้ staff (ใส่ `assessment_id` มาด้วย) | `task_id` |
-| 6 | `PATCH /inventory-lots/ai-status` | เปลี่ยน lot ที่สแกนเสร็จเป็น `CHECKED` | – |
+| ขั้น | Route | ใครเรียก | ทำอะไร | ค่าที่ต้องเก็บไว้ใช้ต่อ |
+| --- | --- | --- | --- | --- |
+| 1 | `PATCH /inventory-lots/ai-status` | AI | ล็อก lot ที่กำลังสแกนเป็น `PROCESSING` | – |
+| 2 | `GET /ai/scan-inputs` | Risk Scanner + Forecast | ดึง lot + ยอดขาย ไปประเมินความเสี่ยงและพยากรณ์ | – |
+| 3 | `POST /risk-assessments` | Risk Scanner | บันทึกผลความเสี่ยงของแต่ละ lot | `run_id`, `assessment_id` |
+| 4 | `GET /ai/optimize-inputs?run_id=...` | Optimizer | ดึงข้อมูลไปตัดสินใจ (ลดราคา / เข้าครัว / บริจาค / ทิ้ง) | – |
+| 5 | `POST /optimization-decisions` | Optimizer | บันทึกการตัดสินใจ **รวมตัวเลขทั้งหมด** | `decision_id` |
+| 6 | `GET /optimization-decisions?status=PENDING` | LLM (RAG) | ดึง decision + context ไปเขียนคำสั่งงาน | `decision_id` |
+| 7 | `POST /tasks` | LLM | สร้าง task จาก decision (ส่งแค่ข้อความ + priority) | `task_id` |
+| 8 | `PATCH /inventory-lots/ai-status` | AI | เปลี่ยน lot ที่สแกนเสร็จเป็น `CHECKED` | – |
+
+**หลักการ:** Optimizer เป็นเจ้าของตัวเลข LLM เป็นเจ้าของข้อความ
+ตัวเลขใน task (ส่วนลด จำนวน สูตร batch partner due_by) คัดลอกจาก decision เสมอ LLM จึงแต่งตัวเลขเองไม่ได้
 
 ## เรื่องที่ควรรู้
 
@@ -38,6 +43,10 @@ TAGS_METADATA = [
     {
         "name": "Risk Assessments",
         "description": "บันทึกผล Risk Scanner + Forecast ของแต่ละรอบสแกน (run)",
+    },
+    {
+        "name": "Optimization Decisions",
+        "description": "ผลของ Optimizer (ตัวเลขทั้งหมดของ task) เก็บไว้ก่อนส่งให้ LLM เขียนคำสั่งงาน",
     },
     {
         "name": "Tasks",

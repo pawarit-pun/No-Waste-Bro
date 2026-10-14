@@ -20,3 +20,8 @@ class LotAIStatus(str, Enum):
     IDLE = "IDLE"
     PROCESSING = "PROCESSING"
     CHECKED = "CHECKED"
+
+
+class DecisionStatus(str, Enum):
+    PENDING = "PENDING"            # ยังไม่มี task
+    TASK_CREATED = "TASK_CREATED"  # LLM สร้าง task แล้ว

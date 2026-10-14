@@ -13,3 +13,12 @@ def fetch_all(table: str, columns: str = "*") -> list[dict]:
         if len(res.data) < PAGE_SIZE:
             return rows
         start += PAGE_SIZE
+
+
+def fetch_by_ids(table: str, key: str, ids, columns: str = "*") -> dict:
+    """ดึงหลายแถวจาก key ที่ระบุ คืนเป็น dict {key: row}"""
+    ids = {str(i) for i in ids if i is not None}
+    if not ids:
+        return {}
+    res = supabase.table(table).select(columns).in_(key, list(ids)).execute()
+    return {str(row[key]): row for row in res.data}

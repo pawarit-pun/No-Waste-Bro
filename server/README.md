@@ -7,8 +7,9 @@ Backend for No-Waste-Bro, built with **FastAPI** and using **Supabase** as the d
 - Python 3.10+ (developed on Python 3.13)
 - A Supabase project with the tables and RPCs the server uses
   (`products`, `inventory_lots`, `sales_history`, `daily_sales_velocity`,
-  `kitchen_capacity_daily`, `lot_risk_assessments`, `ai_recommended_tasks`, `recipes`,
-  `recipe_ingredients`, `donation_partners`, RPCs `ensure_kitchen_days`,
+  `kitchen_capacity_daily`, `lot_risk_assessments`, `optimization_decisions`,
+  `ai_recommended_tasks`, `recipes`, `recipe_ingredients`, `donation_partners`,
+  view `optimization_decisions_status`, RPCs `ensure_kitchen_days`,
   `book_kitchen_hours` and `release_kitchen_hours`)
 
 ## 1. Install libraries
@@ -91,7 +92,7 @@ The server runs at `http://127.0.0.1:8000` by default.
 
 ## API Endpoints
 
-All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group them by the same tags.
+All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group them by the same tags (descriptions there are in Thai for the AI team).
 
 ### Products
 
@@ -127,82 +128,106 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | --- | --- | --- |
 | `POST` | `/api/v1/risk-assessments` | Save Risk Scanner & Forecast results for one run (all rows or none) |
 
+### Optimization Decisions
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/optimization-decisions` | Save the Optimizer's decisions, including every number a task will use (all rows or none) |
+| `GET` | `/api/v1/optimization-decisions?run_id=&status=PENDING` | Decisions with the context the LLM needs to write staff instructions |
+
 ### Tasks
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/api/v1/tasks` | Create AI-recommended tasks in bulk; books kitchen hours for `KITCHEN_REPURPOSE` tasks |
+| `POST` | `/api/v1/tasks` | Turn decisions into staff tasks in bulk; books kitchen hours for `KITCHEN_REPURPOSE` |
 
 ## AI Pipeline Flow
 
-The AI agent calls the endpoints in this order for each scan run:
+**Principle: the Optimizer owns the numbers, the LLM owns the text.** Every number on a task (discount, quantity, recipe, batch count, partner, due time) is copied from an Optimizer decision, so the LLM cannot invent or change them.
 
 ```
 1. PATCH /inventory-lots/ai-status   {"ai_status": "PROCESSING"}   lock the lots being scanned
 2. GET   /ai/scan-inputs                                          → Risk Scanner + Forecast
-3. POST  /risk-assessments                                        ← returns run_id + assessment_id per lot
+3. POST  /risk-assessments                                        ← run_id + assessment_id per lot
 4. GET   /ai/optimize-inputs?run_id=<run_id>                      → Optimizer decides the action per lot
-5. POST  /tasks                                                   ← LLM writes staff tasks (with assessment_id)
-6. PATCH /inventory-lots/ai-status   {"ai_status": "CHECKED"}     mark the lots as done
+5. POST  /optimization-decisions                                  ← decision_id per decision
+6. GET   /optimization-decisions?status=PENDING                   → LLM (RAG) writes instructions
+7. POST  /tasks                                                   ← decision_id + text + priority only
+8. PATCH /inventory-lots/ai-status   {"ai_status": "CHECKED"}     mark the lots as done
 ```
 
-| Step | Sends | Gets back |
-| --- | --- | --- |
-| `scan-inputs` | – | Inventory lots, full sales history, 7/30-day average daily sales |
-| `risk-assessments` | One row per lot: days to expiry, forecast demand, predicted leftover, risk score (0–100), risk level. `run_id` is optional; the server creates one if omitted | `run_id` and the `assessment_id` of each lot |
-| `optimize-inputs` | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `MEDIUM`/`HIGH`/`CRITICAL` (with lot data), product rules, active recipes with ingredients, kitchen capacity, active donation partners |
-| `tasks` | A list of tasks | Created tasks and the kitchen hours that were booked |
+| Step | Caller | Sends | Gets back |
+| --- | --- | --- | --- |
+| `scan-inputs` | Risk Scanner + Forecast | – | Inventory lots, full sales history, 7/30-day average daily sales |
+| `risk-assessments` | Risk Scanner | One row per lot: days to expiry, forecast demand, predicted leftover, risk score (0–100), risk level. `run_id` is optional | `run_id` and the `assessment_id` of each lot |
+| `optimize-inputs` | Optimizer | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `MEDIUM`/`HIGH`/`CRITICAL`, product rules, active recipes with ingredients, kitchen capacity, active donation partners |
+| `optimization-decisions` (POST) | Optimizer | One or more decisions per assessment, with all numbers | `decision_id` of each decision |
+| `optimization-decisions` (GET) | LLM | `run_id` (optional, latest), `status=PENDING` | Decisions with assessment, lot (incl. shelf location), product, recipe, and partner context |
+| `tasks` | LLM | `decision_id`, `priority`, `ai_reasoning`, `staff_instructions` | Created tasks and the kitchen hours that were booked |
 
 `reference_date` is today in Thailand time, or `DEMO_DATE` if set in `.env`.
 
-## Task Rules
+A decision's `status` is computed by the `optimization_decisions_status` view: `PENDING` until a task is created from it, then `TASK_CREATED`. Each decision can become exactly one task (enforced by a unique index).
 
-`POST /api/v1/tasks` validates each task before anything is written.
+## Decision Rules
+
+`POST /api/v1/optimization-decisions` validates each decision before anything is written.
 
 | `action_type` | Required fields | Must be empty |
 | --- | --- | --- |
 | `MARKDOWN` | `discount_pct` (between 0 and 100, exclusive) | `batch_count` |
-| `KITCHEN_REPURPOSE` | `target_recipe_id`, `batch_count`, `due_by` | `discount_pct` |
-| `DONATE` | `target_partner_id` | `discount_pct`, `batch_count` |
-| `DISCARD` | – | `discount_pct`, `batch_count` |
+| `KITCHEN_REPURPOSE` | `target_recipe_id`, `batch_count`, `due_by` | `discount_pct`, `new_recommended_price` |
+| `DONATE` | `target_partner_id` | `discount_pct`, `new_recommended_price`, `batch_count` |
+| `DISCARD` | – | `discount_pct`, `new_recommended_price`, `batch_count` |
 
-All tasks require `lot_id` and `action_quantity` (> 0). `priority` is 1–5 (default 3).
+All decisions require `assessment_id` and `action_quantity` (> 0). The server fills in `run_id` and `lot_id` from the assessment.
 
-**Filled in by the server**
+**Checked against real data**
 
-- `product_id` comes from the lot. If you send one that does not match the lot, the request is rejected.
-- `original_price` defaults to the lot's `current_selling_price`.
+- The product must allow the action (`allow_markdown`, `allow_kitchen_repurposing`, `allow_donation`).
+- The total `action_quantity` per lot in one request cannot exceed the lot's `current_quantity`.
+- `MARKDOWN`: if `new_recommended_price` is omitted, the server sets it to `current_selling_price × (1 − discount_pct / 100)`. The price cannot be below the product's `min_allowed_price`.
+- `KITCHEN_REPURPOSE`: the recipe must be active, and the lot's product must be one of its ingredients.
+- `DONATE`: the partner must be active, accept the product's category, and the lot must have at least `min_days_before_expiry` days left.
+
+## Task Rules
+
+`POST /api/v1/tasks` accepts only `decision_id` (required), `priority` (1–5, default 3), `ai_reasoning`, and `staff_instructions`. Any other field is ignored.
+
+**Copied by the server**
+
+- From the decision: `lot_id`, `assessment_id`, `action_type`, `action_quantity`, `discount_pct`, `new_recommended_price`, `target_recipe_id`, `batch_count`, `target_partner_id`, `due_by`, `expected_profit_impact`.
+- From the lot: `product_id`, and `original_price` (the current selling price).
 
 **Kitchen booking (`KITCHEN_REPURPOSE`)**
 
-- Hours are calculated by the server, not sent by the AI:
-  `recipe.estimated_prep_time_mins × batch_count ÷ 60`, booked in the recipe's `department_id`.
-- The booking date is the date of `due_by` in Thailand time (a `due_by` without a timezone is treated as Thailand time).
+- Hours: `recipe.estimated_prep_time_mins × batch_count ÷ 60`, booked in the recipe's `department_id`.
+- The booking date is the date of the decision's `due_by` in Thailand time.
 - Hours for tasks that use the same kitchen on the same day are added together and booked once.
-- If any kitchen does not have enough hours, every booking made by this request is released and no task is created.
-- If saving the tasks fails after booking, every booking is released.
+- Kitchen hours are booked when the task is created, not when the decision is saved.
+- If any kitchen is full, or saving the tasks fails, every booking made by this request is released and no task is created.
 
 ## Error Responses
 
 | Status | When |
 | --- | --- |
-| `400` | The database rejected the write (for example, a `target_partner_id` that does not exist), or kitchen hours exceed capacity on `POST /kitchen-bookings` |
+| `400` | The database rejected the write, or kitchen hours exceed capacity on `POST /kitchen-bookings` |
 | `404` | Lot not found on `PATCH /inventory-lots/{lot_id}`, none of the `lot_ids` found on `PATCH /inventory-lots/ai-status`, or unknown `department_id` on `POST /kitchen-bookings` |
-| `409` | Duplicate `lot_id` in the same `run_id` on `POST /risk-assessments`, or a kitchen is full on `POST /tasks` |
-| `422` | Request body fails validation: missing or invalid fields, task rule violations, unknown `lot_id`, `product_id` mismatch, or an inactive / unknown recipe |
+| `409` | Duplicate `lot_id` in the same `run_id` on `POST /risk-assessments`; on `POST /tasks`, a kitchen is full or a decision already has a task |
+| `422` | Request body fails validation, or a decision fails the checks in [Decision Rules](#decision-rules); on `POST /tasks`, an unknown or repeated `decision_id` |
 
 `PATCH /inventory-lots/ai-status` returns lot IDs that do not exist in `not_found` instead of failing, as long as at least one lot was updated.
 
 ## Example Requests
 
-> **Warning:** these requests write real data to Supabase, including risk assessments, tasks, lot status, and **booked kitchen hours**. Release any test bookings afterwards with the `release_kitchen_hours` RPC.
+> **Warning:** these requests write real data to Supabase, including risk assessments, decisions, tasks, lot status, and **booked kitchen hours**. Release any test bookings afterwards with the `release_kitchen_hours` RPC.
 
 ```bash
 B=http://127.0.0.1:8000/api/v1
 
-# 1) Save scan results → keep run_id and assessment_id
+# 1) Save scan results → keep assessment_id
 curl -X POST $B/risk-assessments -H "Content-Type: application/json" -d '{
-  "model_version": "v1",
+  "model_version": "risk-v1",
   "assessments": [{
     "lot_id": "LOT-000001", "days_to_expiry": 0, "quantity_at_assessment": 85,
     "forecast_daily_demand": 30.8, "predicted_units_sold_before_expiry": 30.8,
@@ -214,16 +239,30 @@ curl -X POST $B/risk-assessments -H "Content-Type: application/json" -d '{
 # 2) Optimizer input for the latest run
 curl "$B/ai/optimize-inputs"
 
-# 3) Create tasks: one markdown + one kitchen task (books BAKERY_DEPT for 0.83 h)
+# 3) Save the Optimizer's decisions → keep decision_id
+curl -X POST $B/optimization-decisions -H "Content-Type: application/json" -d '{
+  "optimizer_version": "opt-v1",
+  "decisions": [
+    {"assessment_id": "<assessment_id>", "action_type": "MARKDOWN",
+     "action_quantity": 30, "discount_pct": 30, "expected_profit_impact": -300},
+    {"assessment_id": "<assessment_id>", "action_type": "KITCHEN_REPURPOSE",
+     "action_quantity": 2, "target_recipe_id": "RCP-006", "batch_count": 1,
+     "due_by": "2026-10-14T17:00:00+07:00"}
+  ]
+}'
+
+# 4) Decisions waiting for the LLM
+curl "$B/optimization-decisions?status=PENDING"
+
+# 5) Create tasks (books BAKERY_DEPT for 0.83 h)
 curl -X POST $B/tasks -H "Content-Type: application/json" -d '{"tasks": [
-  {"lot_id": "LOT-000001", "action_type": "MARKDOWN", "action_quantity": 30,
-   "discount_pct": 30, "priority": 2},
-  {"lot_id": "LOT-000001", "action_type": "KITCHEN_REPURPOSE", "action_quantity": 2,
-   "target_recipe_id": "RCP-006", "batch_count": 1, "priority": 1,
-   "due_by": "2026-10-14T17:00:00+07:00"}
+  {"decision_id": "<markdown decision_id>", "priority": 2,
+   "staff_instructions": "Put 30% off labels on 30 bottles at CHILL-A / A-01"},
+  {"decision_id": "<kitchen decision_id>", "priority": 1,
+   "staff_instructions": "Bring 2 bottles from CHILL-A / A-01 to the bakery before 17:00"}
 ]}'
 
-# 4) Mark lots as checked
+# 6) Mark lots as checked
 curl -X PATCH $B/inventory-lots/ai-status -H "Content-Type: application/json" \
   -d '{"lot_ids": ["LOT-000001"], "ai_status": "CHECKED"}'
 ```
@@ -236,30 +275,35 @@ server/
 ├── configs/
 │   └── config.py               # Environment loading (pydantic-settings)
 ├── core/
-│   └── dates.py                # Thailand timezone and today_bkk() (supports DEMO_DATE)
+│   ├── dates.py                # Thailand timezone and today_bkk() (supports DEMO_DATE)
+│   └── openapi.py              # Swagger page text and tag descriptions (Thai)
 ├── db/
 │   ├── supabase.py             # Supabase client (service role)
-│   └── helpers.py              # fetch_all(): paginates past the 1,000-row limit
+│   └── helpers.py              # fetch_all() past the 1,000-row limit, fetch_by_ids()
 ├── routers/                    # API endpoints, one file per tag
 │   ├── products.py
 │   ├── inventory_lots.py
 │   ├── kitchen.py
 │   ├── ai.py                   # scan-inputs, optimize-inputs
 │   ├── risk_assessments.py
+│   ├── optimization_decisions.py
 │   └── tasks.py
-├── schemas/                    # Pydantic request models
-│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus (match DB enums)
+├── schemas/                    # Pydantic request and response models
+│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus, DecisionStatus (match DB)
 │   ├── inventory_lot.py
 │   ├── kitchen.py
 │   ├── risk_assessment.py
-│   └── task.py                 # Task rules per action_type
+│   ├── decision.py             # Decision rules per action_type
+│   ├── task.py                 # decision_id + text fields only
+│   └── responses.py            # Response shapes shown in Swagger
 ├── services/                   # Business logic shared by routers
 │   ├── kitchen.py              # department_exists, book_hours, release_hours
-│   └── tasks.py                # Task creation with kitchen booking and rollback
+│   ├── decisions.py            # Decision checks against real data, listing with context
+│   └── tasks.py                # Task creation from decisions, kitchen booking and rollback
 └── requirements.txt
 ```
 
 ## Known Limitations
 
-- `DONATE` tasks cannot be created until the `donation_partners` table has data.
+- `DONATE` decisions cannot be created until the `donation_partners` table has data.
 - There are no endpoints yet for staff to accept, complete, or reject tasks, so booked kitchen hours are only released automatically when task creation fails.

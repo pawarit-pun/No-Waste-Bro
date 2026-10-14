@@ -126,6 +126,7 @@ class DonationPartnerRow(_Row):
 
 class TaskRow(_Row):
     task_id: UUID
+    decision_id: Optional[UUID] = Field(None, description="decision ที่เป็นที่มาของ task")
     lot_id: Optional[str] = None
     product_id: Optional[str] = None
     assessment_id: Optional[UUID] = None
@@ -196,3 +197,100 @@ class LotAIStatusResponse(BaseModel):
     message: str
     updated: list[LotStatus] = Field(..., description="lot ที่อัปเดตสำเร็จ")
     not_found: list[str] = Field(..., description="lot_id ที่ไม่มีอยู่จริง")
+
+
+# ---------- Optimization Decisions ----------
+
+class DecisionRef(BaseModel):
+    decision_id: UUID
+    run_id: UUID
+    assessment_id: UUID
+    lot_id: str
+    action_type: str
+
+
+class DecisionCreateResponse(BaseModel):
+    created: int = Field(..., description="จำนวน decision ที่บันทึก")
+    decisions: list[DecisionRef] = Field(..., description="decision_id ของแต่ละรายการ")
+
+
+class DecisionAssessment(_Row):
+    assessment_id: UUID
+    days_to_expiry: int
+    quantity_at_assessment: int
+    predicted_leftover_units: float
+    risk_score: float
+    risk_level: str
+
+
+class DecisionLot(_Row):
+    lot_id: str
+    product_id: str
+    current_quantity: int
+    current_selling_price: float
+    expiration_date: date
+    location_aisle: Optional[str] = Field(None, description="ทางเดินที่วางสินค้า")
+    location_shelf: Optional[str] = Field(None, description="ชั้นที่วางสินค้า")
+
+
+class DecisionProduct(_Row):
+    product_id: str
+    name: str
+    category: str
+    unit_of_measure: str
+    regular_price: float
+    min_allowed_price: Optional[float] = None
+
+
+class DecisionRecipe(_Row):
+    recipe_id: str
+    name: str
+    department_id: Optional[str] = None
+    output_product_id: str
+    output_quantity: float
+    estimated_prep_time_mins: Optional[int] = None
+    shelf_life_days: int
+
+
+class DecisionPartner(_Row):
+    partner_id: str
+    name: str
+    partner_type: str
+    pickup_days: list[int]
+    pickup_time_start: Optional[str] = None
+    pickup_time_end: Optional[str] = None
+    requires_cold_chain: bool
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+
+
+class DecisionWithContext(_Row):
+    decision_id: UUID
+    run_id: UUID
+    assessment_id: UUID
+    lot_id: str
+    action_type: str
+    action_quantity: int
+    discount_pct: Optional[float] = None
+    new_recommended_price: Optional[float] = None
+    target_recipe_id: Optional[str] = None
+    batch_count: Optional[int] = None
+    target_partner_id: Optional[str] = None
+    due_by: Optional[datetime] = None
+    expected_profit_impact: Optional[float] = None
+    decision_score: Optional[float] = None
+    alternatives: Optional[list[dict]] = None
+    optimizer_version: Optional[str] = None
+    created_at: datetime
+    status: str = Field(..., description="PENDING = ยังไม่มี task, TASK_CREATED = สร้าง task แล้ว")
+    task_id: Optional[UUID] = Field(None, description="task ที่สร้างจาก decision นี้ (ถ้ามี)")
+    assessment: Optional[DecisionAssessment] = Field(None, description="ผลประเมินความเสี่ยง")
+    lot: Optional[DecisionLot] = Field(None, description="สภาพ lot ปัจจุบัน + ตำแหน่งชั้นวาง")
+    product: Optional[DecisionProduct] = Field(None, description="ชื่อและประเภทสินค้า")
+    recipe: Optional[DecisionRecipe] = Field(None, description="สูตรที่จะทำ (เฉพาะ KITCHEN_REPURPOSE)")
+    partner: Optional[DecisionPartner] = Field(None, description="partner ที่รับบริจาค (เฉพาะ DONATE)")
+
+
+class DecisionListResponse(BaseModel):
+    run_id: Optional[UUID] = Field(None, description="รอบสแกนที่ใช้ null = ยังไม่มี decision")
+    decisions: list[DecisionWithContext]
