@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from configs.config import db_env
 from core.openapi import APP_DESCRIPTION, APP_TITLE, APP_VERSION, TAGS_METADATA
 from routers import (ai, inventory_lots, kitchen, optimization_decisions, products,
                      risk_assessments, staff, tasks)
@@ -11,6 +13,13 @@ app = FastAPI(
     version=APP_VERSION,
     description=APP_DESCRIPTION,
     openapi_tags=TAGS_METADATA,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in db_env.cors_origins.split(",") if origin.strip()],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 for module in (products, inventory_lots, kitchen, ai, risk_assessments,

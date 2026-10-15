@@ -47,6 +47,10 @@ SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 # (optional) Pin the system's "today" for demos, format YYYY-MM-DD.
 # If empty, the current date in Thailand time (Asia/Bangkok) is used.
 DEMO_DATE=
+
+# (optional) Origins allowed to call the API from a browser, comma-separated.
+# Defaults to * (any origin). Example: http://localhost:3000,http://localhost:5173
+CORS_ORIGINS=*
 ```
 
 | Variable | Required | Description |
@@ -54,6 +58,7 @@ DEMO_DATE=
 | `SUPABASE_URL` | ✅ | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service role key used to connect to Supabase |
 | `DEMO_DATE` | ❌ | Simulated date for demos (`YYYY-MM-DD`) |
+| `CORS_ORIGINS` | ❌ | Browser origins allowed to call the API, comma-separated. Default `*` (any origin). Set specific origins once the web dashboard has a fixed URL |
 
 - Values are loaded with `pydantic-settings` in `configs/config.py`. If a required variable is missing, the server fails on startup.
 - `.env` is read from the **directory you run the command from**, so always start the server from inside `server/`.
