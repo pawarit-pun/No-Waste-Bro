@@ -57,7 +57,7 @@ class TaskCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      task.product?.name ?? task.productId ?? '-',
+                      taskTitle(task),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -163,7 +163,7 @@ class _StatusLine extends StatelessWidget {
               width: 8,
               height: 8,
               decoration: const BoxDecoration(
-                color: AppColors.inProgress,
+                color: AppColors.statusInProgress,
                 shape: BoxShape.circle,
               ),
             ),
@@ -173,35 +173,35 @@ class _StatusLine extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: AppColors.inProgress,
+                color: AppColors.statusInProgress,
               ),
             ),
           ],
         ),
       TaskStatus.completed => const Row(
           children: [
-            Icon(Icons.check, size: 15, color: Color(0xFF3A3A3C)),
+            Icon(Icons.check, size: 15, color: AppColors.statusCompleted),
             SizedBox(width: 4),
             Text(
               'Completed',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF3A3A3C),
+                color: AppColors.statusCompleted,
               ),
             ),
           ],
         ),
       _ => const Row(
           children: [
-            Icon(Icons.radio_button_unchecked, size: 13, color: AppColors.textSecondary),
+            Icon(Icons.radio_button_unchecked, size: 13, color: AppColors.statusPending),
             SizedBox(width: 5),
             Text(
               'Pending',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+                color: AppColors.statusPending,
               ),
             ),
           ],

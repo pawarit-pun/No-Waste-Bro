@@ -16,7 +16,13 @@ class AppColors {
 
   // หน้า My tasks
   static const urgent = Color(0xFFC0281C); // เวลา due ของงานด่วน / เลยกำหนด
-  static const inProgress = Color(0xFFC2410C);
+  static const urgentBadge = Color(0xFFC2410C); // กล่องตัวเลขในแบนเนอร์ Urgent
+
+  // สีสถานะ task
+  static const statusPending = Color(0xFF007AFF);
+  static const statusInProgress = orange;
+  static const statusCompleted = Color(0xFF248A3D);
+  static const inProgress = statusInProgress;
   static const cardMuted = Color(0xFFF5F5F7); // การ์ดงานที่เสร็จแล้ว
   static const chipBorder = Color(0xFFD1D1D6);
 }
@@ -51,10 +57,10 @@ class ActionStyle {
             badgeBackground: Color(0xFFF5E0A3),
           ),
         ActionType.donate => const ActionStyle(
-            icon: Icons.favorite_border,
-            tint: Color(0xFFB4234A),
-            iconBackground: Color(0xFFF9D6DF),
-            badgeBackground: Color(0xFFF7CCD7),
+            icon: Icons.local_shipping_outlined,
+            tint: Color(0xFF2E7D32),
+            iconBackground: Color(0xFFDCEFDC),
+            badgeBackground: Color(0xFFCDE8CF),
           ),
         ActionType.discard => const ActionStyle(
             icon: Icons.delete_outline,
@@ -97,3 +103,19 @@ class AppTheme {
     );
   }
 }
+
+/// สีป้ายสถานะ task
+Color statusColor(TaskStatus status) => switch (status) {
+      TaskStatus.pending => AppColors.statusPending,
+      TaskStatus.inProgress => AppColors.statusInProgress,
+      TaskStatus.completed => AppColors.statusCompleted,
+      TaskStatus.rejected => AppColors.urgent,
+    };
+
+/// สีป้ายระดับความเสี่ยง (พื้น, ตัวหนังสือ)
+(Color, Color) riskColors(String level) => switch (level) {
+      'CRITICAL' => (AppColors.urgent, Colors.white),
+      'HIGH' => (const Color(0xFFFBD5D5), AppColors.urgent),
+      'MEDIUM' => (const Color(0xFFFFF0C2), const Color(0xFF8A6100)),
+      _ => (const Color(0xFFDDF3E4), AppColors.statusCompleted),
+    };

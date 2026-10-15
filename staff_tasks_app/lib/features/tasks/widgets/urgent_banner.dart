@@ -34,7 +34,7 @@ class UrgentBanner extends StatelessWidget {
                 height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.inProgress,
+                  color: AppColors.urgentBadge,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

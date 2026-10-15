@@ -54,14 +54,14 @@ String quantityLabel(int qty, String unit) {
   return '$qty ${qty == 1 ? names.$1 : names.$2}';
 }
 
-String _pctLabel(double? pct) {
+String percentLabel(double? pct) {
   if (pct == null) return '';
   return pct == pct.roundToDouble() ? '${pct.toInt()}%' : '${pct.toStringAsFixed(1)}%';
 }
 
 /// ข้อความในป้ายประเภทงาน เช่น "Markdown 30%"
 String actionLabel(Task task) => switch (task.actionType) {
-      ActionType.markdown => 'Markdown ${_pctLabel(task.discountPct)}'.trim(),
+      ActionType.markdown => 'Markdown ${percentLabel(task.discountPct)}'.trim(),
       ActionType.kitchenRepurpose => 'Kitchen repurpose',
       ActionType.donate => 'Donation',
       ActionType.discard => 'Discard',
@@ -73,7 +73,13 @@ String dueLabel(Task task, DateTime dueBy) {
     ActionType.donate || ActionType.discard => 'Pickup',
     _ => 'Due',
   };
-  return '$prefix ${hhmm.format(dueBy.toLocal())}';
+  final due = dueBy.toLocal();
+  final now = DateTime.now();
+  final today = due.year == now.year && due.month == now.month && due.day == now.day;
+  // วันอื่นใส่ชื่อวันด้วย เช่น "Pickup Fri 09:00"
+  return today
+      ? '$prefix ${hhmm.format(due)}'
+      : '$prefix ${DateFormat('EEE').format(due)} ${hhmm.format(due)}';
 }
 
 /// บรรทัด lot เช่น "LOT-000004 · MEAT-B · B-01 · 18 packs"
@@ -83,3 +89,61 @@ String taskLotLine(Task task) => [
       task.lot?.locationShelf,
       quantityLabel(task.actionQuantity, task.product?.unitOfMeasure ?? 'PIECE'),
     ].whereType<String>().join(' · ');
+
+/// หัวการ์ด: ชื่อสินค้า (งานครัวต่อท้ายด้วยชื่อสูตร เช่น "กล้วยหอม 1kg → เค้กกล้วยหอม")
+String taskTitle(Task task) {
+  final product = task.product?.name ?? task.productId ?? '-';
+  final recipe = task.recipe?['name'] as String?;
+  return recipe == null ? product : '$product → $recipe';
+}
+
+// ---------- หน้า Task detail ----------
+
+String statusLabel(TaskStatus status) => switch (status) {
+      TaskStatus.pending => 'Pending',
+      TaskStatus.inProgress => 'In progress',
+      TaskStatus.completed => 'Completed',
+      TaskStatus.rejected => 'Rejected',
+    };
+
+/// LOW / MEDIUM / HIGH / CRITICAL → "High risk"
+String riskLabel(String level) => switch (level) {
+      'CRITICAL' => 'Critical risk',
+      'HIGH' => 'High risk',
+      'MEDIUM' => 'Medium risk',
+      _ => 'Low risk',
+    };
+
+final _money = NumberFormat('#,##0.00');
+
+/// 31.15 → "฿31.15"
+String baht(num value) => '฿${_money.format(value)}';
+
+final _dayMonth = DateFormat('EEE d MMM');
+
+/// "Due today 16:00" / "Due tomorrow 09:00" / "Due Fri 16 Oct 09:00"
+String dueDayLabel(DateTime dueBy, [DateTime? now]) {
+  final due = dueBy.toLocal();
+  final today = now ?? DateTime.now();
+  final days = DateTime(due.year, due.month, due.day)
+      .difference(DateTime(today.year, today.month, today.day))
+      .inDays;
+  final day = switch (days) {
+    0 => 'today',
+    1 => 'tomorrow',
+    -1 => 'yesterday',
+    _ => _dayMonth.format(due),
+  };
+  return 'Due $day ${hhmm.format(due)}';
+}
+
+/// "expires Tue 13 Oct" (DB เก็บแค่วันที่)
+String expiresLabel(DateTime date) => 'expires ${_dayMonth.format(date)}';
+
+/// 180 → "3 h", 75 → "1 h 15 min", 45 → "45 min"
+String durationLabel(int minutes) {
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  if (h == 0) return '$m min';
+  return m == 0 ? '$h h' : '$h h $m min';
+}

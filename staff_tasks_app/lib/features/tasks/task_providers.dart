@@ -63,9 +63,14 @@ final taskListProvider = FutureProvider.autoDispose.family<List<Task>, String>((
   return [...open, ...doneToday];
 });
 
-/// งานด่วน = ยังไม่เสร็จและ priority 1
-bool isUrgentTask(Task task) =>
-    task.priority == 1 && task.status != TaskStatus.completed;
+/// งานด่วน = ยังไม่เสร็จ, priority 1 และ due วันนี้ (หรือเลยกำหนด / ไม่มี due)
+bool isUrgentTask(Task task) {
+  if (task.priority != 1 || task.status == TaskStatus.completed) return false;
+  final due = task.dueBy?.toLocal();
+  if (due == null) return true;
+  final now = DateTime.now();
+  return due.isBefore(DateTime(now.year, now.month, now.day + 1));
+}
 
 /// แท็บกรองในหน้า My tasks
 enum TaskFilter {

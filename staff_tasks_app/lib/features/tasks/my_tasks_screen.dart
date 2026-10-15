@@ -8,6 +8,7 @@ import '../../models/staff.dart';
 import '../../models/task.dart';
 import '../../widgets/staff_avatar.dart';
 import '../staff_picker/staff_providers.dart';
+import 'task_detail_screen.dart';
 import 'task_providers.dart';
 import 'widgets/filter_chips.dart';
 import 'widgets/task_card.dart';
@@ -43,7 +44,7 @@ class MyTasksScreen extends ConsumerWidget {
           onAction: () => ref.invalidate(provider),
         ),
       ],
-      data: (list) => _content(ref, list, filter),
+      data: (list) => _content(context, ref, list, filter),
     );
 
     return Scaffold(
@@ -64,7 +65,7 @@ class MyTasksScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _content(WidgetRef ref, List<Task> list, TaskFilter filter) {
+  List<Widget> _content(BuildContext context, WidgetRef ref, List<Task> list, TaskFilter filter) {
     final urgent = list.where(isUrgentTask).toList();
     final visible = list.where(filter.matches).toList();
     return [
@@ -89,8 +90,14 @@ class MyTasksScreen extends ConsumerWidget {
         for (final task in visible)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            // TODO: เปิดหน้ารายละเอียดงานเมื่อได้ดีไซน์
-            child: TaskCard(task: task),
+            child: TaskCard(
+              task: task,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => TaskDetailScreen(taskId: task.taskId, staffId: staff.staffId),
+                ),
+              ),
+            ),
           ),
     ];
   }

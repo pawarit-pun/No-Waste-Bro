@@ -80,6 +80,19 @@ class TaskLot {
       );
 }
 
+/// ขั้นตอนทำงาน 1 ข้อ (จาก LLM)
+class InstructionStep {
+  const InstructionStep({required this.title, required this.detail});
+
+  final String title;
+  final String detail;
+
+  factory InstructionStep.fromJson(Map<String, dynamic> json) => InstructionStep(
+        title: json['title'] as String? ?? '',
+        detail: json['detail'] as String? ?? '',
+      );
+}
+
 class StaffRef {
   const StaffRef({required this.staffId, required this.fullName, this.imageUrl});
 
@@ -120,6 +133,7 @@ class Task {
     this.completedAt,
     this.aiReasoning,
     this.staffInstructions,
+    this.instructionSteps = const [],
     this.actualQuantityHandled,
     this.rejectionReason,
     this.product,
@@ -150,6 +164,9 @@ class Task {
   final DateTime? completedAt;
   final String? aiReasoning;
   final String? staffInstructions;
+
+  /// ว่าง = ไม่มีขั้นตอน (ใช้ staffInstructions แทน)
+  final List<InstructionStep> instructionSteps;
   final int? actualQuantityHandled;
   final String? rejectionReason;
   final TaskProduct? product;
@@ -182,6 +199,9 @@ class Task {
       completedAt: toDateTime(json['completed_at']),
       aiReasoning: json['ai_reasoning'] as String?,
       staffInstructions: json['staff_instructions'] as String?,
+      instructionSteps: (json['instruction_steps'] as List? ?? const [])
+          .map((e) => InstructionStep.fromJson(e as Map<String, dynamic>))
+          .toList(),
       actualQuantityHandled: toInt(json['actual_quantity_handled']),
       rejectionReason: json['rejection_reason'] as String?,
       product: obj('product') == null ? null : TaskProduct.fromJson(obj('product')!),
