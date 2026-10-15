@@ -145,7 +145,12 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/api/v1/tasks` | Turn decisions into staff tasks in bulk; books kitchen hours for `KITCHEN_REPURPOSE` |
+| `POST` | `/api/v1/tasks` | Turn decisions into staff tasks in bulk; assigns each task to a staff member and books kitchen hours for `KITCHEN_REPURPOSE` |
+| `GET` | `/api/v1/tasks?staff_id=&status=` | Task queue for one staff member (mobile), or all tasks without `staff_id` (dashboard). Default status: `PENDING` + `IN_PROGRESS` |
+| `GET` | `/api/v1/tasks/{task_id}` | Task detail with product, lot, assigned staff, assessment, recipe, and partner |
+| `POST` | `/api/v1/tasks/{task_id}/accept` | Assigned staff starts the task: `PENDING` → `IN_PROGRESS` |
+| `POST` | `/api/v1/tasks/{task_id}/reject` | Assigned staff rejects the task with a reason: → `REJECTED`; releases kitchen hours for kitchen tasks |
+| `POST` | `/api/v1/tasks/{task_id}/complete` | Assigned staff finishes the task: `IN_PROGRESS` → `COMPLETED`, and stock is updated (see [Task Lifecycle](#task-lifecycle)) |
 
 ## AI Pipeline Flow
 
@@ -166,7 +171,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | --- | --- | --- | --- |
 | `scan-inputs` | Risk Scanner + Forecast | – | Lots with `ai_status = IDLE` (sorted by expiry), plus sales history and 7/30-day average daily sales for those lots' products |
 | `risk-assessments` | Risk Scanner | One row per lot: days to expiry, forecast demand, predicted leftover, risk score (0–100), risk level. `run_id` is optional | `run_id` and the `assessment_id` of each lot |
-| `optimize-inputs` | Optimizer | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `MEDIUM`/`HIGH`/`CRITICAL`, product rules, active recipes with ingredients, kitchen capacity, active donation partners |
+| `optimize-inputs` | Optimizer | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `MEDIUM`/`HIGH`/`CRITICAL`, product rules, active recipes with ingredients, kitchen capacity, active donation partners, and `ingredient_stock` (usable, unexpired stock of every recipe ingredient, earliest expiry first) |
 | `optimization-decisions` (POST) | Optimizer | One or more decisions per assessment, with all numbers | `decision_id` of each decision |
 | `optimization-decisions` (GET) | LLM | `run_id` (optional, latest), `status=PENDING` | Decisions with assessment, lot (incl. shelf location), product, recipe, and partner context |
 | `tasks` | LLM | `decision_id`, `priority`, `ai_reasoning`, `staff_instructions` | Created tasks and the kitchen hours that were booked |
@@ -207,6 +212,13 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 - From the decision: `lot_id`, `assessment_id`, `action_type`, `action_quantity`, `discount_pct`, `new_recommended_price`, `target_recipe_id`, `batch_count`, `target_partner_id`, `due_by`, `expected_profit_impact`.
 - From the lot: `product_id`, and `original_price` (the current selling price).
 
+**Automatic assignment**
+
+- Each task is assigned when it is created, in the same insert, so the first Realtime event already has `assigned_staff_id`.
+- Candidates are active `STAFF` whose `responsible_categories` include the product's category.
+- With several candidates, the one with the fewest open tasks (`PENDING` + `IN_PROGRESS`) wins; ties go to the lowest `staff_id`. Tasks assigned earlier in the same request count toward the workload.
+- If nobody covers the category, `assigned_staff_id` is `null` and the manager handles it.
+
 **Kitchen booking (`KITCHEN_REPURPOSE`)**
 
 - Hours: `recipe.estimated_prep_time_mins × batch_count ÷ 60`, booked in the recipe's `department_id`.
@@ -215,14 +227,58 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 - Kitchen hours are booked when the task is created, not when the decision is saved.
 - If any kitchen is full, or saving the tasks fails, every booking made by this request is released and no task is created.
 
+## Task Lifecycle
+
+```
+PENDING ──accept──▶ IN_PROGRESS ──complete──▶ COMPLETED
+   │                    │
+   └──────reject────────┴──────────────────▶ REJECTED
+```
+
+Every action sends `staff_id` in the body (there is no login), and only the assigned staff member may act. A task must be accepted before it can be completed.
+
+**Reject** requires `rejection_reason`. Stock does not change. For `KITCHEN_REPURPOSE`, the kitchen hours booked at creation are released (recomputed with the same rule used for booking).
+
+**Complete** takes `actual_quantity_handled` (0 to `action_quantity`) and updates stock in one database transaction (`complete_task` function). If any step fails, nothing changes.
+
+| `action_type` | Stock effect |
+| --- | --- |
+| `MARKDOWN` | The task lot loses `actual_quantity_handled` units, which become a **new lot** at `new_recommended_price` (same product, dates, cost, and location; `ai_status = CHECKED`) |
+| `KITCHEN_REPURPOSE` | The task lot loses `actual_quantity_handled` units; **every other recipe ingredient** is deducted; a **new output lot** is created |
+| `DONATE` / `DISCARD` | The task lot loses `actual_quantity_handled` units |
+
+Kitchen details:
+
+- Other ingredients need `required_quantity × batch_count ÷ net content`, **rounded up** to whole units. They are taken from unexpired lots (as of the reference date), earliest expiry first, across several lots if needed. If any ingredient is short, the request fails with `422` and names the missing products.
+- The output lot holds `output_quantity × batch_count` units, expires on the reference date + `shelf_life_days`, sells at `regular_price`, costs `base_cost`, sits at the kitchen (`location_aisle` = department), and starts as `IDLE` so the next scan picks it up.
+- The booked kitchen hours count as used.
+
+Every new lot has `source_task_id` pointing to the task. The response's `effects` lists each changed lot (before → after) and each new lot.
+
+## Realtime for the Mobile App
+
+`ai_recommended_tasks` is in the `supabase_realtime` publication, and the `anon` role can read it (prototype, no login). The app subscribes to its own tasks and refetches from the API when an event arrives:
+
+```js
+supabase.channel('my-tasks')
+  .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'ai_recommended_tasks',
+        filter: 'assigned_staff_id=eq.STF-003' },
+      () => refetchTasks())          // GET /api/v1/tasks?staff_id=STF-003
+  .subscribe()
+```
+
+Use the event only as a signal; the API applies the queue's filtering and ordering.
+
 ## Error Responses
 
 | Status | When |
 | --- | --- |
 | `400` | The database rejected the write, or kitchen hours exceed capacity on `POST /kitchen-bookings` |
-| `404` | Lot not found on `PATCH /inventory-lots/{lot_id}`, none of the `lot_ids` found on `PATCH /inventory-lots/ai-status`, or unknown `department_id` on `POST /kitchen-bookings` |
-| `409` | Duplicate `lot_id` in the same `run_id` on `POST /risk-assessments`; on `POST /tasks`, a kitchen is full or a decision already has a task |
-| `422` | Request body fails validation, or a decision fails the checks in [Decision Rules](#decision-rules); on `POST /tasks`, an unknown or repeated `decision_id` |
+| `403` | On task actions, `staff_id` is not the assigned staff member |
+| `404` | Unknown `staff_id` or `task_id` on task routes, lot not found on `PATCH /inventory-lots/{lot_id}`, none of the `lot_ids` found on `PATCH /inventory-lots/ai-status`, or unknown `department_id` on `POST /kitchen-bookings` |
+| `409` | Duplicate `lot_id` in the same `run_id` on `POST /risk-assessments`; on `POST /tasks`, a kitchen is full or a decision already has a task; on task actions, the task is not in the required status |
+| `422` | Request body fails validation, or a decision fails the checks in [Decision Rules](#decision-rules); on `POST /tasks`, an unknown or repeated `decision_id`; on `complete`, a quantity out of range, not enough stock in the lot, or missing recipe ingredients |
 
 `PATCH /inventory-lots/ai-status` returns lot IDs that do not exist in `not_found` instead of failing, as long as at least one lot was updated.
 
@@ -298,17 +354,18 @@ server/
 │   ├── tasks.py
 │   └── staff.py
 ├── schemas/                    # Pydantic request and response models
-│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus, DecisionStatus, StaffRole (match DB)
+│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus, DecisionStatus, StaffRole, TaskStatus (match DB)
 │   ├── inventory_lot.py
 │   ├── kitchen.py
 │   ├── risk_assessment.py
 │   ├── decision.py             # Decision rules per action_type
-│   ├── task.py                 # decision_id + text fields only
+│   ├── task.py                 # Task creation (decision_id + text) and accept / reject / complete bodies
 │   └── responses.py            # Response shapes shown in Swagger
 ├── services/                   # Business logic shared by routers
 │   ├── kitchen.py              # department_exists, book_hours, release_hours
 │   ├── decisions.py            # Decision checks against real data, listing with context
-│   └── tasks.py                # Task creation from decisions, kitchen booking and rollback
+│   ├── tasks.py                # Task creation (auto-assign, kitchen booking, rollback), task queue and detail
+│   └── task_actions.py         # Accept, reject (releases kitchen hours), complete (calls the complete_task DB function)
 └── requirements.txt
 ```
 
@@ -316,4 +373,5 @@ server/
 
 - `DONATE` decisions cannot be created until the `donation_partners` table has data.
 - Lots are scanned only once by design (prototype): nothing resets `ai_status` back to `IDLE`.
-- There are no endpoints yet for staff to accept, complete, or reject tasks, so booked kitchen hours are only released automatically when task creation fails.
+- When a kitchen task is rejected, released hours are recomputed per task and rounded to 0.01 h, so a booking that summed several tasks can leave up to 0.01 h booked per task.
+- The `anon` read policy on `ai_recommended_tasks` lets anyone with the anon key read tasks. Acceptable for a prototype without login.

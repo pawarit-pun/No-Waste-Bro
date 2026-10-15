@@ -30,3 +30,10 @@ class DecisionStatus(str, Enum):
 class StaffRole(str, Enum):
     MANAGER = "MANAGER"  # เข้า web dashboard
     STAFF = "STAFF"      # เข้า staff mobile app
+
+
+class TaskStatus(str, Enum):
+    PENDING = "PENDING"            # รอ staff เริ่มทำ
+    IN_PROGRESS = "IN_PROGRESS"    # staff กำลังทำ
+    COMPLETED = "COMPLETED"
+    REJECTED = "REJECTED"

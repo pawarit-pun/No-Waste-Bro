@@ -78,7 +78,9 @@ AT_RISK_LEVELS = ["MEDIUM", "HIGH", "CRITICAL"]
 | `recipes` | lot นี้ทำเมนูอะไรได้ ใช้วัตถุดิบเท่าไหร่ต่อ batch ใช้เวลาเท่าไหร่ ครัวไหนทำ |
 | `kitchen_capacity` | ครัวยังว่างกี่ชั่วโมงในแต่ละวัน |
 | `donation_partners` | บริจาคให้ใครได้ รับสินค้าประเภทไหน ต้องเหลืออายุกี่วัน |
+| `ingredient_stock` | **วัตถุดิบของทุกสูตรเหลือเท่าไหร่** (เฉพาะ lot ที่ยังไม่หมดอายุ เรียงหมดอายุก่อน = ลำดับที่ระบบจะตัดจริงตอน complete) |
 
+- **งานครัวที่ใช้วัตถุดิบเดียวกันหลายงาน:** Optimizer ต้องรวมความต้องการเองแล้วเทียบกับ `ingredient_stock` (วัตถุดิบต่อ batch = `required_quantity` ในหน่วย G/ML เทียบกับ `total_content`)
 - ไม่ส่ง `run_id` = ใช้รอบสแกนล่าสุด ถ้ายังไม่เคยสแกนหรือ `run_id` ไม่มีอยู่จริง `at_risk_lots` จะเป็น `[]`
 - เรียกแล้ว server จะสร้างแถวความจุครัวรายวันให้ถ้ายังไม่มี (ไม่แตะชั่วโมงที่จองไว้)
 """,
@@ -132,6 +134,7 @@ def get_optimize_inputs(
                            .execute()).data
 
     return {
+        "ingredient_stock": _ingredient_stock(recipes, products, start),
         "reference_date": start.isoformat(),
         "run_id": str(run_id) if run_id else None,
         "at_risk_lots": at_risk_lots,
@@ -140,3 +143,39 @@ def get_optimize_inputs(
         "kitchen_capacity": kitchen_capacity,
         "donation_partners": donation_partners,
     }
+
+
+def _ingredient_stock(recipes: list[dict], products: list[dict], today) -> list[dict]:
+    """สต็อกที่ใช้ได้ของสินค้าที่เป็นวัตถุดิบของสูตร active (lot ที่ยังมีของและยังไม่หมดอายุ)"""
+    ingredient_ids = sorted({i["ingredient_product_id"] for r in recipes for i in r["ingredients"]})
+    if not ingredient_ids:
+        return []
+    lots = (supabase.table("inventory_lots")
+              .select("lot_id, product_id, current_quantity, expiration_date, location_aisle, location_shelf")
+              .in_("product_id", ingredient_ids)
+              .gt("current_quantity", 0)
+              .gte("expiration_date", today.isoformat())
+              .order("expiration_date").order("lot_id")
+              .execute()).data
+    by_product = {p["product_id"]: p for p in products}
+
+    stock = []
+    for product_id in ingredient_ids:
+        p = by_product[product_id]
+        product_lots = [l for l in lots if l["product_id"] == product_id]
+        total_units = sum(l["current_quantity"] for l in product_lots)
+        unit, size = p["net_content_unit"], p["net_content_value"]
+        # แปลงเป็น G / ML ให้ตรงกับหน่วยใน recipe_ingredients
+        base_unit = {"KG": "G", "L": "ML"}.get(unit, unit)
+        multiplier = 1000 if unit in ("KG", "L") else 1
+        stock.append({
+            "product_id": product_id,
+            "name": p["name"],
+            "net_content_value": size,
+            "net_content_unit": unit,
+            "total_units": total_units,
+            "total_content": round(total_units * size * multiplier, 2) if size is not None else None,
+            "content_unit": base_unit,
+            "lots": product_lots,
+        })
+    return stock

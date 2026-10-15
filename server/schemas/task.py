@@ -32,3 +32,29 @@ class TaskBatchCreate(BaseModel):
             }]
         }
     }
+
+
+STAFF_ID_DESC = "รหัส staff ที่กด (ต้องเป็นคนที่ได้รับมอบหมาย task นี้)"
+
+
+class TaskAccept(BaseModel):
+    staff_id: str = Field(..., description=STAFF_ID_DESC)
+
+    model_config = {"json_schema_extra": {"examples": [{"staff_id": "STF-003"}]}}
+
+
+class TaskReject(BaseModel):
+    staff_id: str = Field(..., description=STAFF_ID_DESC)
+    rejection_reason: str = Field(..., min_length=1, description="เหตุผลที่ทำไม่ได้ (บังคับ)")
+
+    model_config = {
+        "str_strip_whitespace": True,
+        "json_schema_extra": {"examples": [{"staff_id": "STF-003", "rejection_reason": "สินค้าเสียหาย ขายไม่ได้"}]},
+    }
+
+
+class TaskComplete(BaseModel):
+    staff_id: str = Field(..., description=STAFF_ID_DESC)
+    actual_quantity_handled: int = Field(..., ge=0, description="จำนวนที่จัดการได้จริง (0 ถึง action_quantity) ใช้ตัด/แยกสต็อก")
+
+    model_config = {"json_schema_extra": {"examples": [{"staff_id": "STF-003", "actual_quantity_handled": 30}]}}

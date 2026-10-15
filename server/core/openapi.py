@@ -19,13 +19,30 @@ AI Agent เรียก route ตามลำดับนี้ในการ�
 | 4 | `GET /ai/optimize-inputs?run_id=...` | Optimizer | ดึงข้อมูลไปตัดสินใจ (ลดราคา / เข้าครัว / บริจาค / ทิ้ง) | – |
 | 5 | `POST /optimization-decisions` | Optimizer | บันทึกการตัดสินใจ **รวมตัวเลขทั้งหมด** | `decision_id` |
 | 6 | `GET /optimization-decisions?status=PENDING` | LLM (RAG) | ดึง decision + context ไปเขียนคำสั่งงาน | `decision_id` |
-| 7 | `POST /tasks` | LLM | สร้าง task จาก decision (ส่งแค่ข้อความ + priority) | `task_id` |
+| 7 | `POST /tasks` | LLM | สร้าง task จาก decision (ส่งแค่ข้อความ + priority) **server มอบหมาย staff ให้อัตโนมัติ** | `task_id` |
 | 8 | `PATCH /inventory-lots/ai-status` | AI | เปลี่ยน lot ที่สแกนเสร็จเป็น `CHECKED` | – |
 
 **lot แต่ละตัวถูกสแกนครั้งเดียว:** `scan-inputs` ส่งเฉพาะ lot ที่เป็น `IDLE` เมื่อเป็น `PROCESSING` / `CHECKED` แล้วจะไม่ถูกสแกนอีก
 
 **หลักการ:** Optimizer เป็นเจ้าของตัวเลข LLM เป็นเจ้าของข้อความ
 ตัวเลขใน task (ส่วนลด จำนวน สูตร batch partner due_by) คัดลอกจาก decision เสมอ LLM จึงแต่งตัวเลขเองไม่ได้
+
+## หลังสร้าง task: Staff mobile app
+
+server มอบหมาย task ให้ staff ที่ดูแลหมวดสินค้านั้นตั้งแต่ตอนสร้าง (`assigned_staff_id`)
+mobile app subscribe Supabase Realtime เพื่อรู้ทันทีว่ามีงานใหม่ แล้วเรียก `GET /tasks?staff_id=...`
+
+```js
+supabase.channel('my-tasks')
+  .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'ai_recommended_tasks',
+        filter: 'assigned_staff_id=eq.STF-003' },
+      () => refetchTasks())          // GET /api/v1/tasks?staff_id=STF-003
+  .subscribe()
+```
+
+staff ทำงานตามลำดับ: `POST /tasks/{id}/accept` → `POST /tasks/{id}/complete` (หรือ `reject`)
+`complete` อัปเดตสต็อกจริง: ลดราคาแยกเป็น lot ใหม่, งานครัวตัดวัตถุดิบทุกตัวแล้วสร้าง lot ผลผลิต, บริจาค/ทิ้งตัดสต็อก
 
 ## เรื่องที่ควรรู้
 
@@ -52,7 +69,7 @@ TAGS_METADATA = [
     },
     {
         "name": "Tasks",
-        "description": "Task ที่ AI แนะนำให้ staff ทำ (ลดราคา / ส่งเข้าครัว / บริจาค / ทิ้ง)",
+        "description": "Task ที่ AI แนะนำให้ staff ทำ (ลดราคา / ส่งเข้าครัว / บริจาค / ทิ้ง) ระบบมอบหมาย staff ตามหมวดสินค้า และมีคิวงานสำหรับ mobile app",
     },
     {
         "name": "Inventory Lots",
