@@ -8,7 +8,7 @@ Backend for No-Waste-Bro, built with **FastAPI** and using **Supabase** as the d
 - A Supabase project with the tables and RPCs the server uses
   (`products`, `inventory_lots`, `sales_history`, `daily_sales_velocity`,
   `kitchen_capacity_daily`, `lot_risk_assessments`, `optimization_decisions`,
-  `ai_recommended_tasks`, `recipes`, `recipe_ingredients`, `donation_partners`,
+  `ai_recommended_tasks`, `recipes`, `recipe_ingredients`, `donation_partners`, `staff`,
   view `optimization_decisions_status`, RPCs `ensure_kitchen_days`,
   `book_kitchen_hours` and `release_kitchen_hours`)
 
@@ -93,6 +93,12 @@ The server runs at `http://127.0.0.1:8000` by default.
 ## API Endpoints
 
 All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group them by the same tags (descriptions there are in Thai for the AI team).
+
+### Staff
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/staff?role=STAFF` | Active staff for the user-picker screen. `role` is `STAFF` (default, mobile app) or `MANAGER` (web dashboard). There is no login |
 
 ### Products
 
@@ -289,9 +295,10 @@ server/
 │   ├── ai.py                   # scan-inputs, optimize-inputs
 │   ├── risk_assessments.py
 │   ├── optimization_decisions.py
-│   └── tasks.py
+│   ├── tasks.py
+│   └── staff.py
 ├── schemas/                    # Pydantic request and response models
-│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus, DecisionStatus (match DB)
+│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus, DecisionStatus, StaffRole (match DB)
 │   ├── inventory_lot.py
 │   ├── kitchen.py
 │   ├── risk_assessment.py

@@ -294,3 +294,14 @@ class DecisionWithContext(_Row):
 class DecisionListResponse(BaseModel):
     run_id: Optional[UUID] = Field(None, description="รอบสแกนที่ใช้ null = ยังไม่มี decision")
     decisions: list[DecisionWithContext]
+
+
+# ---------- Staff ----------
+
+class StaffRow(_Row):
+    staff_id: str = Field(..., description="รหัสพนักงาน เช่น STF-002")
+    full_name: str
+    role: str = Field(..., description="MANAGER = เข้า web dashboard, STAFF = เข้า mobile app")
+    responsible_categories: list[str] = Field(..., description="หมวดสินค้าที่รับผิดชอบ (STAFF มี 1–2 หมวด, MANAGER ว่าง)")
+    image_url: Optional[str] = Field(None, description="URL รูปโปรไฟล์ (null = ไม่มีรูป)")
+    is_active: bool

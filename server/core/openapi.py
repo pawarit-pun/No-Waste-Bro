@@ -63,6 +63,10 @@ TAGS_METADATA = [
         "description": "ความจุครัว (ชั่วโมงต่อวัน) และการจองชั่วโมงครัว",
     },
     {
+        "name": "Staff",
+        "description": "พนักงาน 2 role: MANAGER (web dashboard) และ STAFF (mobile app) ใช้กับหน้าเลือกผู้ใช้ (ยังไม่มี login)",
+    },
+    {
         "name": "Products",
         "description": "ข้อมูลหลักของสินค้า",
     },
