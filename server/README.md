@@ -95,6 +95,72 @@ The server runs at `http://127.0.0.1:8000` by default.
 - Swagger UI: http://127.0.0.1:8000/docs
 - ReDoc: http://127.0.0.1:8000/redoc
 
+## 4. Deploy to AWS Lambda + API Gateway
+
+The whole FastAPI app runs in **one Lambda function**. API Gateway (HTTP API) forwards every path
+(`ANY /{proxy+}`) to it, and [Mangum](https://pypi.org/project/mangum/) (`handler` in `main.py`)
+turns the Lambda event into a normal request for FastAPI, so the routes need no changes.
+
+```
+client → API Gateway (HTTP API) → Lambda [ Mangum → FastAPI → routers / services ] → Supabase
+```
+
+| File | Purpose |
+| --- | --- |
+| `template.yaml` | AWS SAM template: Lambda (python3.13, arm64, 512 MB, 29 s), HTTP API, log group |
+| `samconfig.toml` | Deploy defaults: stack `no-waste-bro-api`, region `ap-southeast-1` |
+| `requirements-lambda.txt` | Runtime libraries packaged into the Lambda |
+| `scripts/build_lambda.sh` | Builds `build/`: Linux (arm64) libraries + app code only |
+
+### Prerequisites (one time)
+
+- AWS CLI v2 with credentials (`aws configure` or `aws configure sso`)
+- [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+- Docker is **not** needed
+
+### Build and deploy
+
+```bash
+cd server
+./scripts/build_lambda.sh
+
+# Reads the service role key from .env so it is never typed or saved in samconfig.toml
+sam deploy --parameter-overrides \
+  SupabaseServiceRoleKey="$(grep '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2-)"
+```
+
+Optional parameters (add them to `--parameter-overrides`; any parameter left out goes back to its default on that deploy):
+
+| Parameter | Default | Env var in Lambda |
+| --- | --- | --- |
+| `SupabaseUrl` | `https://vvhwqamejfaouvfmkhps.supabase.co` | `SUPABASE_URL` |
+| `SupabaseServiceRoleKey` | (required) | `SUPABASE_SERVICE_ROLE_KEY` |
+| `DemoDate` | empty (today in Bangkok) | `DEMO_DATE` |
+| `CorsOrigins` | `*` | `CORS_ORIGINS` |
+
+Example for a demo day: `sam deploy --parameter-overrides SupabaseServiceRoleKey="..." DemoDate=2026-10-20`
+
+The outputs show the URLs: `ApiBaseUrl` (for the mobile app) and `DocsUrl` (Swagger). Show them again with
+`sam list stack-outputs`.
+
+### Everyday use
+
+| Task | Command |
+| --- | --- |
+| Deploy code changes | `./scripts/build_lambda.sh` then the `sam deploy` command above |
+| Tail logs | `sam logs --tail` |
+| Point the mobile app at AWS | `flutter run --dart-define=API_BASE_URL=<ApiBaseUrl>` |
+| Reset demo data | `python -m scripts.demo reset-seed` (still runs locally, talks to Supabase directly) |
+| Remove everything from AWS | `sam delete` |
+
+Notes:
+- **The API URL stays the same across `sam deploy`.** `sam delete` (or renaming the stack / the API resource) creates a new API with a new URL, so only delete when you are done with it.
+- Never run `sam deploy --guided` and type the key: SAM would save it into `samconfig.toml`.
+- Do not edit the function or its env vars in the AWS console; the next `sam deploy` overwrites them.
+- `build/` contains only `main.py`, `configs/`, `core/`, `db/`, `routers/`, `schemas/`, `services/` and the libraries. `.env`, `.venv/` and `scripts/` are never packaged.
+- The first request after the function has been idle is slower (cold start, about 1–3 s). Call the API once before a live demo.
+- API Gateway cuts requests at 30 seconds, so long AI / LLM work should run outside these routes.
+
 ## API Endpoints
 
 All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group them by the same tags (descriptions there are in Thai for the AI team).

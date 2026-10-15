@@ -1,0 +1,16 @@
+# Default settings for sam deploy / sam logs (run from the server folder)
+# Do not put SupabaseServiceRoleKey here: pass it with --parameter-overrides on every deploy
+version = 0.1
+
+[default.global.parameters]
+stack_name = "no-waste-bro-api"
+region = "ap-southeast-1"
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true                 # SAM creates and reuses an S3 bucket for the code upload
+confirm_changeset = false
+fail_on_empty_changeset = false   # redeploying with no changes is not an error
+
+[default.logs.parameters]
+name = "ApiFunction"
