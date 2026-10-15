@@ -179,7 +179,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | `optimize-inputs` | Optimizer | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `MEDIUM`/`HIGH`/`CRITICAL`, product rules, active recipes with ingredients, kitchen capacity, active donation partners, and `ingredient_stock` (usable, unexpired stock of every recipe ingredient, earliest expiry first) |
 | `optimization-decisions` (POST) | Optimizer | One or more decisions per assessment, with all numbers | `decision_id` of each decision |
 | `optimization-decisions` (GET) | LLM | `run_id` (optional, latest), `status=PENDING` | Decisions with assessment, lot (incl. shelf location), product, recipe, and partner context |
-| `tasks` | LLM | `decision_id`, `priority`, `ai_reasoning`, `staff_instructions` | Created tasks and the kitchen hours that were booked |
+| `tasks` | LLM | `decision_id`, `priority`, `ai_reasoning`, `staff_instructions`, `instruction_steps` | Created tasks and the kitchen hours that were booked |
 
 Each lot is scanned once: `scan-inputs` only returns `IDLE` lots, and lots never return to `IDLE` once they are `PROCESSING` or `CHECKED`. Lock the returned lots right after step 1.
 
@@ -210,7 +210,7 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 
 ## Task Rules
 
-`POST /api/v1/tasks` accepts only `decision_id` (required), `priority` (1–5, default 3), `ai_reasoning`, and `staff_instructions`. Any other field is ignored.
+`POST /api/v1/tasks` accepts only `decision_id` (required), `priority` (1–5, default 3), `ai_reasoning`, `staff_instructions`, and `instruction_steps` (optional list of 1–8 `{title, detail}` objects, shown step by step in the mobile app's "How to do it" section; when it is missing the app shows `staff_instructions` instead). Any other field is ignored.
 
 **Copied by the server**
 
@@ -326,7 +326,11 @@ curl "$B/optimization-decisions?status=PENDING"
 # 5) Create tasks (books BAKERY_DEPT for 0.83 h)
 curl -X POST $B/tasks -H "Content-Type: application/json" -d '{"tasks": [
   {"decision_id": "<markdown decision_id>", "priority": 2,
-   "staff_instructions": "Put 30% off labels on 30 bottles at CHILL-A / A-01"},
+   "staff_instructions": "Put 30% off labels on 30 bottles at CHILL-A / A-01",
+   "instruction_steps": [
+     {"title": "Find the lot", "detail": "Go to CHILL-A / A-01 and check the lot code on the label"},
+     {"title": "Print 30 labels", "detail": "Print the new price from the handheld label printer"},
+     {"title": "Label and move to front", "detail": "Cover the old price and put the bottles at the front"}]},
   {"decision_id": "<kitchen decision_id>", "priority": 1,
    "staff_instructions": "Bring 2 bottles from CHILL-A / A-01 to the bakery before 17:00"}
 ]}'
@@ -373,6 +377,34 @@ server/
 │   └── task_actions.py         # Accept, reject (releases kitchen hours), complete (calls the complete_task DB function)
 └── requirements.txt
 ```
+
+## Demo Data
+
+Scripts to reset the database and load the demo tasks, so a demo can be rehearsed any number of times.
+
+**One-time setup:** open Supabase → SQL Editor, paste `scripts/demo_functions.sql`, and run it. It creates the table `demo_lot_baseline` (the starting state of LOT-000001 to LOT-000010) and three functions: `demo_reset`, `demo_seed`, and `demo_snapshot`.
+
+```bash
+# run from the server folder
+python -m scripts.demo reset-seed                    # reset, then load today's demo tasks (most common)
+python -m scripts.demo reset                         # reset only
+python -m scripts.demo seed                          # load demo tasks (after a reset)
+python -m scripts.demo reset-seed --date 2026-10-20  # prepare a specific demo day
+python -m scripts.demo snapshot                      # after loading new mock data: save current lots as the baseline
+```
+
+| Command | What it does |
+|---|---|
+| `reset` | Deletes **all** tasks, decisions, and risk assessments; deletes lots that are not in the baseline (markdown splits, kitchen output, the donation lot); restores the baseline lots (quantity, price, `ai_status = IDLE`, dates shifted to the demo day); releases every kitchen booking; restarts lot numbering after the baseline |
+| `seed` | Creates 9 tasks for STF-002/003/004 from real sales velocity: markdown, kitchen, one completed markdown, and one donation to `P-DON-01` on its next pickup day. Due times are fixed clock times on the demo day (15:30–19:00) |
+| `snapshot` | Replaces the baseline with every lot currently in `inventory_lots` |
+
+The same functions can be called from the SQL Editor: `select demo_reset(); select demo_seed();`
+
+Notes:
+- `reset` also deletes tasks created by the real AI pipeline.
+- `seed` is tied to LOT-000001 to LOT-000010. If new mock data changes these lots, update the task list in `demo_seed`.
+- On demo day, remove `DEMO_DATE` from `.env` (or set it to the demo day) so task completion uses the same date as the seeded data.
 
 ## Known Limitations
 

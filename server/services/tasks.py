@@ -145,7 +145,7 @@ def create_tasks(tasks: list[TaskCreate]) -> dict:
 # ---------- อ่าน task (คิวงานของ staff / ภาพรวมของ manager) ----------
 
 def _attach_context(tasks: list[dict], detail: bool = False) -> list[dict]:
-    """แนบข้อมูลสินค้า, lot, คนที่ได้รับมอบหมาย (และ assessment / สูตร / partner ถ้า detail=True)"""
+    """แนบข้อมูลสินค้า, lot, คนที่ได้รับมอบหมาย, ชื่อสูตร (และ assessment / รายละเอียดสูตร / partner ถ้า detail=True)"""
     lot_cols = "lot_id, current_quantity, expiration_date, location_aisle, location_shelf"
     if detail:
         lot_cols += ", product_id, current_selling_price, ai_status"
@@ -155,24 +155,29 @@ def _attach_context(tasks: list[dict], detail: bool = False) -> list[dict]:
                             + (", regular_price, min_allowed_price" if detail else ""))
     staff = fetch_by_ids("staff", "staff_id", {t.get("assigned_staff_id") for t in tasks},
                          "staff_id, full_name, image_url")
+    recipes = fetch_by_ids("recipes", "recipe_id", {t.get("target_recipe_id") for t in tasks},
+                           "recipe_id, name" + (", department_id, output_product_id, output_quantity, "
+                                                "estimated_prep_time_mins, shelf_life_days" if detail else ""))
     if detail:
         assessments = fetch_by_ids("lot_risk_assessments", "assessment_id", {t.get("assessment_id") for t in tasks},
                                    "assessment_id, days_to_expiry, quantity_at_assessment, "
                                    "predicted_leftover_units, risk_score, risk_level")
-        recipes = fetch_by_ids("recipes", "recipe_id", {t.get("target_recipe_id") for t in tasks},
-                               "recipe_id, name, department_id, output_product_id, output_quantity, "
-                               "estimated_prep_time_mins, shelf_life_days")
+        departments = fetch_by_ids("kitchen_capacity", "department_id",
+                                   {r.get("department_id") for r in recipes.values()},
+                                   "department_id, department_name")
+        for r in recipes.values():
+            r["department_name"] = (departments.get(r.get("department_id")) or {}).get("department_name")
         partners = fetch_by_ids("donation_partners", "partner_id", {t.get("target_partner_id") for t in tasks},
                                 "partner_id, name, partner_type, pickup_days, pickup_time_start, "
-                                "pickup_time_end, requires_cold_chain, contact_name, contact_phone")
+                                "pickup_time_end, contact_name, contact_phone")
 
     for t in tasks:
         t["lot"] = lots.get(t.get("lot_id"))
         t["product"] = products.get(t.get("product_id"))
         t["assigned_staff"] = staff.get(t.get("assigned_staff_id"))
+        t["recipe"] = recipes.get(t.get("target_recipe_id"))
         if detail:
             t["assessment"] = assessments.get(str(t.get("assessment_id")))
-            t["recipe"] = recipes.get(t.get("target_recipe_id"))
             t["partner"] = partners.get(t.get("target_partner_id"))
     return tasks
 

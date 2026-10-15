@@ -19,7 +19,7 @@ AI Agent เรียก route ตามลำดับนี้ในการ�
 | 4 | `GET /ai/optimize-inputs?run_id=...` | Optimizer | ดึงข้อมูลไปตัดสินใจ (ลดราคา / เข้าครัว / บริจาค / ทิ้ง) | – |
 | 5 | `POST /optimization-decisions` | Optimizer | บันทึกการตัดสินใจ **รวมตัวเลขทั้งหมด** | `decision_id` |
 | 6 | `GET /optimization-decisions?status=PENDING` | LLM (RAG) | ดึง decision + context ไปเขียนคำสั่งงาน | `decision_id` |
-| 7 | `POST /tasks` | LLM | สร้าง task จาก decision (ส่งแค่ข้อความ + priority) **server มอบหมาย staff ให้อัตโนมัติ** | `task_id` |
+| 7 | `POST /tasks` | LLM | สร้าง task จาก decision (ส่งแค่ข้อความ + priority + `instruction_steps` ขั้นตอนทีละข้อ) **server มอบหมาย staff ให้อัตโนมัติ** | `task_id` |
 | 8 | `PATCH /inventory-lots/ai-status` | AI | เปลี่ยน lot ที่สแกนเสร็จเป็น `CHECKED` | – |
 
 **lot แต่ละตัวถูกสแกนครั้งเดียว:** `scan-inputs` ส่งเฉพาะ lot ที่เป็น `IDLE` เมื่อเป็น `PROCESSING` / `CHECKED` แล้วจะไม่ถูกสแกนอีก

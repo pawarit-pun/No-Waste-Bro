@@ -113,14 +113,19 @@ class KitchenCapacityDay(_Row):
 class DonationPartnerRow(_Row):
     partner_id: str
     name: str
-    partner_type: str = Field(..., description="FOOD_BANK / CHARITY / COMMUNITY / TEMPLE / ANIMAL_FEED")
+    partner_type: str = Field(..., description="FOOD_BANK / CHARITY / COMMUNITY / TEMPLE / DONATION / "
+                                                "ANIMAL_FEED / COMPOSTING / ANAEROBIC_DIGESTION / LANDFILL")
     accepted_categories: list[str] = Field(..., description="ประเภทสินค้าที่รับ")
     pickup_days: list[int] = Field(..., description="วันที่มารับ 1 = จันทร์ … 7 = อาทิตย์")
-    pickup_time_start: Optional[str] = None
-    pickup_time_end: Optional[str] = None
-    min_days_before_expiry: int = Field(..., description="สินค้าต้องเหลืออายุอย่างน้อยกี่วัน")
-    max_capacity_kg_per_pickup: Optional[float] = None
-    requires_cold_chain: bool = Field(..., description="ต้องขนส่งแบบแช่เย็นไหม")
+    pickup_time_start: Optional[str] = Field(None, description="เวลาเริ่มรับของ")
+    pickup_time_end: Optional[str] = Field(None, description="เวลาสิ้นสุดรับของ")
+    min_days_before_expiry: Optional[int] = Field(None, description="สินค้าต้องเหลืออายุอย่างน้อยกี่วัน (null = ไม่มีเงื่อนไข)")
+    min_kg_per_pickup: Optional[float] = Field(None, description="น้ำหนักขั้นต่ำต่อรอบที่มารับ (kg)")
+    max_capacity_kg_per_pickup: Optional[float] = Field(None, description="น้ำหนักสูงสุดต่อรอบที่มารับ (kg)")
+    fixed_cost_per_trip: Optional[float] = Field(None, description="ค่าใช้จ่ายคงที่ต่อเที่ยว (บาท)")
+    travel_cost_per_trip: Optional[float] = Field(None, description="ค่าเดินทางต่อเที่ยว (บาท)")
+    handling_fee_per_kg: Optional[float] = Field(None, description="ค่าจัดการต่อ kg (บาท)")
+    buyback_price_per_kg: Optional[float] = Field(None, description="ราคาที่ partner รับซื้อต่อ kg (บาท) 0 = ไม่รับซื้อ")
     is_active: bool
 
 
@@ -145,6 +150,7 @@ class TaskRow(_Row):
     due_by: Optional[datetime] = None
     ai_reasoning: Optional[str] = None
     staff_instructions: Optional[str] = None
+    instruction_steps: Optional[list[dict]] = Field(None, description="ขั้นตอนทำงาน [{title, detail}] (null = ใช้ staff_instructions)")
     created_at: Optional[datetime] = None
 
 
@@ -267,6 +273,7 @@ class DecisionRecipe(_Row):
     recipe_id: str
     name: str
     department_id: Optional[str] = None
+    department_name: Optional[str] = Field(None, description="ชื่อครัว (มีเฉพาะใน GET /tasks/{task_id})")
     output_product_id: str
     output_quantity: float
     estimated_prep_time_mins: Optional[int] = None
@@ -280,7 +287,6 @@ class DecisionPartner(_Row):
     pickup_days: list[int]
     pickup_time_start: Optional[str] = None
     pickup_time_end: Optional[str] = None
-    requires_cold_chain: bool
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
 
@@ -352,10 +358,17 @@ class StaffRef(_Row):
     image_url: Optional[str] = None
 
 
+class TaskRecipeRef(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    recipe_id: str
+    name: str
+
+
 class TaskListItem(TaskRow):
     product: Optional[TaskProduct] = Field(None, description="สินค้าของ task")
     lot: Optional[TaskLot] = Field(None, description="lot + ตำแหน่งชั้นวาง")
     assigned_staff: Optional[StaffRef] = Field(None, description="staff ที่ได้รับมอบหมาย")
+    recipe: Optional[TaskRecipeRef] = Field(None, description="ชื่อสูตรที่จะทำ (เฉพาะ KITCHEN_REPURPOSE)")
 
 
 class TaskDetail(TaskListItem):
