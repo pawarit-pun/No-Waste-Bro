@@ -6,7 +6,7 @@ Backend for No-Waste-Bro, built with **FastAPI** and using **Supabase** as the d
 
 - Python 3.10+ (developed on Python 3.13)
 - A Supabase project with the tables and RPCs the server uses
-  (`products`, `inventory_lots`, `sales_history`, `daily_sales_velocity`,
+  (`products`, `inventory_lots`, `product_daily`, `daily_context`, `daily_sales_velocity`,
   `kitchen_capacity_daily`, `lot_risk_assessments`, `optimization_decisions`,
   `ai_recommended_tasks`, `recipes`, `recipe_ingredients`, `donation_partners`, `staff`,
   view `optimization_decisions_status`, RPCs `ensure_kitchen_days`,
@@ -196,7 +196,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/v1/ai/scan-inputs` | Input data for the Risk Scanner & Forecaster: lots with `ai_status = IDLE`, plus sales history and sales velocity for their products |
+| `GET` | `/api/v1/ai/scan-inputs?history_days=28` | Prediction input for the Risk Scanner & Forecaster: `reference_date`, lots with `ai_status = IDLE`, their products, the last `history_days` of daily sales (`product_daily`) and daily factors for today + 7 days, extended to the latest expiry if later (`daily_context`) |
 | `GET` | `/api/v1/ai/optimize-inputs?run_id=&days_ahead=1` | Input data for the Optimizer (at-risk lots, product rules, recipes, kitchen capacity, donation partners) |
 
 ### Risk Assessments
@@ -240,7 +240,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 
 | Step | Caller | Sends | Gets back |
 | --- | --- | --- | --- |
-| `scan-inputs` | Risk Scanner + Forecast | – | Lots with `ai_status = IDLE` (sorted by expiry), plus sales history and 7/30-day average daily sales for those lots' products |
+| `scan-inputs` | Risk Scanner + Forecast | `history_days` (0–60, default 28) | `reference_date`, lots with `ai_status = IDLE` (sorted by expiry), their `products` (incl. `shelf_life_days`), `product_daily` for the last `history_days` up to yesterday, and `daily_context` from `reference_date` to `reference_date + 7`, extended to the latest lot expiry if later (see [Forecast Data](#forecast-data)) |
 | `risk-assessments` | Risk Scanner | One row per lot: days to expiry, forecast demand, predicted leftover, risk score (0–100), risk level. `run_id` is optional | `run_id` and the `assessment_id` of each lot |
 | `optimize-inputs` | Optimizer | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `MEDIUM`/`HIGH`/`CRITICAL`, product rules, active recipes with ingredients, kitchen capacity, active donation partners, and `ingredient_stock` (usable, unexpired stock of every recipe ingredient, earliest expiry first) |
 | `optimization-decisions` (POST) | Optimizer | One or more decisions per assessment, with all numbers | `decision_id` of each decision |
@@ -444,6 +444,51 @@ server/
 └── requirements.txt
 ```
 
+## Forecast Data
+
+Two tables feed the forecast. In the training CSV, join them on `product_daily.sale_date = daily_context.context_date`.
+
+| Use | Where | What |
+| --- | --- | --- |
+| **Training** (offline) | CSV in `AI/data/`, re-export with `python -m scripts.export_training_data` | All of `product_daily` up to yesterday, all of `daily_context`, `products`, a joined `training_dataset.csv`, and a data dictionary |
+| **Prediction** (each scan) | `GET /ai/scan-inputs?history_days=28` | IDLE lots, their products, the last `history_days` of `product_daily` (up to yesterday), and `daily_context` for today to today + 7 (extended to the latest lot expiry if later). Past days' factors come from `AI/data/daily_context.csv` |
+
+Both use the same columns, so features must be computed the same way in both places. Today's `product_daily`
+row is never sent: it is a whole-day summary known only after closing, and today's sales are what the model
+predicts. Today's stock on the shelf is in `inventory_lots`. Use `history_days=0` if the model does not use
+recent sales.
+
+**`product_daily`** (one row per product per day, 12 Jul – 15 Oct 2026)
+
+| Column | Meaning |
+| --- | --- |
+| `opening_qty`, `received_qty` | Stock on the shelf at 08:00, and stock received that day |
+| `sold_qty` = `sold_full_price_qty` + `markdown_sold_qty` | Units sold at full price and at a discount |
+| `waste_qty` | Units thrown away (expired or damaged) |
+| `closing_qty` | Stock at 22:00 = opening + received − sold − waste (enforced by a CHECK) |
+| `is_stockout`, `stockout_hour` | The shelf ran empty before closing; that day's sales are censored (below real demand) |
+| `markdown_pct`, `avg_selling_price` | Highest discount of the day, and the weighted average price |
+| `latent_demand` | Real demand before the stock limit. For evaluating models only; never use it as a feature |
+
+**`daily_context`** (one row per day, 12 Jul – 25 Oct 2026)
+
+| Column | Source |
+| --- | --- |
+| `dow`, `is_weekend` | Calendar |
+| `is_public_holiday`, `holiday_name`, `is_long_weekend_day` | Cabinet holiday announcements, including the Bangkok flood holidays on 28–29 Sep 2026 |
+| `is_pension_day`, `days_since_any_payday` | Comptroller General's Department 2026 pay calendar (civil servant rounds 1 and 2, pensions) |
+| `is_private_payday` | Assumption: last working day of the month |
+| `rain_mm`, `rain_mm_16_20`, `temp_max_c`, `temp_min_c` | Open-Meteo at 13.75, 100.50 (Bangkok): observed up to 15 Oct, forecast from 16 Oct |
+
+How the data was made: weather, holidays and paydays are real. Sales are simulated hour by hour from those factors
+(day of week, discount effect and day-to-day variation measured from the original `sales_history`), with supplier
+delivery days, case packs and a full-shelf rule, so stockouts and waste happen for realistic reasons. Stock on 15 Oct
+matches `inventory_lots` exactly. The old `sales_history` table was removed: `product_daily` holds the same
+numbers. The view `daily_sales_velocity` (7/30-day average sales, used only by `demo_seed`) reads `product_daily`.
+
+**Demo day:** the data ends on 15 Oct 2026, so run demos with `DEMO_DATE=2026-10-16` and
+`python -m scripts.demo reset-seed --date 2026-10-16`.
+
 ## Demo Data
 
 Scripts to reset the database and load the demo tasks, so a demo can be rehearsed any number of times.
@@ -457,12 +502,13 @@ python -m scripts.demo reset                         # reset only
 python -m scripts.demo seed                          # load demo tasks (after a reset)
 python -m scripts.demo reset-seed --date 2026-10-20  # prepare a specific demo day
 python -m scripts.demo snapshot                      # after loading new mock data: save current lots as the baseline
+python -m scripts.export_training_data               # export training CSVs for the AI team to ../AI/data
 ```
 
 | Command | What it does |
 |---|---|
 | `reset` | Deletes **all** tasks, decisions, and risk assessments; deletes lots that are not in the baseline (markdown splits, kitchen output, the donation lot); restores the baseline lots (quantity, price, `ai_status = IDLE`, dates shifted to the demo day); releases every kitchen booking; restarts lot numbering after the baseline |
-| `seed` | Creates 9 tasks for STF-002/003/004 from real sales velocity: markdown, kitchen, one completed markdown, and one donation to `P-DON-01` on its next pickup day. Due times are fixed clock times on the demo day (15:30–19:00) |
+| `seed` | Creates 8 tasks for STF-002/003/004 from real sales velocity: markdown, kitchen, one completed markdown, and one donation to `P-DON-01` on its next pickup day. Due times are fixed clock times on the demo day (15:30–19:00) |
 | `snapshot` | Replaces the baseline with every lot currently in `inventory_lots` |
 
 The same functions can be called from the SQL Editor: `select demo_reset(); select demo_seed();`
