@@ -3,3 +3,6 @@ __pycache__/
 # AWS Lambda build output
 build/
 .aws-sam/
+
+# simulate.py output (copy kept in AI/data/mock_v3)
+scripts/forecast_data/data/*.csv

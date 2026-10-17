@@ -75,21 +75,47 @@ class DailyContextRow(_Row):
     temp_min_c: float
 
 
+class ShelfForecastRow(_Row):
+    discount_pct: float = Field(..., description="ส่วนลด (%) 0 = ราคาปัจจุบัน")
+    price: float = Field(..., description="ราคาหลังลด (บาท/หน่วย)")
+    expected_qty: float = Field(..., description="ล็อตนี้คาดว่าขายได้ก่อนหมดอายุ ถ้าลดตั้งแต่เปิดร้านวันนี้จนหมดอายุ")
+    low_qty: float = Field(..., description="ช่วงล่าง (10%)")
+    high_qty: float = Field(..., description="ช่วงบน (90%)")
+    applies_from: date
+    applies_until: date
+    lost_sales_other_lots: float = Field(..., description="ล็อตอื่นของสินค้าเดียวกันขายได้น้อยลงเท่าไร")
+
+
+class RecipeDemandRow(_Row):
+    recipe_id: str
+    output_product_id: str
+    window_from: date
+    window_to: date = Field(..., description="ช่วงอายุเมนู")
+    gross_demand: float = Field(..., description="ความต้องการเมนูทั้งช่วง")
+    current_stock: int = Field(..., description="ของเมนูที่มีบนชั้นแล้ว")
+    menu_qty: float = Field(..., description="ควรผลิตเพิ่ม")
+    low_qty: float
+    high_qty: float
+    expected_revenue: float = Field(..., description="รายได้ที่คาด (บาท)")
+
+
 class AtRiskLot(_Row):
     assessment_id: UUID
     run_id: UUID
     lot_id: str
     assessed_at: datetime
     days_to_expiry: int
+    sellable_hours: Optional[int] = Field(None, description="ชั่วโมงร้านเปิดที่เหลือจนสิ้นวันหมดอายุ")
     quantity_at_assessment: int
     forecast_daily_demand: float
     predicted_units_sold_before_expiry: float
     predicted_leftover_units: float
     sell_through_probability: Optional[float] = None
     risk_score: float
-    risk_level: str = Field(..., description="MEDIUM / HIGH / CRITICAL")
+    risk_level: str = Field(..., description="HIGH / CRITICAL")
     model_version: Optional[str] = None
     lot: Optional[InventoryLotRow] = Field(None, description="ข้อมูล lot ปัจจุบันทั้งแถว")
+    shelf: list[ShelfForecastRow] = Field(default_factory=list, description="ลด x% แล้วขายได้เท่าไร เรียงตามส่วนลด ([] = หมดอายุแล้ว หรือห้ามลดราคา)")
 
 
 class ProductRule(_Row):
@@ -214,7 +240,8 @@ class IngredientStock(BaseModel):
 class OptimizeInputsResponse(BaseModel):
     reference_date: date = Field(..., description="วันที่ระบบถือว่าเป็นวันนี้")
     run_id: Optional[UUID] = Field(None, description="รอบสแกนที่ใช้ null = ยังไม่เคยสแกน")
-    at_risk_lots: list[AtRiskLot] = Field(..., description="lot ที่ risk MEDIUM ขึ้นไป เรียงจาก risk_score มากไปน้อย")
+    at_risk_lots: list[AtRiskLot] = Field(..., description="lot ที่ risk HIGH / CRITICAL เรียงจาก risk_score มากไปน้อย")
+    recipe_demand: list[RecipeDemandRow] = Field(default_factory=list, description="ความต้องการเมนูครัวต่อสูตรของรอบสแกน เรียงตามรายได้ที่คาด")
     products: list[ProductRule] = Field(..., description="กฎของสินค้าทุกตัว")
     recipes: list[RecipeWithIngredients] = Field(..., description="สูตรที่ active พร้อมวัตถุดิบ")
     kitchen_capacity: list[KitchenCapacityDay] = Field(..., description="ความจุครัวตั้งแต่วันนี้ถึง +days_ahead")

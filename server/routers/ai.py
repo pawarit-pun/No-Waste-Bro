@@ -23,7 +23,7 @@ CONTEXT_DAYS_AHEAD = 7  # daily_context ใน scan-inputs: วันนี้�
 **ขั้นที่ 1 ของ AI Pipeline** ดึงข้อมูลที่ใช้ประเมินความเสี่ยงและพยากรณ์ยอดขาย **เฉพาะ lot ที่ยังไม่เคยถูกสแกน**
 
 route นี้เป็น **input ตอนทำนาย (inference)** เท่านั้น ข้อมูลสำหรับเทรนโมเดลอยู่ในไฟล์ CSV
-(`AI/data/` หรือ export ใหม่ด้วย `python -m scripts.export_training_data`) ซึ่งมีคอลัมน์ชุดเดียวกัน
+(`AI/risk_forecaster/data/` หรือ export ใหม่ด้วย `python -m scripts.export_training_data`) ซึ่งมีคอลัมน์ชุดเดียวกัน
 
 | ส่วน | 1 แถว = | ใช้ทำอะไร |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ route นี้เป็น **input ตอนทำนาย (inference)** เ�
 | `inventory_lots` | 1 lot | lot ที่ `ai_status = IDLE` (คงเหลือ วันหมดอายุ ราคา ตำแหน่ง) |
 | `products` | 1 สินค้า | หมวด ราคาปกติ ราคาต่ำสุด `shelf_life_days` ของสินค้าใน lot ข้างบน |
 | `product_daily` | สินค้า × วัน | ยอดขายย้อนหลัง `history_days` วัน **ถึงเมื่อวาน** (ยอดเปิด/รับเข้า/ขายราคาเต็ม/ราคาลด/ทิ้ง/คงเหลือ, `is_stockout`) ใช้คำนวณ feature อย่างยอดเฉลี่ย 7 วัน ส่ง `history_days=0` ถ้าโมเดลไม่ใช้ |
-| `daily_context` | 1 วัน | ปัจจัยรายวัน (วันหยุด วันเงินเดือนออก ฝน อุณหภูมิ) **วันนี้ถึง 7 วันข้างหน้า** ถ้ามี lot หมดอายุช้ากว่านั้นจะยืดถึงวันหมดอายุล่าสุด (อากาศ = ค่าพยากรณ์) ปัจจัยของวันในอดีตดูจาก `AI/data/daily_context.csv` |
+| `daily_context` | 1 วัน | ปัจจัยรายวัน (วันหยุด วันเงินเดือนออก ฝน อุณหภูมิ) **วันนี้ถึง 7 วันข้างหน้า** ถ้ามี lot หมดอายุช้ากว่านั้นจะยืดถึงวันหมดอายุล่าสุด (อากาศ = ค่าพยากรณ์) ปัจจัยของวันในอดีตดูจาก `AI/risk_forecaster/data/mock_v3/daily_context.csv` |
 
 - **ไม่มี `product_daily` ของวันนี้** เพราะเป็นสรุปทั้งวัน (รู้ตอนปิดร้าน) และยอดขายวันนี้คือสิ่งที่โมเดลต้องทำนาย ของที่อยู่บนชั้นตอนนี้ดูจาก `inventory_lots`
 - วันที่ `is_stockout = true` ยอดขายถูกตัด (censored) ต่ำกว่า demand จริง ควรจัดการก่อนเทรน
@@ -97,7 +97,7 @@ def get_scan_inputs(
     }
 
 
-AT_RISK_LEVELS = ["MEDIUM", "HIGH", "CRITICAL"]
+AT_RISK_LEVELS = ["HIGH", "CRITICAL"]   # LOW / MEDIUM ไม่ส่งต่อ (Risk Scanner คืนเป็น IDLE ให้สแกนใหม่พรุ่งนี้)
 
 
 @router.get(
@@ -110,7 +110,8 @@ AT_RISK_LEVELS = ["MEDIUM", "HIGH", "CRITICAL"]
 
 | ส่วน | ใช้ตอบคำถาม |
 | --- | --- |
-| `at_risk_lots` | ต้องจัดการ lot ไหนบ้าง (เฉพาะ risk MEDIUM / HIGH / CRITICAL ของ run นั้น พร้อมข้อมูล lot ใน `lot`) |
+| `at_risk_lots` | ต้องจัดการ lot ไหนบ้าง (เฉพาะ risk HIGH / CRITICAL ของ run นั้น พร้อมข้อมูล lot ใน `lot`) และ `shelf` = ถ้าลด x% ตั้งแต่เปิดร้านวันนี้จนหมดอายุจะขายได้เท่าไร (expected / low / high, ยอดที่ล็อตอื่นเสียไป) |
+| `recipe_demand` | เมนูครัวแต่ละสูตรควรผลิตเพิ่มเท่าไร (หักของเมนูบนชั้นแล้ว) เรียงตามรายได้ที่คาด |
 | `products` | ลดราคาได้ถึงเท่าไหร่ (`min_allowed_price`), ส่งครัว / บริจาคได้ไหม (`allow_*`), ขนาดบรรจุสำหรับแปลงหน่วย |
 | `recipes` | lot นี้ทำเมนูอะไรได้ ใช้วัตถุดิบเท่าไหร่ต่อ batch ใช้เวลาเท่าไหร่ ครัวไหนทำ |
 | `kitchen_capacity` | ครัวยังว่างกี่ชั่วโมงในแต่ละวัน |
@@ -118,7 +119,8 @@ AT_RISK_LEVELS = ["MEDIUM", "HIGH", "CRITICAL"]
 | `ingredient_stock` | **วัตถุดิบของทุกสูตรเหลือเท่าไหร่** (เฉพาะ lot ที่ยังไม่หมดอายุ เรียงหมดอายุก่อน = ลำดับที่ระบบจะตัดจริงตอน complete) |
 
 - **งานครัวที่ใช้วัตถุดิบเดียวกันหลายงาน:** Optimizer ต้องรวมความต้องการเองแล้วเทียบกับ `ingredient_stock` (วัตถุดิบต่อ batch = `required_quantity` ในหน่วย G/ML เทียบกับ `total_content`)
-- ไม่ส่ง `run_id` = ใช้รอบสแกนล่าสุด ถ้ายังไม่เคยสแกนหรือ `run_id` ไม่มีอยู่จริง `at_risk_lots` จะเป็น `[]`
+- ไม่ส่ง `run_id` = ใช้รอบสแกนล่าสุด ถ้ายังไม่เคยสแกนหรือ `run_id` ไม่มีอยู่จริง `at_risk_lots` และ `recipe_demand` จะเป็น `[]`
+- `shelf` ว่าง = ล็อตหมดอายุแล้ว (เหลือแค่บริจาค / อาหารสัตว์ / ปุ๋ย / ทิ้ง) หรือสินค้าห้ามลดราคา
 - เรียกแล้ว server จะสร้างแถวความจุครัวรายวันให้ถ้ายังไม่มี (ไม่แตะชั่วโมงที่จองไว้)
 """,
 )
@@ -135,14 +137,20 @@ def get_optimize_inputs(
                     .execute())
         run_id = latest.data[0]["run_id"] if latest.data else None
 
-    at_risk_lots = []
+    at_risk_lots, recipe_demand = [], []
     if run_id is not None:
         at_risk_lots = (supabase.table("lot_risk_assessments")
-                          .select("*, lot:inventory_lots(*)")
+                          .select("*, lot:inventory_lots(*), shelf:lot_shelf_forecasts(*)")
                           .eq("run_id", str(run_id))
                           .in_("risk_level", AT_RISK_LEVELS)
                           .order("risk_score", desc=True)
+                          .order("discount_pct", foreign_table="shelf")
                           .execute()).data
+        recipe_demand = (supabase.table("recipe_demand_forecasts")
+                           .select("*")
+                           .eq("run_id", str(run_id))
+                           .order("expected_revenue", desc=True)
+                           .execute()).data
 
     products = supabase.table("products").select(
         "product_id, name, category, unit_of_measure, net_content_value, net_content_unit, "
@@ -175,6 +183,7 @@ def get_optimize_inputs(
         "reference_date": start.isoformat(),
         "run_id": str(run_id) if run_id else None,
         "at_risk_lots": at_risk_lots,
+        "recipe_demand": recipe_demand,
         "products": products,
         "recipes": recipes,
         "kitchen_capacity": kitchen_capacity,

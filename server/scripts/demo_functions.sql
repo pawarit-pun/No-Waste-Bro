@@ -39,6 +39,7 @@ create or replace function demo_reset(p_today date default (now() at time zone '
 returns jsonb language plpgsql set search_path = public as $$
 declare
   v_tasks int; v_decisions int; v_assessments int; v_lots_deleted int; v_lots_restored int; v_kitchen int;
+  v_runs int;
 begin
   if not exists (select 1 from demo_lot_baseline) then
     raise exception 'demo_lot_baseline is empty, run demo_snapshot() first';
@@ -47,6 +48,9 @@ begin
   delete from ai_recommended_tasks where true;           get diagnostics v_tasks = row_count;
   delete from optimization_decisions where true;         get diagnostics v_decisions = row_count;
   delete from lot_risk_assessments where true;           get diagnostics v_assessments = row_count;
+  -- ผลพยากรณ์ของรอบสแกน (lot_shelf_forecasts ลบตาม lot_risk_assessments อัตโนมัติ)
+  delete from recipe_demand_forecasts where true;
+  delete from forecast_runs where true;                  get diagnostics v_runs = row_count;
 
   delete from inventory_lots l
    where not exists (select 1 from demo_lot_baseline b where b.lot_id = l.lot_id);
@@ -74,7 +78,7 @@ begin
 
   return jsonb_build_object(
     'demo_date', p_today, 'tasks_deleted', v_tasks, 'decisions_deleted', v_decisions,
-    'assessments_deleted', v_assessments, 'lots_deleted', v_lots_deleted,
+    'assessments_deleted', v_assessments, 'forecast_runs_deleted', v_runs, 'lots_deleted', v_lots_deleted,
     'lots_restored', v_lots_restored, 'kitchen_days_released', v_kitchen);
 end $$;
 

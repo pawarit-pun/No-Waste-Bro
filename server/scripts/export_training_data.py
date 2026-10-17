@@ -1,8 +1,8 @@
 """Export ข้อมูลสำหรับเทรน Risk Scanner + Forecast เป็น CSV ส่งให้ทีม AI
 
 ใช้งาน (รันในโฟลเดอร์ server):
-    python -m scripts.export_training_data                                  # ข้อมูลถึงเมื่อวาน (ตาม DEMO_DATE) -> ../AI/data
-    python -m scripts.export_training_data --until 2026-10-15 --out ../AI/data
+    python -m scripts.export_training_data                                  # ข้อมูลถึงเมื่อวาน (ตาม DEMO_DATE) -> ../AI/risk_forecaster/data
+    python -m scripts.export_training_data --until 2026-10-15 --out ../AI/risk_forecaster/data
 
 ไฟล์ที่ได้:
     product_daily.csv     สินค้า × วัน (ถึง --until)
@@ -71,7 +71,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Export ข้อมูลเทรน Forecast เป็น CSV")
     parser.add_argument("--until", type=date.fromisoformat, default=None,
                         help="วันสุดท้ายของ product_daily (YYYY-MM-DD) ค่าเริ่มต้น = เมื่อวาน (ตาม DEMO_DATE)")
-    parser.add_argument("--out", type=Path, default=Path("../AI/data"), help="โฟลเดอร์ปลายทาง (ค่าเริ่มต้น ../AI/data)")
+    parser.add_argument("--out", type=Path, default=Path("../AI/risk_forecaster/data"), help="โฟลเดอร์ปลายทาง (ค่าเริ่มต้น ../AI/risk_forecaster/data)")
     args = parser.parse_args()
     until = args.until or (today_bkk() - timedelta(days=1))
     args.out.mkdir(parents=True, exist_ok=True)
