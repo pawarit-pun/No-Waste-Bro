@@ -34,6 +34,11 @@ def wape(pred, actual):
     return float(np.abs(pred - actual).sum() / max(actual.sum(), 1e-9) * 100)
 
 
+def bias(pred, actual):
+    pred, actual = np.asarray(pred, float), np.asarray(actual, float)
+    return float((pred.sum() - actual.sum()) / max(actual.sum(), 1e-9) * 100)
+
+
 def split_training_csv(df):
     """training_dataset.csv (join แล้ว) -> product_daily, daily_context, products"""
     df = df.copy()
@@ -145,8 +150,17 @@ class Forecaster:
                           "lgbm": round(wape(test.pred_lgbm, test[truth_col]), 2)},
             "test_wape_by_horizon": {int(h): round(wape(g[pick], g[truth_col]), 2) for h, g in test.groupby("horizon")},
             "test_wape_by_category": {c: round(wape(g[pick], g[truth_col]), 2) for c, g in test.groupby("category")},
+            "test_wape_by_product": {p: round(wape(g[pick], g[truth_col]), 2) for p, g in test.groupby("product_id")},
+            # FVA: โมเดลที่เลือกดีกว่าตัวเทียบ same-dow กี่ % (Gilliland, Forecast Value Added)
+            "test_fva_pct": round((1 - wape(test[pick], test[truth_col])
+                                   / max(wape(test.pred_same_dow, test[truth_col]), 1e-9)) * 100, 2),
+            # bias = (ทายรวม - จริงรวม) / จริงรวม x 100: บวก = ทายเกิน (risk_score จะต่ำกว่าจริง), ลบ = ทายขาด
+            "test_bias_pct": round(bias(test[pick], test[truth_col]), 2),
+            "test_bias_by_category": {c: round(bias(g[pick], g[truth_col]), 2) for c, g in test.groupby("category")},
             "phi_by_days": {int(k): round(v, 3) for k, v in self.phi.items()},
         }
+        # coverage: ยอดจริงตกในช่วง 10-90% ของ Negative Binomial กี่ % (ควรใกล้ 80) ของยอดรวม 1 / 3 / 7 วัน
+        self.metrics["test_coverage_80"] = self._coverage(test, pick, truth_col)
 
         # 3) ใช้งานจริง: เทรนด้วยข้อมูลทั้งหมด
         self.model = self.model_until(rows, last + timedelta(days=1))
@@ -171,6 +185,23 @@ class Forecaster:
             # ไม่ให้ลดลงเมื่อรวมหลายวันขึ้น (หน้าต่างยาวมีตัวอย่างน้อย ค่าจะแกว่ง) เลือกค่าที่ระวังกว่า
             phi[k] = float(max(1.05, phi.get(k - 1, 0), ((g.y - g.p) ** 2).sum() / g.p.sum()))
         return phi or {1: 1.5}
+
+    def _coverage(self, test, pick, truth_col, days=(1, 3, 7)):
+        """สัดส่วนที่ยอดจริงรวม k วันแรกอยู่ในช่วง [quantile 10%, quantile 90%] ของ NB(mean = ที่ทาย, phi_k)
+        ถ้าต่ำกว่า 80 มาก = ช่วงแคบเกินไป (มั่นใจเกินจริง), สูงกว่ามาก = ช่วงกว้างเกินไป (Gneiting et al. 2007)"""
+        from risk_scanner import nb
+        out = {}
+        test = test.sort_values(["origin", "product_id", "horizon"])
+        for k in days:
+            part = test[test.horizon <= k]
+            g = part.groupby(["origin", "product_id"]).agg(y=(truth_col, "sum"), p=(pick, "sum"), n=(truth_col, "size"))
+            g = g[g.n == k]
+            if g.empty:
+                continue
+            phi = self.phi_for(k)
+            inside = [nb.quantile(0.10, p, phi) <= y <= nb.quantile(0.90, p, phi) for y, p in zip(g.y, g.p)]
+            out[int(k)] = {"coverage_pct": round(float(np.mean(inside)) * 100, 1), "n": int(len(g))}
+        return out
 
     def phi_for(self, days):
         days = max(1, int(days))

@@ -29,6 +29,12 @@ def main():
     print("validation WAPE:", m["validation_wape"], "-> parameter", m["params"], "| ใช้", m["chosen"])
     print("test WAPE:", m["test_wape"])
     print("test WAPE แยกหมวด:", json.dumps(m["test_wape_by_category"], ensure_ascii=False))
+    print("test WAPE แยกสินค้า:", json.dumps(m["test_wape_by_product"], ensure_ascii=False))
+    print(f"FVA (ดีกว่า same-dow): {m['test_fva_pct']}%")
+    print(f"bias: {m['test_bias_pct']}% (บวก = ทายเกิน, ลบ = ทายขาด) แยกหมวด:",
+          json.dumps(m["test_bias_by_category"], ensure_ascii=False))
+    print("coverage ช่วง 10-90% (ควรใกล้ 80%):",
+          ", ".join(f"{k} วัน {v['coverage_pct']}%" for k, v in m["test_coverage_80"].items()))
     print("phi ตามจำนวนวัน:", m["phi_by_days"])
     print("lift ของการลดราคา (ลดทั้งวัน):", m["markdown_lift"])
     top = list(fc.feature_importance.items())[:8]

@@ -13,6 +13,10 @@ v2 (ให้ข้อมูลพอเทรน Forecaster):
 - ตัดผลน้ำท่วมฝั่ง demand ออก (ไม่มีคอลัมน์ให้โมเดลเห็น) คงไว้แค่ฝั่ง supply ที่เห็นได้จาก received_qty / is_stockout
 - lot demo มีครบทุกระดับความเสี่ยง รวม lot หมดอายุที่ยังค้างชั้น
 
+v3.1:
+- RTE รอบผลิตสุดท้ายผลิตพอถึง 20:00 (RTE_LAST_COVER_UNTIL) ของเสีย RTE 20.3% -> 11.3% ใกล้ deli ของ FMI (8.7%)
+- ล็อต demo 004 / 007 / 009 มีของเหลือช่วงกลาง ให้ score กระจาย ไม่ใช่ 0 หรือ 40+ อย่างเดียว
+
 รัน: python3 simulate.py  -> data/daily_context.csv, data/product_daily.csv, data/inventory_lots_demo.csv
 """
 import csv
@@ -191,11 +195,12 @@ PRODUCTS = [
 TRACKED = [
     ("SEA-001", "LOT-000006", date(2026, 10, 14), 30, 20),     # หมดอายุวันนี้ ของเหลือเยอะ (HIGH/CRITICAL)
     ("DAI-002", "LOT-000003", date(2026, 9, 19), 200, 45),     # (LOW)
-    ("MEA-001", "LOT-000004", date(2026, 10, 13), 60, 18),     # (LOW)
-    ("PRO-001", "LOT-000007", date(2026, 10, 12), 100, 32),    # (LOW)
+    # v3.1: 004 / 007 / 009 เพิ่มของคงเหลือให้ score อยู่ช่วงกลาง (เดิมขายหมด score 0 ทุกตัว)
+    ("MEA-001", "LOT-000004", date(2026, 10, 13), 80, 58),     # เหลือราว 1 ใน 4 (score ~25)
+    ("PRO-001", "LOT-000007", date(2026, 10, 12), 100, 50),    # เหลือราว 1 ใน 5 (score ~15-20)
     ("MEA-002", "LOT-000005", date(2026, 10, 11), 40, 24),     # (MEDIUM)
     ("BAK-002", "LOT-000010", date(2026, 10, 14), 26, 22),     # (MEDIUM)
-    ("BAK-001", "LOT-000009", date(2026, 10, 13), 100, 42),    # (LOW)
+    ("BAK-001", "LOT-000009", date(2026, 10, 13), 100, 70),    # เหลือราว 1 ใน 3 (score ~30-35)
     ("PRO-002", "LOT-000008", date(2026, 10, 14), 120, 90),    # (HIGH)
     ("DAI-001", "LOT-000001", date(2026, 10, 9), 220, 150),    # หมดอายุก่อน ได้ demand ก่อนแบบ FIFO (MEDIUM)
     ("DAI-001", "LOT-000002", date(2026, 10, 15), 180, 172),   # (LOW)
@@ -243,6 +248,11 @@ RTE_CLEARANCE_STAGES = ((20, 50, 0.5), (18, 30, 0.8), (16, 20, 1.2))
 OTHER_CLEARANCE = (18, 30, 0.6)    # หมวดอื่น: ลด 30% หลัง 18:00 ถ้าของที่หมดอายุวันนี้ยังเหลือเยอะ
 # ครัวผลิต RTE หลายรอบต่อวัน: แต่ละรอบผลิตพอถึงรอบถัดไป ตามยอดที่ขายไปจริง (ลดทั้งของขาดและของทิ้ง)
 RTE_TOPUP_HOURS = (11, 14, 17)
+# v3.1: รอบสุดท้าย (17:00) ผลิตพอถึง 20:00 เท่านั้น หลังจากนั้นขายของที่เหลือ + ลดราคาเคลียร์ (ไม่ผลิตเพิ่มช่วงก่อนปิดร้าน)
+# เดิมผลิตพอถึงปิดร้าน -> safety stock ของรอบสุดท้ายกลายเป็นของทิ้งเกือบทุกวัน (ของเสีย RTE 20.3% vs deli 8.7% ของ FMI)
+# ผล (seed เดิม): ของเสีย RTE 20.3% -> 11.3%, ความต้องการที่ขายไม่ได้เพราะของหมด 2.8% -> 5.8% (ส่วนใหญ่หลัง 19:00)
+# สินค้าขายวันละ 8-16 ชิ้นอายุ 0 วัน: ลดของทิ้งต่ำกว่านี้ต้องยอมให้ของหมดชั้นเพิ่มมาก (newsvendor trade-off)
+RTE_LAST_COVER_UNTIL = 20
 # safety stock (z x SD ของ NB) ปรับให้ของหมดชั้นราว 5-10% ใกล้ค่าเฉลี่ยค้าปลีกราว 8% (Gruen & Corsten)
 # RTE ขายวันละ 9-16 ชิ้น อายุ 0-1 วัน: ลดของขาดได้เท่าไรของทิ้งก็เพิ่มเท่านั้น เลือกจุดกลาง (หมดชั้น ~20%, ทิ้ง ~20%)
 IN_HOUSE_Z = {"READY_TO_EAT": 1.5, "BAKERY": 0.5}
@@ -441,7 +451,7 @@ def simulate_product(p):
             if rte and free_period and h in RTE_TOPUP_HOURS and p.supply == "IN_HOUSE":
                 # ผลิตพอถึงรอบถัดไป (รอบสุดท้าย: ถึงปิดร้าน)
                 later = [x for x in RTE_TOPUP_HOURS if x > h]
-                end = OPEN_HOURS.index(later[0]) if later else len(OPEN_HOURS)
+                end = OPEN_HOURS.index(later[0]) if later else OPEN_HOURS.index(RTE_LAST_COVER_UNTIL)
                 window = mu * weights[i:end].sum() / weights.sum()
                 stock = sum(l.qty for l in lots if not l.tracked)
                 z = IN_HOUSE_Z[p.category]

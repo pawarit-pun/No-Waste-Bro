@@ -27,8 +27,9 @@ EXPECTED_DAILY_LIFT = {20: 1.12, 30: 1.20, 50: 1.35}
 # เป้าหมาย (min, max) % ต่อหมวด: ของทิ้งจาก shrink รายแผนกของ FMI (ตั้งต่ำกว่าเล็กน้อยเพราะ shrink รวมการขโมย)
 # ของหมดชั้นจากค่าเฉลี่ยค้าปลีกราว 8% RTE ยกเว้น (ขายวันละไม่กี่ชิ้น อายุ 0-1 วัน ลดของขาดได้เท่าไรของทิ้งก็เพิ่มเท่านั้น)
 WASTE_TARGET = {"BAKERY": (4, 9), "SEAFOOD": (4, 9), "MEAT": (2, 6), "PRODUCE": (2, 6), "DAIRY": (0.5, 3),
-                "READY_TO_EAT": (0, 25)}
-STOCKOUT_TARGET = {c: (2, 10) for c in CATEGORY.values()} | {"READY_TO_EAT": (0, 25)}
+                "READY_TO_EAT": (4, 12)}   # v3.1: RTE เทียบ deli ของ FMI 8.7% (เดิมยอม 0-25)
+# RTE ขายวันละไม่กี่ชิ้น อายุ 0 วัน ของหมดชั้นช่วงค่ำเป็นเรื่องปกติ (ส่วนใหญ่หมดหลัง 19:00) จึงยอมให้สูงกว่าหมวดอื่น
+STOCKOUT_TARGET = {c: (2, 10) for c in CATEGORY.values()} | {"READY_TO_EAT": (0, 35)}
 
 
 def load(folder):
@@ -69,10 +70,10 @@ def check_rates(df):
 
 
 def check_markdown_lift(df):
-    """วันลดทั้งวัน (ขายราคาลด >= 50% ของยอด) / ยอดปกติของสินค้าเดียวกันวันเดียวกันในสัปดาห์ (ไม่รวม RTE และวันของหมดชั้น)"""
+    """วันลดทั้งวัน (ขายราคาลด >= 90% ของยอด) / ยอดปกติของสินค้าเดียวกันวันเดียวกันในสัปดาห์ (ไม่รวม RTE และวันของหมดชั้น)"""
     d = df[(df.category != "READY_TO_EAT") & ~df.is_stockout]
     base = d[d.markdown_pct == 0].groupby(["product_id", "dow"]).sold_qty.mean().rename("base")
-    md = d[(d.markdown_pct > 0) & (d.markdown_sold_qty >= 0.5 * d.sold_qty)].join(base, on=["product_id", "dow"])
+    md = d[(d.markdown_pct > 0) & (d.markdown_sold_qty >= 0.9 * d.sold_qty)].join(base, on=["product_id", "dow"])
     est = (md.sold_qty / md.base).groupby(md.markdown_pct).agg(["mean", "count"])
     print("[3] ผลของการลดราคาทั้งวัน (วัดได้ vs ค่าที่ตั้งใน simulator)")
     ok = True
