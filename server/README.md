@@ -199,7 +199,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/v1/ai/scan-inputs?history_days=28` | Prediction input for the Risk Scanner & Forecaster: `reference_date`, lots with `ai_status = IDLE`, their products, the last `history_days` of daily sales (`product_daily`) and daily factors for today + 7 days, extended to the latest expiry if later (`daily_context`) |
-| `GET` | `/api/v1/ai/optimize-inputs?run_id=&days_ahead=1` | Input data for the Optimizer (at-risk lots, product rules, recipes, kitchen capacity, donation partners) |
+| `GET` | `/api/v1/ai/optimize-inputs?run_id=&days_ahead=1` | Input data for the Optimizer (at-risk lots with `shelf` curves, `recipe_demand`, product rules, recipes, kitchen capacity, donation partners, ingredient stock) |
 
 ### Risk Assessments
 
