@@ -75,7 +75,8 @@ def create_decisions(decisions: list[DecisionCreate], optimizer_version: Optiona
             if product["category"] not in partner["accepted_categories"]:
                 _fail(i, f"partner '{d.target_partner_id}' does not accept category {product['category']}")
             days_left = (date.fromisoformat(lot["expiration_date"]) - today).days
-            if days_left < partner["min_days_before_expiry"]:
+            min_days = partner["min_days_before_expiry"]   # null = ไม่มีเงื่อนไข
+            if min_days is not None and days_left < min_days:
                 _fail(i, f"lot expires in {days_left} day(s), partner requires at least "
                          f"{partner['min_days_before_expiry']}")
 
@@ -129,7 +130,7 @@ def list_decisions(run_id: Optional[str], status: Optional[DecisionStatus]) -> d
                            "estimated_prep_time_mins, shelf_life_days")
     partners = fetch_by_ids("donation_partners", "partner_id", {d.get("target_partner_id") for d in decisions},
                             "partner_id, name, partner_type, pickup_days, pickup_time_start, "
-                            "pickup_time_end, requires_cold_chain, contact_name, contact_phone")
+                            "pickup_time_end, contact_name, contact_phone")
 
     for d in decisions:
         lot = lots.get(d["lot_id"])

@@ -1,0 +1,9 @@
+# Libraries used at runtime on AWS Lambda (installed by scripts/build_lambda.sh)
+# Local development still uses requirements.txt
+fastapi==0.141.1
+pydantic==2.13.5
+pydantic-settings==2.15.0
+supabase==2.31.0
+mangum==0.22.0
+# Time zone data for zoneinfo (Asia/Bangkok), in case the Lambda image has no system tz database
+tzdata

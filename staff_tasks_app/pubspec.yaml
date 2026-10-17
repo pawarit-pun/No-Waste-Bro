@@ -1,5 +1,5 @@
 name: staff_tasks_app
-description: "A new Flutter project."
+description: "No-Waste-Bro staff mobile app (task queue for store staff)."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -37,6 +37,13 @@ dependencies:
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
 
+  # State management / API / Realtime / storage / Thai date format
+  flutter_riverpod: ^3.4.3
+  dio: ^5.11.1
+  supabase_flutter: ^2.18.3
+  shared_preferences: ^2.5.6
+  intl: ^0.20.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -58,6 +65,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
