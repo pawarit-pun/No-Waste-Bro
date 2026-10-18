@@ -103,14 +103,14 @@ class Facts:
 
     def to_prompt(self) -> str:
         """FACTS block for the LLM. Missing values say NO_DATA so the model does not guess."""
-        days = self.days_to_expiry if self.days_to_expiry is not None else NO_DATA
+        days = f" (เหลือ {self.days_to_expiry} วัน)" if self.days_to_expiry is not None else ""
         lines = [
             f"- action_type: {self.action} ({ACTION_TH.get(self.action, self.action)})",
             f"- สินค้า: {self.product_name} ({self.category or NO_DATA}), lot: {self.lot_id}",
             f"- ตำแหน่ง: {self.location or NO_DATA}",
             f"- จำนวนคงเหลือใน lot: {self.current_qty or NO_DATA} {self.unit}, "
             f"จำนวนที่ต้องทำในงานนี้: {self.qty} {self.unit}",
-            f"- หมดอายุ: {self.expiry or NO_DATA} (เหลือ {days} วัน), "
+            f"- หมดอายุ: {self.expiry or NO_DATA}{days}, "
             f"risk_level: {self.risk_level or NO_DATA}, risk_score: {self.risk_score or NO_DATA}",
         ]
         if self.leftover:
