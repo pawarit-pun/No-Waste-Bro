@@ -25,3 +25,15 @@ class LotAIStatus(str, Enum):
 class DecisionStatus(str, Enum):
     PENDING = "PENDING"            # ยังไม่มี task
     TASK_CREATED = "TASK_CREATED"  # LLM สร้าง task แล้ว
+
+
+class StaffRole(str, Enum):
+    MANAGER = "MANAGER"  # เข้า web dashboard
+    STAFF = "STAFF"      # เข้า staff mobile app
+
+
+class TaskStatus(str, Enum):
+    PENDING = "PENDING"            # รอ staff เริ่มทำ
+    IN_PROGRESS = "IN_PROGRESS"    # staff กำลังทำ
+    COMPLETED = "COMPLETED"
+    REJECTED = "REJECTED"

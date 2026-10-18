@@ -35,7 +35,7 @@ router = APIRouter(prefix="/optimization-decisions", tags=["Optimization Decisio
 - ผลรวม `action_quantity` ของ lot เดียวกันในคำขอต้องไม่เกิน `current_quantity`
 - **MARKDOWN:** ไม่ส่ง `new_recommended_price` = server คำนวณให้ ราคาใหม่ต้องไม่ต่ำกว่า `min_allowed_price`
 - **KITCHEN_REPURPOSE:** สูตรต้อง active และสินค้าของ lot ต้องเป็นวัตถุดิบของสูตรนั้น
-- **DONATE:** partner ต้อง active, รับ category ของสินค้า และ lot ต้องเหลืออายุ ≥ `min_days_before_expiry`
+- **DONATE:** partner ต้อง active, รับ category ของสินค้า และ lot ต้องเหลืออายุ ≥ `min_days_before_expiry` (ถ้าเป็น null ไม่เช็ค)
 
 1 assessment มีได้หลาย decision (เช่น ลดราคาบางส่วน + ส่งครัวบางส่วน)
 **ยังไม่จองครัวในขั้นนี้** จะจองตอน `POST /tasks`
@@ -64,7 +64,7 @@ def create_optimization_decisions(payload: DecisionBatchCreate):
 | `lot` | จำนวนคงเหลือ, ราคาปัจจุบัน, วันหมดอายุ, **ตำแหน่งชั้นวาง** |
 | `product` | ชื่อสินค้า, ประเภท, หน่วยนับ |
 | `recipe` | ชื่อเมนู, ครัวที่ทำ, ได้กี่ชิ้น (เฉพาะ KITCHEN_REPURPOSE) |
-| `partner` | ชื่อ partner, วัน/เวลารับของ, ต้องแช่เย็นไหม, ผู้ติดต่อ (เฉพาะ DONATE) |
+| `partner` | ชื่อ partner, วัน/เวลารับของ, ผู้ติดต่อ (เฉพาะ DONATE) |
 
 - ไม่ส่ง `run_id` = รอบล่าสุดที่มี decision
 - `status=PENDING` = เฉพาะที่ยังไม่มี task (ใช้ค่านี้ตอนส่งให้ LLM)

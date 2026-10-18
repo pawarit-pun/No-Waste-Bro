@@ -113,20 +113,26 @@ class KitchenCapacityDay(_Row):
 class DonationPartnerRow(_Row):
     partner_id: str
     name: str
-    partner_type: str = Field(..., description="FOOD_BANK / CHARITY / COMMUNITY / TEMPLE / ANIMAL_FEED")
+    partner_type: str = Field(..., description="FOOD_BANK / CHARITY / COMMUNITY / TEMPLE / DONATION / "
+                                                "ANIMAL_FEED / COMPOSTING / ANAEROBIC_DIGESTION / LANDFILL")
     accepted_categories: list[str] = Field(..., description="ประเภทสินค้าที่รับ")
     pickup_days: list[int] = Field(..., description="วันที่มารับ 1 = จันทร์ … 7 = อาทิตย์")
-    pickup_time_start: Optional[str] = None
-    pickup_time_end: Optional[str] = None
-    min_days_before_expiry: int = Field(..., description="สินค้าต้องเหลืออายุอย่างน้อยกี่วัน")
-    max_capacity_kg_per_pickup: Optional[float] = None
-    requires_cold_chain: bool = Field(..., description="ต้องขนส่งแบบแช่เย็นไหม")
+    pickup_time_start: Optional[str] = Field(None, description="เวลาเริ่มรับของ")
+    pickup_time_end: Optional[str] = Field(None, description="เวลาสิ้นสุดรับของ")
+    min_days_before_expiry: Optional[int] = Field(None, description="สินค้าต้องเหลืออายุอย่างน้อยกี่วัน (null = ไม่มีเงื่อนไข)")
+    min_kg_per_pickup: Optional[float] = Field(None, description="น้ำหนักขั้นต่ำต่อรอบที่มารับ (kg)")
+    max_capacity_kg_per_pickup: Optional[float] = Field(None, description="น้ำหนักสูงสุดต่อรอบที่มารับ (kg)")
+    fixed_cost_per_trip: Optional[float] = Field(None, description="ค่าใช้จ่ายคงที่ต่อเที่ยว (บาท)")
+    travel_cost_per_trip: Optional[float] = Field(None, description="ค่าเดินทางต่อเที่ยว (บาท)")
+    handling_fee_per_kg: Optional[float] = Field(None, description="ค่าจัดการต่อ kg (บาท)")
+    buyback_price_per_kg: Optional[float] = Field(None, description="ราคาที่ partner รับซื้อต่อ kg (บาท) 0 = ไม่รับซื้อ")
     is_active: bool
 
 
 class TaskRow(_Row):
     task_id: UUID
     decision_id: Optional[UUID] = Field(None, description="decision ที่เป็นที่มาของ task")
+    assigned_staff_id: Optional[str] = Field(None, description="staff ที่ได้รับมอบหมาย (ระบบเลือกตามหมวดสินค้า) null = ไม่มีใครดูแลหมวดนี้")
     lot_id: Optional[str] = None
     product_id: Optional[str] = None
     assessment_id: Optional[UUID] = None
@@ -144,6 +150,7 @@ class TaskRow(_Row):
     due_by: Optional[datetime] = None
     ai_reasoning: Optional[str] = None
     staff_instructions: Optional[str] = None
+    instruction_steps: Optional[list[dict]] = Field(None, description="ขั้นตอนทำงาน [{title, detail}] (null = ใช้ staff_instructions)")
     created_at: Optional[datetime] = None
 
 
@@ -155,6 +162,25 @@ class ScanInputsResponse(BaseModel):
     average_daily_sales: list[SalesVelocityRow] = Field(..., description="ยอดขายเฉลี่ยต่อวันของสินค้าใน inventory_lots")
 
 
+class IngredientLot(_Row):
+    lot_id: str
+    current_quantity: int
+    expiration_date: date
+    location_aisle: Optional[str] = None
+    location_shelf: Optional[str] = None
+
+
+class IngredientStock(BaseModel):
+    product_id: str
+    name: str
+    net_content_value: Optional[float] = Field(None, description="ขนาดบรรจุต่อหน่วย")
+    net_content_unit: Optional[str] = Field(None, description="G / KG / ML / L")
+    total_units: int = Field(..., description="จำนวนหน่วยที่ใช้ได้รวมทุก lot")
+    total_content: Optional[float] = Field(None, description="ปริมาณรวมในหน่วย content_unit (เทียบกับ required_quantity ของสูตรได้ตรงๆ)")
+    content_unit: Optional[str] = Field(None, description="G หรือ ML")
+    lots: list[IngredientLot] = Field(..., description="lot ที่ใช้ได้ เรียงจากหมดอายุก่อน (ลำดับที่ระบบตัดจริง)")
+
+
 class OptimizeInputsResponse(BaseModel):
     reference_date: date = Field(..., description="วันที่ระบบถือว่าเป็นวันนี้")
     run_id: Optional[UUID] = Field(None, description="รอบสแกนที่ใช้ null = ยังไม่เคยสแกน")
@@ -163,6 +189,7 @@ class OptimizeInputsResponse(BaseModel):
     recipes: list[RecipeWithIngredients] = Field(..., description="สูตรที่ active พร้อมวัตถุดิบ")
     kitchen_capacity: list[KitchenCapacityDay] = Field(..., description="ความจุครัวตั้งแต่วันนี้ถึง +days_ahead")
     donation_partners: list[DonationPartnerRow] = Field(..., description="partner ที่ active")
+    ingredient_stock: list["IngredientStock"] = Field(..., description="สต็อกที่ใช้ได้ของวัตถุดิบทุกสูตร (lot ยังไม่หมดอายุ เรียงหมดอายุก่อน)")
 
 
 class AssessmentRef(BaseModel):
@@ -246,6 +273,7 @@ class DecisionRecipe(_Row):
     recipe_id: str
     name: str
     department_id: Optional[str] = None
+    department_name: Optional[str] = Field(None, description="ชื่อครัว (มีเฉพาะใน GET /tasks/{task_id})")
     output_product_id: str
     output_quantity: float
     estimated_prep_time_mins: Optional[int] = None
@@ -259,7 +287,6 @@ class DecisionPartner(_Row):
     pickup_days: list[int]
     pickup_time_start: Optional[str] = None
     pickup_time_end: Optional[str] = None
-    requires_cold_chain: bool
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
 
@@ -294,3 +321,87 @@ class DecisionWithContext(_Row):
 class DecisionListResponse(BaseModel):
     run_id: Optional[UUID] = Field(None, description="รอบสแกนที่ใช้ null = ยังไม่มี decision")
     decisions: list[DecisionWithContext]
+
+
+# ---------- Staff ----------
+
+class StaffRow(_Row):
+    staff_id: str = Field(..., description="รหัสพนักงาน เช่น STF-002")
+    full_name: str
+    role: str = Field(..., description="MANAGER = เข้า web dashboard, STAFF = เข้า mobile app")
+    responsible_categories: list[str] = Field(..., description="หมวดสินค้าที่รับผิดชอบ (STAFF มี 1–2 หมวด, MANAGER ว่าง)")
+    image_url: Optional[str] = Field(None, description="URL รูปโปรไฟล์ (null = ไม่มีรูป)")
+    is_active: bool
+
+
+# ---------- Task queue ----------
+
+class TaskProduct(_Row):
+    product_id: str
+    name: str
+    category: str
+    unit_of_measure: str
+    image_url: Optional[str] = None
+
+
+class TaskLot(_Row):
+    lot_id: str
+    current_quantity: int
+    expiration_date: date
+    location_aisle: Optional[str] = Field(None, description="ทางเดินที่วางสินค้า")
+    location_shelf: Optional[str] = Field(None, description="ชั้นที่วางสินค้า")
+
+
+class StaffRef(_Row):
+    staff_id: str
+    full_name: str
+    image_url: Optional[str] = None
+
+
+class TaskRecipeRef(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    recipe_id: str
+    name: str
+
+
+class TaskListItem(TaskRow):
+    product: Optional[TaskProduct] = Field(None, description="สินค้าของ task")
+    lot: Optional[TaskLot] = Field(None, description="lot + ตำแหน่งชั้นวาง")
+    assigned_staff: Optional[StaffRef] = Field(None, description="staff ที่ได้รับมอบหมาย")
+    recipe: Optional[TaskRecipeRef] = Field(None, description="ชื่อสูตรที่จะทำ (เฉพาะ KITCHEN_REPURPOSE)")
+
+
+class TaskDetail(TaskListItem):
+    assessment: Optional[DecisionAssessment] = Field(None, description="ผลประเมินความเสี่ยงที่เป็นที่มาของ task")
+    recipe: Optional[DecisionRecipe] = Field(None, description="สูตรที่จะทำ (เฉพาะ KITCHEN_REPURPOSE)")
+    partner: Optional[DecisionPartner] = Field(None, description="partner ที่รับบริจาค (เฉพาะ DONATE)")
+
+
+# ---------- Task actions ----------
+
+class LotChange(BaseModel):
+    lot_id: str
+    product_id: str
+    reason: str = Field(..., description="TASK_LOT = lot ของ task, INGREDIENT = วัตถุดิบอื่นของสูตร")
+    quantity_before: int
+    quantity_after: int
+
+
+class LotCreated(BaseModel):
+    lot_id: str
+    product_id: str
+    reason: str = Field(..., description="MARKDOWN_SPLIT = ส่วนที่แยกมาลดราคา, KITCHEN_OUTPUT = ผลผลิตจากครัว")
+    quantity: int
+    current_selling_price: float
+    expiration_date: date
+    ai_status: str
+
+
+class CompleteEffects(BaseModel):
+    lots_updated: list[LotChange] = Field(..., description="lot ที่ถูกตัดสต็อก (ก่อน → หลัง)")
+    lots_created: list[LotCreated] = Field(..., description="lot ใหม่ที่ถูกสร้าง")
+
+
+class TaskCompleteResponse(BaseModel):
+    task: TaskDetail
+    effects: CompleteEffects
