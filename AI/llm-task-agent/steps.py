@@ -12,14 +12,25 @@ from datetime import datetime
 from facts import ACTION_TH, Facts
 
 STOP_TEXT = "ถ้าพบสินค้าเสียหาย จำนวนไม่ตรง หรือข้อมูลไม่ตรงกับระบบ ให้หยุดและแจ้งหัวหน้า"
+# Safety gates the LLM tended to drop; they are required text in their step's detail
+KITCHEN_GATE = "ถ้าไม่พร้อมให้แจ้งหัวหน้า"
+DONATE_GATE = "ถ้ายังไม่ได้รับการยืนยันให้หยุดและแจ้งหัวหน้า"
+DISCARD_GATE = "ถ้ายังไม่ได้รับอนุมัติห้ามดำเนินการต่อ"
+# Required in ai_reasoning when an alternative scores better than the chosen action
+REVIEW_TEXT = "ให้ผู้จัดการตรวจสอบก่อนอนุมัติ"
 
 
 @dataclass
 class Must:
-    """Data a step's detail must contain. kind 'num' = this number, 'text' = this text."""
+    """Data a step's detail must contain. kind 'num' = this number, 'text' = this text.
+
+    pattern: optional regex (matched against the detail without spaces) that also counts as present,
+    for wording with the same meaning, e.g. "ตรวจสอบตำแหน่งกับระบบ" for "ตรวจสอบกับระบบ".
+    """
     label: str
     value: str
     kind: str = "text"
+    pattern: str | None = None
 
 
 @dataclass
@@ -33,13 +44,20 @@ def _must(label: str, value: str | None, kind: str = "text") -> list[Must]:
     return [Must(label, value, kind)] if value else []
 
 
+def _location_must(f: Facts) -> list[Must]:
+    if f.location:
+        return _must("ตำแหน่ง", f.location)
+    # No location: any "ตรวจสอบ ... กับระบบ" phrasing is fine
+    return [Must("ตำแหน่ง", f.location_or_check, pattern=r"ตรวจสอบ.{0,15}กับระบบ")]
+
+
 def _locate_step(f: Facts) -> StepSpec:
     where = f"ไปที่ {f.location} " if f.location else f"{f.location_or_check}ว่าเก็บไว้ที่ไหน แล้วไป"
     return StepSpec(
         "ยืนยันสินค้า lot จำนวน และตำแหน่ง",
         f"{where}หา{f.product_name} lot {f.lot_id} "
         f"ตรวจว่ามีอย่างน้อย {f.qty} {f.unit} และตรงกับระบบ",
-        _must("lot", f.lot_id) + _must("ตำแหน่ง", f.location_or_check) + _must("จำนวน", f.qty, "num"),
+        _must("lot", f.lot_id) + _location_must(f) + _must("จำนวน", f.qty, "num"),
     )
 
 
@@ -74,9 +92,8 @@ def _kitchen_steps(f: Facts) -> list[StepSpec]:
     return [
         StepSpec(
             "ตรวจความพร้อมของครัว อุปกรณ์ และพนักงาน",
-            f"ตรวจกับครัว {kitchen} ว่าอุปกรณ์ พื้นที่ และพนักงานพร้อมก่อนส่งวัตถุดิบ "
-            "ถ้าไม่พร้อมให้แจ้งหัวหน้า",
-            _must("ครัว", f.kitchen),
+            f"ตรวจกับครัว {kitchen} ว่าอุปกรณ์ พื้นที่ และพนักงานพร้อมก่อนส่งวัตถุดิบ {KITCHEN_GATE}",
+            _must("ครัว", f.kitchen) + _must("เงื่อนไข", KITCHEN_GATE),
         ),
         StepSpec(
             "นำวัตถุดิบส่งเข้าครัว",
@@ -106,8 +123,8 @@ def _donate_steps(f: Facts) -> list[StepSpec]:
         ),
         StepSpec(
             "ยืนยันนัดรับกับผู้รับบริจาค",
-            f"ยืนยันนัดรับกับ {partner} ก่อนเตรียมของ ถ้ายังไม่ได้รับการยืนยันให้หยุดและแจ้งหัวหน้า",
-            _must("ผู้รับ", f.partner_name or f.partner_id),
+            f"ยืนยันนัดรับกับ {partner} ก่อนเตรียมของ {DONATE_GATE}",
+            _must("ผู้รับ", f.partner_name or f.partner_id) + _must("เงื่อนไข", DONATE_GATE),
         ),
         StepSpec(
             "ส่งมอบให้ผู้รับตามเวลานัด",
@@ -151,7 +168,8 @@ def _discard_steps(f: Facts) -> list[StepSpec]:
     return [
         StepSpec(
             "ขออนุมัติหัวหน้างานก่อนทิ้ง",
-            "ขออนุมัติจากหัวหน้างานก่อนแยกสินค้าออกไปทิ้ง ถ้ายังไม่ได้รับอนุมัติห้ามดำเนินการต่อ",
+            f"ขออนุมัติจากหัวหน้างานก่อนแยกสินค้าออกไปทิ้ง {DISCARD_GATE}",
+            _must("การกระทำ", "ขออนุมัติ") + _must("เงื่อนไข", DISCARD_GATE),
         ),
         *middle,
         StepSpec(
@@ -219,6 +237,8 @@ def fallback_reasoning(f: Facts) -> str:
     text = " ".join(parts)
     if f.alternatives:
         text += " เทียบกับ" + f.alternatives[0].replace("- ทางเลือกอื่น:", "")
+    if f.chosen_is_worse:
+        text += f" {REVIEW_TEXT}"
     return text + " (ข้อความมาตรฐาน: AI เขียนเหตุผลไม่ผ่านการตรวจ)"
 
 

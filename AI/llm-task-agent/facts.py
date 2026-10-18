@@ -1,5 +1,6 @@
 """Build Facts: every number the task uses comes from the decision, never from the LLM."""
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -92,6 +93,17 @@ class Facts:
         return self.location or "ตรวจสอบกับระบบ"
 
     @property
+    def comparison_diffs(self) -> set[float]:
+        """Differences (baht) computed in code for each alternative."""
+        found = re.findall(r"ทางที่เลือก(?:ดีกว่า|แย่กว่า) ([\d.]+) บาท", self.alternatives_prompt())
+        return {float(n) for n in found}
+
+    @property
+    def chosen_is_worse(self) -> bool:
+        """An alternative scores better than the chosen action: a manager should review it."""
+        return any("ทางที่เลือกแย่กว่า" in line for line in self.alternatives)
+
+    @property
     def has_partner(self) -> bool:
         return bool(self.partner_id or self.partner_name)
 
@@ -141,7 +153,19 @@ class Facts:
         return "\n".join(self.alternatives) if self.alternatives else "- ไม่มีข้อมูลทางเลือกอื่น"
 
 
-def _alternative_line(alt: dict) -> str | None:
+def _comparison(chosen: float | None, other: float | None) -> str:
+    """Compare in code: the LLM tends to get the direction wrong with negative numbers."""
+    if chosen is None or other is None:
+        return ""
+    diff = round(float(chosen) - float(other), 2)
+    if diff > 0:
+        return f" → ทางที่เลือกดีกว่า {fmt_num(diff)} บาท"
+    if diff < 0:
+        return f" → ทางที่เลือกแย่กว่า {fmt_num(-diff)} บาท"
+    return " → เท่ากับทางที่เลือก"
+
+
+def _alternative_line(alt: dict, chosen_impact: float | None) -> str | None:
     """One readable line per alternative the Optimizer did not choose."""
     if alt.get("role") == "chosen":
         return None
@@ -149,8 +173,9 @@ def _alternative_line(alt: dict) -> str | None:
     label = OPTION_TH.get(label, label)
     if alt.get("discount_pct") is not None:
         label += f" {fmt_num(alt['discount_pct'])}%"
-    impact = fmt_num(alt.get("expected_profit_impact", alt.get("net_profit_thb")))
-    text = f"- ทางเลือกอื่น: {label}, ผลกระทบกำไร {impact or NO_DATA} บาท"
+    raw_impact = alt.get("expected_profit_impact", alt.get("net_profit_thb"))
+    text = f"- ทางเลือกอื่น: {label}, ผลกระทบกำไร {fmt_num(raw_impact) or NO_DATA} บาท"
+    text += _comparison(chosen_impact, raw_impact)
     note = alt.get("note")
     return text + (f" ({note})" if note else "")
 
@@ -167,7 +192,9 @@ def build_facts(d: OptimizationDecision) -> Facts:
     if d.batch_count and recipe.get("output_quantity"):
         expected_output = fmt_num(d.batch_count * float(recipe["output_quantity"]))
 
-    alternatives = [line for line in map(_alternative_line, d.alternatives) if line]
+    alternatives = [
+        line for line in (_alternative_line(a, d.expected_profit_impact) for a in d.alternatives) if line
+    ]
 
     return Facts(
         decision_id=d.decision_id,

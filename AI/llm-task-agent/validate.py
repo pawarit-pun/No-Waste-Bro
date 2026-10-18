@@ -3,7 +3,7 @@
 import re
 
 from facts import Facts
-from steps import StepSpec
+from steps import REVIEW_TEXT, StepSpec
 
 # Any number, including those inside codes and dates (used to build the allowed list)
 NUM_RE = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?")
@@ -12,6 +12,14 @@ NUM_RE = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?")
 STRICT_NUM_RE = re.compile(r"(?<![A-Za-z0-9_\-.])\d+(?:,\d{3})*(?:\.\d+)?(?![A-Za-z0-9_\-])")
 SOP_NAME_RE = re.compile(r"\b[A-Z][A-Z_]*_(?:SOP|POLICY)\b")
 BUDDHIST_YEAR_RE = re.compile(r"\b25[6-9]\d\b")
+PROMPT_TERM_RE = re.compile(r"FACTS|ALTERNATIVES|REQUIRED_STEPS")
+# A detail that starts with a data label ("จำนวน 8") is a list, not an instruction
+LABEL_START_RE = re.compile(r"^\s*(?:จำนวน|รหัสสูตร|ครัว|เงื่อนไข|ตำแหน่ง|ผู้รับ|วันหมดอายุ|ราคาใหม่|lot)\s")
+# A detail that starts with a condition drops the action itself ("ถ้ายังไม่ได้รับอนุมัติ...")
+CONDITION_START_RE = re.compile(r"^\s*(?:ถ้า|หาก)")
+MIN_DETAIL = 20
+# "ดีกว่าทางเลือกอื่น 224 บาท": the number must be a difference computed in code
+COMPARE_RE = re.compile(r"(?:ดีกว่า|แย่กว่า)[^\d\-\n]{0,25}?(\d+(?:,\d{3})*(?:\.\d+)?)\s*บาท")
 
 MAX_DETAIL = 300  # same limit as the server's InstructionStep.detail
 MAX_REASONING = 800
@@ -30,7 +38,8 @@ def standalone_numbers(text: str) -> set[float]:
 
 
 def _norm(text: str) -> str:
-    return re.sub(r"\s+", "", text or "")
+    """Compare without spaces, treating "หาก" and "ถ้า" (both "if") as the same word."""
+    return re.sub(r"\s+", "", text or "").replace("หาก", "ถ้า")
 
 
 def allowed_numbers(facts: Facts, specs: list[StepSpec]) -> set[float]:
@@ -55,6 +64,21 @@ def validate_output(out: dict, facts: Facts, specs: list[StepSpec]) -> list[str]
         reasoning = ""
     elif len(reasoning) > MAX_REASONING:
         errors.append(f"ai_reasoning ยาวเกิน {MAX_REASONING} ตัวอักษร")
+    has_review = _norm(REVIEW_TEXT) in _norm(reasoning)
+    if reasoning and facts.chosen_is_worse and not has_review:
+        errors.append(f"ai_reasoning ต้องมี \"{REVIEW_TEXT}\" เพราะมีทางเลือกที่ดีกว่าทางที่เลือก")
+    if not facts.chosen_is_worse and has_review:
+        errors.append(f"ai_reasoning ห้ามมี \"{REVIEW_TEXT}\" เพราะทางที่เลือกไม่ได้แย่กว่าทางเลือกอื่น")
+    if reasoning and facts.chosen_is_worse and "แย่กว่า" not in reasoning:
+        errors.append("ai_reasoning ต้องบอกว่าทางที่เลือก \"แย่กว่า\" ทางเลือกอื่นตามข้อมูล ห้ามบอกว่าดีกว่า")
+    wrong_diffs = sorted(
+        float(n.replace(",", "")) for n in COMPARE_RE.findall(reasoning)
+        if float(n.replace(",", "")) not in facts.comparison_diffs
+    )
+    if wrong_diffs:
+        shown = ", ".join(_fmt(n) for n in wrong_diffs)
+        expected = ", ".join(_fmt(n) for n in sorted(facts.comparison_diffs)) or "ไม่มี"
+        errors.append(f"ai_reasoning ส่วนต่างหลังคำว่า ดีกว่า/แย่กว่า ไม่ถูกต้อง ({shown}) ส่วนต่างที่ถูกคือ {expected} บาท")
     if not isinstance(steps, list):
         return errors + ["instruction_steps ไม่ใช่ list"]
     if len(steps) != len(specs):
@@ -78,6 +102,10 @@ def validate_output(out: dict, facts: Facts, specs: list[StepSpec]) -> list[str]
             continue
         if len(detail.strip()) > MAX_DETAIL:
             errors.append(f"{label} detail ยาวเกิน {MAX_DETAIL} ตัวอักษร")
+        if len(detail.strip()) < MIN_DETAIL or LABEL_START_RE.match(detail):
+            errors.append(f"{label} detail ต้องเป็นประโยคคำสั่งที่ขึ้นต้นด้วยคำกริยา ไม่ใช่รายการข้อมูล")
+        elif CONDITION_START_RE.match(detail):
+            errors.append(f"{label} detail ห้ามขึ้นต้นด้วย \"ถ้า\" หรือ \"หาก\" ให้บอกสิ่งที่ต้องทำก่อน แล้วค่อยตามด้วยเงื่อนไข")
         if SOP_NAME_RE.search(detail):
             errors.append(f"{label} มีชื่อเอกสาร SOP ในข้อความถึงพนักงาน ให้เขียนเป็นการกระทำแทน")
 
@@ -86,7 +114,9 @@ def validate_output(out: dict, facts: Facts, specs: list[StepSpec]) -> list[str]
             if must.kind == "num":
                 if float(must.value) not in detail_nums:
                     errors.append(f"{label} detail ต้องมี{must.label} {must.value}")
-            elif _norm(must.value) not in _norm(detail):
+            elif _norm(must.value) not in _norm(detail) and not (
+                must.pattern and re.search(must.pattern, _norm(detail))
+            ):
                 errors.append(f"{label} detail ต้องมี{must.label} \"{must.value}\"")
 
         if check_expected and float(facts.expected_output) in detail_nums and "คาด" not in detail:
@@ -103,6 +133,8 @@ def validate_output(out: dict, facts: Facts, specs: list[StepSpec]) -> list[str]
     for label, text in texts_to_check:
         if BUDDHIST_YEAR_RE.search(text):
             errors.append(f"{label} แปลงปีเป็น พ.ศ. ให้ใช้รูปแบบวันที่ตาม FACTS")
+        if PROMPT_TERM_RE.search(text):
+            errors.append(f"{label} มีคำ FACTS / ALTERNATIVES / REQUIRED_STEPS ซึ่งผู้อ่านไม่เห็น ให้เขียนเป็นข้อมูลจริงแทน")
         extra = sorted(n for n in standalone_numbers(text) if n not in allowed)
         if extra:
             errors.append(f"{label} มีตัวเลขที่ไม่อยู่ใน FACTS: {', '.join(_fmt(n) for n in extra[:5])}")

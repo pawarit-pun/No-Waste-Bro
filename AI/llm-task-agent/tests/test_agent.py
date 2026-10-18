@@ -13,15 +13,15 @@ from datetime import datetime
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from agent import batch_key, run, write_steps  # noqa: E402
+from agent import batch_key, clean_detail, run, write_steps  # noqa: E402
 from api_client import ApiError  # noqa: E402
 from config import TH_TZ, settings  # noqa: E402
 from facts import build_facts, parse_dt  # noqa: E402
 from knowledge_base import NullRetriever  # noqa: E402
-from llm import build_user_prompt, parse_json  # noqa: E402
+from llm import build_user_prompt, feedback_prompt, parse_json  # noqa: E402
 from mock_data import get_mock_decisions  # noqa: E402
 from models import OptimizationDecision, TaskCreate  # noqa: E402
-from steps import compute_priority, required_steps, staff_instructions  # noqa: E402
+from steps import compute_priority, fallback_reasoning, required_steps, staff_instructions  # noqa: E402
 from validate import validate_output  # noqa: E402
 
 PRIMARY, FALLBACK = settings.PRIMARY_MODEL, settings.FALLBACK_MODEL
@@ -67,6 +67,7 @@ NOVA_CASE2 = {
 
 def fixed_case2() -> dict:
     out = copy.deepcopy(NOVA_CASE2)
+    out["instruction_steps"][1]["detail"] = "ตรวจความพร้อมของครัว KITCHEN_DELI อุปกรณ์ และพนักงาน ถ้าไม่พร้อมให้แจ้งหัวหน้า"
     out["instruction_steps"][3]["detail"] = "ผลิตตามสูตร RCP-001 สเต็กเนื้อสันนอก พร้อมสลัด จำนวน 1 batch"
     out["instruction_steps"][4]["detail"] = ("บันทึกวัตถุดิบที่ใช้ 4 ชิ้น และผลผลิตที่ได้จริง (คาดว่าได้ 10 ชิ้น) "
                                              "หากพบสินค้าเสียหายหรือจำนวนไม่ตรง ให้หยุดและแจ้งหัวหน้า")
@@ -74,7 +75,8 @@ def fixed_case2() -> dict:
 
 
 def fallback_answer(facts, specs) -> dict:
-    return {"ai_reasoning": "ok", "instruction_steps": [{"title": s.title, "detail": s.fallback} for s in specs]}
+    return {"ai_reasoning": fallback_reasoning(facts),
+            "instruction_steps": [{"title": s.title, "detail": s.fallback} for s in specs]}
 
 
 # ---------- Facts, steps, priority ----------
@@ -124,7 +126,9 @@ def test_validator_catches_real_mistakes():
     joined = "\n".join(errors)
     assert "ขั้นที่ 4 detail ต้องมีจำนวน batch 1" in joined, errors  # RCP-001 must not count as batch 1
     assert "ขั้นที่ 5 พูดถึงผลผลิต 10 ชิ้น" in joined, errors
-    assert len(errors) == 2, errors  # the rest passes, incl. "16 ตุลาคม 2026" in ai_reasoning
+    assert "ขั้นที่ 2 detail ต้องมีเงื่อนไข" in joined, errors  # dropped "if not ready, tell supervisor"
+    assert "ขั้นที่ 5 มีคำ FACTS" in joined, errors  # "...ไม่ตรงกับ FACTS..."
+    assert len(errors) == 4, errors  # the rest passes, incl. "16 ตุลาคม 2026" in ai_reasoning
 
 
 def test_validator_accepts_fixed_output():
@@ -154,6 +158,96 @@ def test_validator_flags_detail_over_300():
     assert any("ยาวเกิน 300" in e for e in validate_output(out, F, SPECS))
 
 
+def test_alternatives_compared_in_code():
+    assert "→ ทางที่เลือกดีกว่า 868.5 บาท" in build_facts(BY_ID["1"]).alternatives_prompt()
+    assert "→ ทางที่เลือกแย่กว่า 23.4 บาท (ไม่รวมค่าขนย้าย)" in build_facts(BY_ID["4"]).alternatives_prompt()
+
+
+def test_validator_requires_safety_gates():
+    for key, step_index in (("2", 1), ("3", 2), ("4", 1)):  # kitchen readiness, donate pickup, discard approval
+        f = build_facts(BY_ID[key])
+        specs = required_steps(f)
+        out = fallback_answer(f, specs)
+        out["instruction_steps"][step_index]["detail"] = specs[step_index].fallback.split(" ถ้า")[0]
+        errors = validate_output(out, f, specs)
+        assert any("ต้องมีเงื่อนไข" in e for e in errors), (key, errors)
+
+
+def test_validator_accepts_same_meaning_wording():
+    f = build_facts(BY_ID["2"])  # kitchen, no location
+    specs = required_steps(f)
+    out = fallback_answer(f, specs)
+    # Real Nova / Qwen wording that was rejected before
+    out["instruction_steps"][0]["detail"] = "ยืนยันว่า lot ของสินค้าคือ LOT-900002 และตรวจสอบตำแหน่งกับระบบ จำนวนคงเหลือใน lot คือ 8 ชิ้น"
+    out["instruction_steps"][1]["detail"] = "ตรวจสอบความพร้อมของ DEPT-BAKERY อุปกรณ์ และพนักงาน หากไม่พร้อมให้แจ้งหัวหน้า"
+    assert validate_output(out, f, specs) == []
+
+
+def test_validator_flags_label_lists():
+    out = fixed_case2()
+    out["instruction_steps"][2]["detail"] = "จำนวน 4"  # real Nova output after the first prompt change
+    out["instruction_steps"][3]["detail"] = "รหัสสูตร RCP-001, จำนวน batch 1"
+    joined = "\n".join(validate_output(out, F, SPECS))
+    assert "ขั้นที่ 3 detail ต้องเป็นประโยคคำสั่ง" in joined and "ขั้นที่ 4 detail ต้องเป็นประโยคคำสั่ง" in joined, joined
+
+
+def test_validator_requires_review_when_chosen_is_worse():
+    f = build_facts(BY_ID["4"])
+    specs = required_steps(f)
+    out = fallback_answer(f, specs)
+    out["ai_reasoning"] = "เลือกทิ้งเพราะมีการยืนยันจากผู้มีอำนาจ"  # real Nova output: invented reason
+    assert any("ให้ผู้จัดการตรวจสอบก่อนอนุมัติ" in e for e in validate_output(out, f, specs))
+    assert not build_facts(BY_ID["1"]).chosen_is_worse
+
+
+def test_validator_flags_condition_first_and_needless_review():
+    f = build_facts(BY_ID["4"])
+    specs = required_steps(f)
+    out = fallback_answer(f, specs)
+    out["instruction_steps"][1]["detail"] = "ถ้ายังไม่ได้รับอนุมัติห้ามดำเนินการต่อ"  # real Nova output
+    assert any("ห้ามขึ้นต้นด้วย" in e for e in validate_output(out, f, specs))
+
+    f = build_facts(BY_ID["1"])  # chosen action is the best one
+    specs = required_steps(f)
+    out = fallback_answer(f, specs)
+    out["ai_reasoning"] += " ให้ผู้จัดการตรวจสอบก่อนอนุมัติ"
+    assert any("ห้ามมี" in e for e in validate_output(out, f, specs))
+
+
+def test_feedback_includes_example_for_failed_steps():
+    errors = validate_output(NOVA_CASE2, F, SPECS)
+    text = feedback_prompt(errors, SPECS)
+    assert f"- ขั้นที่ 4 ({SPECS[3].title}): {SPECS[3].fallback}" in text
+    assert "ขั้นที่ 1 (" not in text  # steps that passed get no example
+
+
+def test_clean_detail_strips_quotes():
+    assert clean_detail("ติดป้ายราคาใหม่เป็น '33.25' บาท  สำหรับ \"30\" ชิ้น") == "ติดป้ายราคาใหม่เป็น 33.25 บาท สำหรับ 30 ชิ้น"
+
+
+def test_validator_checks_comparison_in_reasoning():
+    # Real Nova outputs
+    f = build_facts(BY_ID["2"])  # chosen is 224 baht better
+    specs = required_steps(f)
+    out = fallback_answer(f, specs)
+    out["ai_reasoning"] = "เลือกทางนี้เพราะผลกระทบกำไรที่คาดจากทางนี้ดีกว่าทางเลือกอื่น 96 บาท"
+    assert any("ส่วนต่างที่ถูกคือ 224" in e for e in validate_output(out, f, specs))
+    out["ai_reasoning"] = "เลือกทางนี้เพราะดีกว่าทางลดราคา 40% อยู่ 224 บาท"
+    assert validate_output(out, f, specs) == []
+
+    f = build_facts(BY_ID["4"])  # chosen is 23.4 baht worse
+    specs = required_steps(f)
+    out = fallback_answer(f, specs)
+    out["ai_reasoning"] = "ทางที่เลือกมีผลกระทบกำไร -290.4 บาท แต่ดีกว่าทิ้งเองที่ -267 บาท ให้ผู้จัดการตรวจสอบก่อนอนุมัติ"
+    assert any("แย่กว่า" in e for e in validate_output(out, f, specs))
+
+
+def test_validator_flags_prompt_terms():
+    out = fixed_case2()
+    out["ai_reasoning"] = "เลือกทางนี้ตามตัวเลขใน FACTS และ ALTERNATIVES"
+    assert any("FACTS / ALTERNATIVES" in e for e in validate_output(out, F, SPECS))
+
+
 def test_fallback_text_always_valid():
     for d in [*DECISIONS, KITCHEN]:
         f = build_facts(d)
@@ -170,7 +264,8 @@ def test_parse_json_strips_fences_and_think():
 
 def test_prompt_without_kb():
     prompt = build_user_prompt(F, SPECS, NullRetriever().retrieve(F.action, F.category))
-    assert "ไม่พบ SOP" in prompt and "จำนวน batch 1" in prompt and "หมดอายุ: ไม่มีข้อมูล, " in prompt
+    assert "ไม่พบ SOP" in prompt and "หมดอายุ: ไม่มีข้อมูล, " in prompt
+    assert "4. ผลิตตามสูตรที่อนุมัติ — ประโยคต้องมี: \"RCP-001\" (รหัสสูตร), \"1\" (จำนวน batch)" in prompt
 
 
 class FakeLLM:

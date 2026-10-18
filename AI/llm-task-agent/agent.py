@@ -25,6 +25,11 @@ TEMPLATE = "TEMPLATE"
 MAX_RAW_TEXT = 4000  # raw model answer kept in the report for prompt tuning
 
 
+def clean_detail(text: str) -> str:
+    """The model sometimes copies the prompt's quotes around values ('33.25')."""
+    return " ".join(text.replace("'", "").replace('"', "").split())
+
+
 def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> dict:
     """Return {ai_reasoning, instruction_steps, model_used, attempts}."""
     attempts: list[dict] = []
@@ -37,7 +42,7 @@ def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> di
             if n == 2:
                 # New model: start a fresh conversation but pass on the latest errors
                 last_errors = attempts[-1]["errors"]
-                text = user_prompt + ("\n\n" + feedback_prompt(last_errors) if last_errors else "")
+                text = user_prompt + ("\n\n" + feedback_prompt(last_errors, specs) if last_errors else "")
                 messages = [{"role": "user", "text": text}]
 
             record = {"model": model, "errors": [], "text": ""}
@@ -56,7 +61,7 @@ def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> di
 
             if not record["errors"]:
                 steps = [
-                    InstructionStep(title=spec.title, detail=step["detail"].strip())
+                    InstructionStep(title=spec.title, detail=clean_detail(step["detail"]))
                     for spec, step in zip(specs, out["instruction_steps"])
                 ]
                 return {
@@ -68,7 +73,7 @@ def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> di
             if n == 0 and record["text"]:
                 messages = messages + [
                     {"role": "assistant", "text": record["text"]},
-                    {"role": "user", "text": feedback_prompt(record["errors"])},
+                    {"role": "user", "text": feedback_prompt(record["errors"], specs)},
                 ]
 
     return {
