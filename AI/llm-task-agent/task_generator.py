@@ -1,20 +1,9 @@
 from datetime import datetime
 
 from config import TH_TZ, settings
-from facts import Facts, build_facts
-from models import (
-    InstructionStep,
-    OptimizationDecision,
-    TaskBatchCreate,
-    TaskCreate,
-)
-from steps import (
-    StepSpec,
-    compute_priority,
-    fallback_reasoning,
-    required_steps,
-    staff_instructions,
-)
+from facts import Facts
+from models import InstructionStep, TaskCreate
+from steps import StepSpec, compute_priority, staff_instructions
 
 
 def resolve_now(default: str | None = None) -> datetime:
@@ -47,19 +36,3 @@ def build_task(
         staff_instructions=staff_instructions(facts),
         instruction_steps=instruction_steps,
     )
-
-
-def generate_task(decision: OptimizationDecision, now: datetime) -> TaskCreate:
-    """Convert one decision into one task using standard text only (no LLM)."""
-    facts = build_facts(decision)
-    specs = required_steps(facts)
-    return build_task(facts, now, fallback_reasoning(facts), fallback_steps(specs))
-
-
-def generate_tasks(
-    decisions: list[OptimizationDecision],
-    now: datetime | None = None,
-) -> TaskBatchCreate:
-    """Convert multiple decisions into a validated task batch (no LLM)."""
-    now = now or resolve_now()
-    return TaskBatchCreate(tasks=[generate_task(d, now) for d in decisions])
