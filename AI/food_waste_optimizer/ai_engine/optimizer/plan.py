@@ -1,0 +1,324 @@
+"""PART 6 — แปลงผล solver เป็น Plan ที่อ่านรู้เรื่อง: แต่ละ lot แบ่งไปทางไหนกี่ % ได้เงิน/เสียเงินเท่าไร เพราะอะไร
+
+นิยามเงินต่อ portion:  net_profit = revenue - cost - cogs
+  revenue = ขายหน้าร้าน | ส่วนแบ่งรายได้เมนู | buyback_price_per_kg x kg (ANIMAL_FEED)
+  cost    = ค่าเที่ยว (fixed + travel แบ่งตาม kg) + handling x kg | ส่วนแบ่ง utility_cost (+ วัตถุดิบหลักจากสต็อกปกติ
+            - วัตถุดิบรองที่ได้จาก lot เสี่ยง) | กำไรที่ล็อตอื่นเสียไปเพราะลดราคา (lost_sales_other_lots)
+  cogs    = จำนวน x unit_cost ของ lot (ต้นทุนสินค้า; ในครัวคือ Cost_Primary)
+net_recovery = revenue - cost  = เงินที่ได้กลับคืนจริง (ไม่นับต้นทุนสินค้าที่จ่ายไปแล้ว)
+"""
+from __future__ import annotations
+
+from collections import defaultdict
+from typing import Optional
+
+from ai_engine.optimizer.rules import days_to_expiry
+from ai_engine.optimizer.solver import Solution, Switches, solve
+
+SALE_METHODS = ("SELL_REGULAR", "MARKDOWN")
+KITCHEN_METHODS = ("KITCHEN", "KITCHEN_INGREDIENT")
+
+
+def _r(x: float, n: int = 2) -> float:
+    return round(float(x), n)
+
+
+def _portion(lc, method: str, units: int, revenue: float, cost: float, cogs: float, details: dict) -> dict:
+    return {"method": method, "units": int(units), "share_pct": _r(units / lc.lot.quantity * 100.0),
+            "weight_kg": _r(units * (lc.weight_kg or 0.0), 4), "revenue_thb": _r(revenue), "cost_thb": _r(cost),
+            "cogs_thb": _r(cogs), "net_profit_thb": _r(revenue - cost - cogs), "details": details}
+
+
+# ---------------------------------------------------------------- เที่ยวรับของ
+def _trips(ctx, sol: Solution) -> dict:
+    trips = {}
+    for pid, pc in ctx.partners.items():
+        units = {lid: sol.count(("x", lid, pid)) for lid in ctx.lots}
+        units = {k: v for k, v in units.items() if v > 0}
+        if not units:
+            continue
+        kg = sum(u * ctx.lots[lid].weight_kg for lid, u in units.items())
+        p = pc.partner
+        handling, buyback = pc.handling * kg, p.buyback * kg
+        trips[pid] = {
+            "partner_id": pid, "name": p.name, "partner_type": p.partner_type,
+            "pickup_at": pc.pickup.isoformat() if pc.pickup else None, "kg": _r(kg, 3),
+            "capacity_kg": _r(pc.cap_kg, 2), "min_kg": p.min_kg,
+            "fixed_cost_thb": _r(p.fixed), "travel_cost_thb": _r(0.0 if p.partner_type == "DONATION" else p.travel),
+            "trip_cost_thb": _r(pc.trip_cost), "handling_thb": _r(handling), "buyback_revenue_thb": _r(buyback),
+            "total_cost_thb": _r(pc.trip_cost + handling), "net_cash_thb": _r(buyback - pc.trip_cost - handling),
+            "cost_per_kg_thb": _r((pc.trip_cost + handling) / kg), "units": units, "_kg": kg,
+        }
+    return trips
+
+
+# ---------------------------------------------------------------- งานครัว
+def _jobs(ctx, sol: Solution) -> list:
+    inp = ctx.inputs
+    by_rd = defaultdict(list)
+    for j in ctx.jobs:
+        if sol.count(("n", j.job_id)) > 0:
+            by_rd[(j.recipe_id, j.day)].append(j)
+    # ความต้องการวัตถุดิบ FEFO รวมทุกงาน (ไว้แบ่งปริมาณที่ตัดจากแต่ละ lot กลับให้แต่ละงาน)
+    totals = defaultdict(float)
+    for jobs in by_rd.values():
+        for j in jobs:
+            n = sol.count(("n", j.job_id))
+            for pid, q, primary in j.others:
+                totals[(pid, j.day, "P" if primary else "S")] += q * n
+    lot_c_total = defaultdict(float)
+    for key in sol.var:
+        if key[0] == "c":
+            lot_c_total[key[2]] += sol.amount(key)
+
+    out = []
+    for (rid, day), jobs in by_rd.items():
+        r = inp.recipes[rid]
+        price = inp.products[r.output_product_id].regular_price
+        n_total = sum(sol.count(("n", j.job_id)) for j in jobs)
+        sold_total = sol.amount(("sold", rid, day))
+        rday = ctx.recipe_days[(rid, day)]
+        for j in jobs:
+            n, k = sol.count(("n", j.job_id)), sol.count(("k", j.job_id))
+            anchor = ctx.lots[j.anchor_lot_id].lot
+            sold = sold_total * n / n_total
+            inputs, nonrisk_cost, credit = [], 0.0, 0.0
+            inputs.append({"lot_id": anchor.lot_id, "product_id": j.anchor_product_id, "role": "ANCHOR",
+                           "units": k, "cogs_thb": k * anchor.unit_cost})
+            for pid, q, primary in j.others:
+                rho = "P" if primary else "S"
+                share = q * n / totals[(pid, day, rho)] if totals[(pid, day, rho)] > 0 else 0.0
+                prod = inp.products[pid]
+                for fl in ctx.fefo.get(pid, []):
+                    c = sol.amount(("c", pid, fl.lot_id, day, rho)) * share          # หน่วยของสินค้า
+                    if c <= 1e-9:
+                        continue
+                    row = {"lot_id": fl.lot_id, "product_id": pid, "role": "PRIMARY" if primary else "SECONDARY",
+                           "content": _r(c * prod.content, 1), "at_risk": fl.at_risk}
+                    if fl.at_risk:
+                        u_total = sol.count(("u", fl.lot_id))
+                        row["units"] = u_total * c / lot_c_total[fl.lot_id] if lot_c_total[fl.lot_id] > 0 else 0.0
+                        row["cogs_thb"] = row["units"] * ctx.lots[fl.lot_id].lot.unit_cost
+                        if not primary:
+                            credit += prod.base_cost * c
+                    else:
+                        row["units"] = c
+                        row["cogs_thb"] = 0.0
+                        if primary:
+                            nonrisk_cost += prod.base_cost * c
+                    inputs.append(row)
+            revenue, utility = sold * price, n * r.utility_cost
+            cogs = 0.0  # คำนวณใหม่ใน _integerize หลังแบ่งหน่วยเป็นจำนวนเต็ม
+            out.append({
+                "job_id": j.job_id, "recipe_id": rid, "name": r.name, "department_id": r.department_id,
+                "date": day.isoformat(), "due_by": j.due.isoformat(), "anchor_lot_id": j.anchor_lot_id,
+                "batches": n, "anchor_units": k, "hours": _r(n * j.hours_per_batch),
+                "output_units": _r(n * r.output_qty), "expected_sold_units": _r(sold),
+                "menu_demand_cap": _r(rday.cap_units), "output_product_id": r.output_product_id,
+                "revenue_thb": _r(revenue), "utility_cost_thb": _r(utility),
+                "primary_from_regular_stock_thb": _r(nonrisk_cost), "secondary_credit_thb": _r(credit),
+                "cogs_thb": _r(cogs), "net_profit_thb": _r(revenue - utility - nonrisk_cost + credit - cogs),
+                "inputs": [{k2: (_r(v, 3) if isinstance(v, float) else v) for k2, v in x.items()} for x in inputs],
+                "_revenue": revenue, "_cost": utility + nonrisk_cost - credit, "_cogs": cogs, "_inputs": inputs,
+            })
+    _integerize(ctx, sol, out)
+    return out
+
+
+def _integerize(ctx, sol: Solution, jobs: list) -> None:
+    """หน่วยของ lot เสี่ยงที่ถูก FEFO ตัด (u) แบ่งให้แต่ละงานเป็นจำนวนเต็มแบบ largest remainder ให้รวมแล้วเท่า u พอดี"""
+    by_lot = defaultdict(list)
+    for j in jobs:
+        for x in j["_inputs"]:
+            if x["role"] != "ANCHOR" and x.get("at_risk"):
+                by_lot[x["lot_id"]].append(x)
+    for lid, rows in by_lot.items():
+        total = sol.count(("u", lid))
+        base = [int(x["units"]) for x in rows]
+        left = total - sum(base)
+        order = sorted(range(len(rows)), key=lambda i: -(rows[i]["units"] - base[i]))
+        for i in order[:max(0, left)]:
+            base[i] += 1
+        cost = ctx.lots[lid].lot.unit_cost
+        for x, units in zip(rows, base):
+            x["units"], x["cogs_thb"] = units, units * cost
+    for j in jobs:
+        j["_cogs"] = sum(x["cogs_thb"] for x in j["_inputs"])
+        j["cogs_thb"] = _r(j["_cogs"])
+        j["net_profit_thb"] = _r(j["_revenue"] - j["_cost"] - j["_cogs"])
+        j["inputs"] = [{k: (_r(v, 3) if isinstance(v, float) else v) for k, v in x.items()} for x in j["_inputs"]]
+
+
+def _kitchen_usage(ctx, jobs: list) -> list:
+    used = defaultdict(float)
+    for j in jobs:
+        used[(j["department_id"], j["date"])] += j["hours"]
+    out = []
+    for (dept, day), hrs in sorted(used.items()):
+        budget = next(dc.hours for (d, dy), dc in ctx.hours.items() if d == dept and dy.isoformat() == day)
+        smallest = min((ctx.inputs.recipes[j.recipe_id].hours_per_batch for j in ctx.jobs
+                        if ctx.inputs.recipes[j.recipe_id].department_id == dept), default=0.0)
+        out.append({"department_id": dept, "date": day, "hours_used": _r(hrs), "hours_budget": _r(budget),
+                    "utilization": _r(hrs / budget, 3) if budget > 0 else 0.0,
+                    "binding": budget - hrs < smallest - 1e-9})
+    return out
+
+
+def _price_options(lc, portions: list) -> list:
+    """เทียบทั้ง lot: ถ้าใช้ราคาระดับนี้ lot จะได้/เสียเท่าไร (ส่วนที่ขายไม่หมดคิดด้วยต้นทุนต่อหน่วยของทางที่แผนใช้จริง)
+    ใช้อธิบายว่าทำไมเลือก/ไม่เลือกลดราคา (lift จาก forecaster ต่ำกว่าส่วนต่างราคาที่เสียไปหรือไม่)"""
+    lot, c = lc.lot, lc.lot.unit_cost
+    rest = [p for p in portions if p["method"] not in SALE_METHODS]
+    rest_units = sum(p["units"] for p in rest)
+    per_unit = sum(p["net_profit_thb"] for p in rest) / rest_units if rest_units else -c
+    chosen = next((p["details"]["discount_pct"] for p in portions if p["method"] in SALE_METHODS), None)
+    out = []
+    for t in lc.tiers:
+        sold = min(lot.quantity, t["cap"])
+        net = sold * (t["price"] - c) - t["lost_sales_cost"] + (lot.quantity - sold) * per_unit
+        out.append({"discount_pct": t["discount_pct"], "price": t["price"], "expected_sold": sold,
+                    "lot_net_profit_thb": _r(net), "chosen": t["discount_pct"] == chosen})
+    return out
+
+
+# ---------------------------------------------------------------- Plan
+def build_plan(ctx, sol: Solution, baselines: Optional[dict] = None) -> dict:
+    cfg = ctx.cfg
+    trips, jobs = _trips(ctx, sol), _jobs(ctx, sol)
+    usage = _kitchen_usage(ctx, jobs)
+    lots_out, warnings = [], list(ctx.warnings)
+
+    for lid, lc in ctx.lots.items():
+        lot, c = lc.lot, lc.lot.unit_cost
+        portions = []
+        for t in lc.tiers:
+            d, u = t["discount_pct"], sol.count(("s", lid, t["discount_pct"]))
+            if u > 0:
+                chosen = sol.count(("t", lid, d)) == 1
+                portions.append(_portion(lc, "SELL_REGULAR" if d == 0 else "MARKDOWN", u, u * t["price"],
+                                         t["lost_sales_cost"] if chosen else 0.0, u * c, {
+                    "discount_pct": d, "unit_price": t["price"], "demand_cap": t["cap"],
+                    "forecast_expected": t["expected"], "forecast_low": t["low"], "forecast_high": t["high"],
+                    "lost_sales_cost_thb": t["lost_sales_cost"], "discount_value_thb": _r(u * (lot.price - t["price"]))}))
+        for j in jobs:                                         # ส่วนที่เข้าครัว (lot หลัก หรือถูก FEFO ตัดเป็นวัตถุดิบ)
+            mine = [x for x in j["_inputs"] if x["lot_id"] == lid and "cogs_thb" in x and x.get("at_risk", True)]
+            if not mine:
+                continue
+            units = int(sum(x["units"] for x in mine))
+            cogs = sum(x["cogs_thb"] for x in mine)
+            share = cogs / j["_cogs"] if j["_cogs"] > 0 else 0.0
+            role = "ANCHOR" if any(x["role"] == "ANCHOR" for x in mine) else mine[0]["role"]
+            portions.append(_portion(lc, "KITCHEN" if role == "ANCHOR" else "KITCHEN_INGREDIENT", units,
+                                     j["_revenue"] * share, j["_cost"] * share, cogs,
+                                     {"job_id": j["job_id"], "recipe_id": j["recipe_id"], "role": role,
+                                      "batches": j["batches"], "due_by": j["due_by"], "anchor_lot_id": j["anchor_lot_id"]}))
+        for pid, trip in trips.items():
+            u = trip["units"].get(lid, 0)
+            if u == 0:
+                continue
+            kg = u * lc.weight_kg
+            pc = ctx.partners[pid]
+            alloc = pc.trip_cost * kg / trip["_kg"]
+            portions.append(_portion(lc, trip["partner_type"], u, pc.partner.buyback * kg, alloc + pc.handling * kg,
+                                     u * c, {"partner_id": pid, "partner_name": trip["name"],
+                                             "pickup_at": trip["pickup_at"], "kg": _r(kg, 3),
+                                             "trip_allocated_thb": _r(alloc), "handling_thb": _r(pc.handling * kg),
+                                             "buyback_thb": _r(pc.partner.buyback * kg)}))
+        r_units = sol.count(("res", lid))
+        if r_units:
+            portions.append(_portion(lc, "UNRESOLVED", r_units, 0.0, 0.0, r_units * c,
+                                     {"reason": "ไม่มี partner หรือวิธีใดรับได้ภายในกฎ ต้องให้ผู้จัดการตัดสินใจ"}))
+            warnings.append(f"A2_UNRESOLVED: {lid} เหลือ {r_units} หน่วยที่ไม่มีทางไป")
+
+        binding = sorted({f"DEMAND_CAP:{p['details']['discount_pct']}%" for p in portions
+                          if p["method"] in SALE_METHODS and p["units"] >= p["details"]["demand_cap"]}
+                         | {f"KITCHEN_HOURS:{j['department_id']}@{j['date']}" for p in portions
+                            if p["method"] in KITCHEN_METHODS for j in jobs
+                            if j["job_id"] == p["details"]["job_id"] and any(
+                                u["binding"] and u["department_id"] == j["department_id"] and u["date"] == j["date"]
+                                for u in usage)})
+        lots_out.append({
+            "lot_id": lid, "assessment_id": lot.assessment_id, "product_id": lot.product_id, "name": lc.product.name,
+            "category": lc.product.category, "quantity": lot.quantity, "unit_cost": lot.unit_cost,
+            "current_price": lot.price, "location": f"{lot.aisle or '-'} / {lot.shelf_loc or '-'}",
+            "expiration_date": lot.expiration_date.isoformat(),
+            "days_to_expiry": days_to_expiry(lot, ctx.now.date()), "risk_level": lot.risk_level,
+            "risk_score": lot.risk_score, "demand_source": lc.demand_source, "demand_fraction": lc.demand_fraction,
+            "cogs_thb": _r(lot.quantity * c), "units_planned": sum(p["units"] for p in portions),
+            "portions": portions, "net_profit_thb": _r(sum(p["net_profit_thb"] for p in portions)),
+            "explain": {"excluded": lc.excluded, "binding": binding, "notes": lc.notes,
+                        "price_options": _price_options(lc, portions)},
+        })
+
+    units_by, kg_by = defaultdict(int), defaultdict(float)
+    for lo in lots_out:
+        for p in lo["portions"]:
+            key = f"MARKDOWN {p['details']['discount_pct']}%" if p["method"] == "MARKDOWN" else p["method"]
+            units_by[key] += p["units"]
+            kg_by[key] += p["weight_kg"]
+    total_units = sum(units_by.values())
+    revenue = sum(p["revenue_thb"] for lo in lots_out for p in lo["portions"])
+    costs = sum(p["cost_thb"] for lo in lots_out for p in lo["portions"])
+    cogs = sum(lo["cogs_thb"] for lo in lots_out)
+    net = sum(lo["net_profit_thb"] for lo in lots_out)
+    n_portions = sum(len(lo["portions"]) for lo in lots_out) + 1
+
+    for t in trips.values():
+        if t["cost_per_kg_thb"] > cfg.warn_trip_cost_per_kg:
+            warnings.append(f"A3_TRIP_COST_PER_KG {t['partner_id']}: {t['cost_per_kg_thb']} บาท/kg ({t['kg']} kg)")
+    for u in usage:
+        if u["utilization"] >= cfg.warn_kitchen_utilization:
+            warnings.append(f"W1_KITCHEN_NEAR_FULL {u['department_id']} {u['date']} {u['utilization'] * 100:.0f}%")
+    for lo in lots_out:
+        for note in lo["explain"]["notes"]:
+            warnings.append(f"{lo['lot_id']}: {note}")
+    if sol.status != "optimal":
+        warnings.append(f"A4_SOLVER_NOT_OPTIMAL status={sol.status} gap={sol.gap}")
+
+    for t in trips.values():
+        t.pop("_kg")
+    for j in jobs:
+        for k in [k for k in j if k.startswith("_")]:
+            j.pop(k)
+
+    return {
+        "run_id": ctx.inputs.run_id, "reference_date": ctx.inputs.reference_date.isoformat(),
+        "simulated_now": ctx.now.isoformat(), "model_version": cfg.model_version,
+        "solver": {"name": "HiGHS", "status": sol.status, "gap": sol.gap, "time_ms": sol.time_ms},
+        "lots": lots_out, "skipped_lots": ctx.skipped, "trips": list(trips.values()), "kitchen_jobs": jobs,
+        "kitchen_usage": usage,
+        "recipes": {rid: s for rid, s in ctx.recipe_status.items()},
+        "summary": {
+            "lots": len(lots_out), "units": total_units,
+            "split_pct_by_method": {k: _r(v / total_units * 100.0) for k, v in sorted(units_by.items(), key=lambda kv: -kv[1])}
+            if total_units else {},
+            "units_by_method": dict(units_by), "kg_by_method": {k: _r(v, 3) for k, v in kg_by.items()},
+            "gross_revenue_thb": _r(revenue), "route_costs_thb": _r(costs), "cogs_thb": _r(cogs),
+            "net_recovery_thb": _r(revenue - costs), "net_profit_thb": _r(net),
+            "unresolved_units": sol.unresolved_units,
+            "reconciliation_gap_thb": _r(abs(sol.net_profit - net), 4),
+            "reconciliation_ok": abs(sol.net_profit - net) <= 0.01 * n_portions,
+        },
+        "baselines": baselines or {}, "warnings": warnings,
+    }
+
+
+# ---------------------------------------------------------------- Baseline
+def compute_baselines(ctx, sol: Solution) -> dict:
+    """ผลถ้าไม่ใช้ Optimizer เทียบกำไรสุทธิ (รวมต้นทุนสินค้า)"""
+    do_nothing = 0.0
+    for lc in ctx.lots.values():
+        t0 = next((t for t in lc.tiers if t["discount_pct"] == 0), None)
+        sold = min(lc.lot.quantity, t0["cap"]) if t0 else 0
+        do_nothing += (sold * t0["price"] if t0 else 0.0) - lc.lot.quantity * lc.lot.unit_cost
+    landfill = frozenset({"LANDFILL"})
+    a = solve(ctx, Switches(discounts=frozenset({0}), kitchen=False, partner_types=landfill))
+    b = solve(ctx, Switches(kitchen=False, partner_types=landfill))
+    row = lambda s: {"net_profit_thb": _r(s.net_profit), "unresolved_units": s.unresolved_units}
+    return {
+        "do_nothing_no_disposal_cost": {"net_profit_thb": _r(do_nothing)},
+        "regular_price_then_landfill": row(a),
+        "markdown_then_landfill": row(b),
+        "optimized": row(sol),
+        "improvement_vs_regular_then_landfill_thb": _r(sol.net_profit - a.net_profit),
+    }

@@ -18,6 +18,7 @@ AI Agent เรียก route ตามลำดับนี้ในการ�
 | 3 | `POST /risk-assessments` | Risk Scanner | บันทึกผลความเสี่ยงของแต่ละ lot | `run_id`, `assessment_id` |
 | 4 | `GET /ai/optimize-inputs?run_id=...` | Optimizer | ดึงข้อมูลไปตัดสินใจ (ลดราคา / เข้าครัว / บริจาค / ทิ้ง) | – |
 | 5 | `POST /optimization-decisions` | Optimizer | บันทึกการตัดสินใจ **รวมตัวเลขทั้งหมด** | `decision_id` |
+| 4-5 | `POST /ai/optimize?run_id=...&dry_run=false` | Risk Scanner / ใครก็ได้ | ทางลัด: server รัน Optimizer กับรอบสแกนแล้วบันทึก decision ให้ในคำขอเดียว (`dry_run=true` = ดูผลอย่างเดียว) | `decision_id` |
 | 6 | `GET /optimization-decisions?status=PENDING` | LLM (RAG) | ดึง decision + context ไปเขียนคำสั่งงาน | `decision_id` |
 | 7 | `POST /tasks` | LLM | สร้าง task จาก decision (ส่งแค่ข้อความ + priority + `instruction_steps` ขั้นตอนทีละข้อ) **server มอบหมาย staff ให้อัตโนมัติ** | `task_id` |
 | 8 | `PATCH /inventory-lots/ai-status` | AI | เปลี่ยน lot ที่สแกนเสร็จเป็น `CHECKED` | – |
@@ -47,10 +48,11 @@ staff ทำงานตามลำดับ: `POST /tasks/{id}/accept` → `PO
 ## เรื่องที่ควรรู้
 
 - **วันที่อ้างอิง (`reference_date`)** = วันนี้ตามเวลาไทย หรือค่า `DEMO_DATE` ใน `.env` ของ server ถ้าตั้งไว้ ใช้ค่านี้คำนวณวันหมดอายุ
+- **เวลาที่ Optimizer ใช้คิด** = วันที่อ้างอิง + เวลาไทยตอนที่เรียก (ไม่มีค่าเวลาใน `.env`)
 - **ข้อมูลสำหรับ Forecast:** ใช้ `product_daily` (ยอดขาย/สต็อก/ของทิ้ง/ของหมดรายวัน) คู่กับ `daily_context` (วันหยุด วันเงินเดือน อากาศ) จาก `GET /ai/scan-inputs`
 - **หน่วยสินค้า:** lot นับเป็นชิ้น/แพ็ค แต่สูตรอาหารใช้ G / ML ให้แปลงผ่าน `net_content_value` + `net_content_unit` ของสินค้า (KG / L ให้คูณ 1000)
 - **ราคาต่ำสุด:** DB ไม่ยอมให้ตั้งราคา lot ต่ำกว่า `min_allowed_price` ของสินค้า
-- **การทดสอบด้วย "Try it out" เขียนข้อมูลจริงลง Supabase** รวมถึงจองชั่วโมงครัวจริง
+- **การทดสอบด้วย "Try it out" เขียนข้อมูลจริงลง Supabase** รวมถึงจองชั่วโมงครัวจริง (ยกเว้น `POST /ai/optimize` ที่ `dry_run=true` เป็นค่าเริ่มต้น)
 """
 
 TAGS_METADATA = [
@@ -58,6 +60,11 @@ TAGS_METADATA = [
         "name": "AI",
         "description": "ข้อมูล input สำหรับ AI Agent: `scan-inputs` สำหรับ Risk Scanner + Forecast "
                        "และ `optimize-inputs` สำหรับ Optimizer ทั้งสอง route อ่านข้อมูลอย่างเดียว",
+    },
+    {
+        "name": "Optimizer",
+        "description": "รัน Optimizer บน server กับรอบสแกนล่าสุดหรือที่ระบุ (`dry_run=true` ดูผลอย่างเดียว, "
+                       "`false` บันทึก decision ให้ RAG ใช้ต่อ)",
     },
     {
         "name": "Risk Assessments",
