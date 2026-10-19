@@ -1,9 +1,6 @@
-"""PART 9 — เรียก route จริงของ server (ข้อมูลจริงใน Supabase) ไม่ต่อ DB ตรงจากฝั่ง AI (กติกาเดียวกับ risk_forecaster)
-
-ค่าเริ่มต้น API_BASE_URL = http://127.0.0.1:8000/api/v1  (server ที่รันในเครื่องด้วย `fastapi dev main.py`)
-ใช้ server บน AWS เมื่อพร้อม: set API_BASE_URL=https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1
-
+"""
 route ที่ใช้
+  GET   /ai/optimize-runs          อ่าน: รอบสแกนที่พร้อมตัดสินใจ (ไม่ระบุ run_id = ใช้ suggested_run_id)
   GET   /ai/optimize-inputs        อ่าน: lot เสี่ยง + shelf + recipe_demand + สินค้า + สูตร + ครัว + partner + สต็อกวัตถุดิบ
   GET   /products                  อ่าน: flag allow_animal_feed / composting / anaerobic_digestion / landfill
   GET   /optimization-decisions    อ่าน: decision ที่มีแล้วของรอบนี้ (กันบันทึกซ้ำ)
@@ -64,6 +61,9 @@ class ApiClient:
             raise ApiError(status, payload, url)
         return payload
 
+    def get_optimize_runs(self) -> dict:
+        return self.request("GET", "ai/optimize-runs")
+
     def get_optimize_inputs(self, run_id: Optional[str] = None, days_ahead: int = 1) -> dict:
         return self.request("GET", "ai/optimize-inputs", {"run_id": run_id, "days_ahead": days_ahead})
 
@@ -83,8 +83,23 @@ class ApiClient:
         return self.request("POST", "ai/optimize", {"run_id": run_id, "days_ahead": days_ahead, "dry_run": dry_run})
 
 
+def pick_run(client: ApiClient, run_id: Optional[str] = None) -> tuple[Optional[str], Optional[dict]]:
+    """run_id ที่ระบุ > suggested_run_id ของ GET /ai/optimize-runs (รอบล่าสุดที่สแกนวันเดียวกับ DEMO_DATE และยังมี lot
+    HIGH / CRITICAL รอตัดสินใจ) > None (= รอบสแกนล่าสุด) -> (run_id, ข้อมูลรอบทั้งหมด หรือ None)"""
+    if run_id:
+        return run_id, None
+    try:
+        runs = client.get_optimize_runs()
+    except ApiError as e:
+        if e.status == 404:          # server รุ่นเก่ายังไม่มี route นี้
+            return None, None
+        raise
+    return runs.get("suggested_run_id"), runs
+
+
 def load_from_api(client: ApiClient, run_id: Optional[str] = None, days_ahead: int = 1) -> tuple[dict, list, set]:
     """อ่านข้อมูลจริงทั้งหมดที่ Optimizer ต้องใช้ -> (optimize_inputs, products, assessment_id ที่มี decision แล้ว)"""
+    run_id, _ = pick_run(client, run_id)
     inputs = client.get_optimize_inputs(run_id, days_ahead)
     products = client.get_products()
     decided = set()

@@ -3,6 +3,7 @@
 - LocalSource: อ่าน CSV ใน data/mock_v3 แล้วจัดรูปให้เหมือน JSON ของ GET /ai/scan-inputs ทุกฟิลด์
   ไม่เขียนอะไรลง Supabase (ใช้พัฒนา / ทดสอบตอนที่ Supabase ยังไม่ได้โหลด v2)
 - ApiSource: เรียก route จริง 3 ตัว (scan-inputs, ai-status, risk-assessments)
+  + optimize(): ส่งต่อให้ Optimizer ผ่าน POST /ai/optimize (เส้นเชื่อม Risk Scanner -> Optimizer)
 """
 import json
 from datetime import date, timedelta
@@ -74,6 +75,9 @@ class LocalSource:
     def post_assessments(self, payload):
         return None
 
+    def optimize(self, run_id, dry_run=True, days_ahead=1):
+        return None
+
 
 class ApiSource:
     mode = "api"
@@ -106,3 +110,12 @@ class ApiSource:
 
     def post_assessments(self, payload):
         return self._call("POST", "/risk-assessments", json=payload)
+
+    def optimize(self, run_id, dry_run=True, days_ahead=1):
+        """ส่งต่อให้ Optimizer: server อ่านผลสแกนของ run_id นี้ (shelf + recipe_demand) แล้วตัดสินใจ
+        dry_run=False = บันทึก decision ลง optimization_decisions ให้ RAG ใช้ต่อ (timeout ยาวกว่าเพราะต้องรัน solver)"""
+        params = {"run_id": run_id, "days_ahead": days_ahead, "dry_run": str(bool(dry_run)).lower()}
+        res = self.http.request("POST", f"{self.base}/ai/optimize", params=params, timeout=max(self.timeout, 120))
+        if res.status_code >= 400:
+            raise RuntimeError(f"POST /ai/optimize -> {res.status_code}: {res.text[:800]}")
+        return res.json()

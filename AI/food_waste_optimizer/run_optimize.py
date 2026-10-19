@@ -1,12 +1,14 @@
-"""รอบ Optimizer 1 รอบ: อ่านข้อมูลจริงจาก server -> คำนวณ -> (--save) บันทึกลง Supabase ผ่าน server
+"""รอบ Optimizer 1 รอบ: GET ข้อมูลจริงจาก Supabase (ผ่าน server) -> คำนวณ -> POST ลง optimization_decisions ทันที
 (รวมโค้ดของ ai_engine/demo/run_offline.py เดิมไว้ที่นี่ รูปแบบเดียวกับ run_scan.py ของทีม Risk Scanner)
 
 ใช้งาน (จากโฟลเดอร์ AI/food_waste_optimizer, เปิด server ไว้ก่อน: `fastapi dev main.py` ในโฟลเดอร์ server)
-    python run_optimize.py                          อ่านจริง คำนวณ แสดงผล ไม่เขียนอะไร (dry run)
-    python run_optimize.py --run-id <uuid>          ระบุรอบสแกน (ไม่ใส่ = รอบล่าสุด)
-    python run_optimize.py --save                   บันทึก decision + คืน lot ที่ไม่ต้องทำอะไรเป็น IDLE
-    python run_optimize.py --via-server [--save]    ให้ server รัน Optimizer เอง (POST /api/v1/ai/optimize)
-    python run_optimize.py --input output/<รอบ>/optimize_inputs.json   รันซ้ำจากข้อมูลจริงที่บันทึกไว้ (ไม่ต่อ server)
+    python run_optimize.py                          GET -> คำนวณ -> POST decision ลง Supabase ทันที + คืน lot ที่ไม่ต้องทำอะไรเป็น IDLE
+    python run_optimize.py --dry-run                GET -> คำนวณ -> แสดงผลอย่างเดียว ไม่เขียนอะไร
+    python run_optimize.py --run-id <uuid>          ระบุรอบสแกนเอง
+                                                    (ไม่ใส่ = รอบล่าสุดที่สแกนวันเดียวกับ DEMO_DATE และยังมี lot HIGH / CRITICAL
+                                                     รอตัดสินใจ จาก GET /ai/optimize-runs)
+    python run_optimize.py --via-server [--dry-run] ให้ server รัน Optimizer เอง (POST /api/v1/ai/optimize)
+    python run_optimize.py --input output/<รอบ>/optimize_inputs.json   รันซ้ำจากข้อมูลจริงที่บันทึกไว้ (ไม่ต่อ server ไม่เขียน)
 
 URL ของ server: env API_BASE_URL (ค่าเริ่มต้น http://127.0.0.1:8000/api/v1)
 ผลแต่ละรอบ: output/<วันที่>_<เวลา>_<โหมด>/ (optimize_inputs.json, plan.json, decisions_request.json,
@@ -20,7 +22,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from ai_engine.optimizer import ApiClient, ApiError, PlanValidationError, optimize_and_post, run_optimizer
+from ai_engine.optimizer import ApiClient, ApiError, PlanValidationError, optimize_and_post, pick_run, run_optimizer
 from ai_engine.optimizer.config import BKK
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "output"
@@ -65,6 +67,15 @@ def format_report(plan: dict, decisions: list) -> str:
     return "\n".join(lines)
 
 
+def format_runs(runs: dict) -> str:
+    lines = [f"รอบสแกนใน lot_risk_assessments (วันที่อ้างอิงของ server = {runs['reference_date']}):",
+             f"  {'run_id':36s}  {'สแกนวันที่':10s}  lot  HIGH/CRIT  มี decision  รอตัดสินใจ  พร้อม"]
+    for r in runs["runs"][:10]:
+        lines.append(f"  {r['run_id']:36s}  {str(r['scan_date']):10s}  {r['lots']:3d}  {r['at_risk']:9d}  "
+                     f"{r['decided']:11d}  {r['pending']:10d}  {'ใช่' if r['ready'] else '-'}")
+    return "\n".join(lines)
+
+
 def write_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
 
@@ -86,28 +97,48 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="No-Waste-Bro Optimizer")
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--days-ahead", type=int, default=1)
-    ap.add_argument("--save", action="store_true", help="บันทึก decision ลง Supabase ผ่าน server")
+    ap.add_argument("--dry-run", action="store_true", help="คำนวณและแสดงผลอย่างเดียว ไม่เขียน Supabase")
+    ap.add_argument("--save", action="store_true", help=argparse.SUPPRESS)   # รุ่นเก่า: ตอนนี้บันทึกเป็นค่าเริ่มต้นแล้ว
     ap.add_argument("--via-server", action="store_true", help="ให้ server รัน Optimizer เอง (POST /ai/optimize)")
     ap.add_argument("--input", type=Path, default=None, help="optimize_inputs.json ที่บันทึกไว้ (ไม่ต่อ server)")
     args = ap.parse_args()
+    save = not args.dry_run
 
-    mode = "file" if args.input else ("server" if args.via_server else "api") + ("_save" if args.save else "_dry")
+    mode = "file" if args.input else ("server" if args.via_server else "api") + ("_save" if save else "_dry")
     try:
         if args.input:
             result = run_local_file(args.input)
-        elif args.via_server:
-            response = ApiClient().run_optimize(args.run_id, args.days_ahead, dry_run=not args.save)
-            out = OUTPUT_DIR / f"{response['reference_date']}_{datetime.now(BKK):%H%M%S}_{mode}"
-            out.mkdir(parents=True, exist_ok=True)
-            write_json(out / "optimize_response.json", response)
-            print(json.dumps(response["summary"], ensure_ascii=False, indent=1))
-            print(f"decision {len(response['decisions'])} รายการ | บันทึกแล้ว: {bool(response['saved'])} | "
-                  f"คืน IDLE: {response['lots_released']}\nไฟล์ผลลัพธ์: {out}")
-            return 0
         else:
-            result = optimize_and_post(ApiClient(), run_id=args.run_id, days_ahead=args.days_ahead, dry_run=not args.save)
+            # ---- 1) GET: เลือกรอบสแกนที่พร้อมตัดสินใจ
+            client = ApiClient()
+            run_id, runs = pick_run(client, args.run_id)
+            if runs is not None:
+                print(format_runs(runs) + "\n")
+                if run_id is None:
+                    print(f"ไม่มีรอบสแกนที่พร้อมตัดสินใจ: ต้องเป็นรอบที่สแกนวันที่ {runs['reference_date']} (= DEMO_DATE) "
+                          f"และยังมี lot HIGH / CRITICAL สถานะ PROCESSING ที่ไม่มี decision\n"
+                          f"  - สแกนใหม่: cd ..\\risk_forecaster แล้ว python run_scan.py --source api\n"
+                          f"  - หรือแก้ DEMO_DATE ใน server/.env ให้ตรงกับ 'สแกนวันที่' ของรอบที่ต้องการ แล้วเปิด server ใหม่\n"
+                          f"  - หรือระบุรอบเอง: python run_optimize.py --run-id <run_id>\n"
+                          f"ไม่ได้บันทึกอะไร", file=sys.stderr)
+                    return 3
+                print(f"ใช้รอบ {run_id}\n")
+            if args.via_server:
+                response = client.run_optimize(run_id, args.days_ahead, dry_run=not save)
+                out = OUTPUT_DIR / f"{response['reference_date']}_{datetime.now(BKK):%H%M%S}_{mode}"
+                out.mkdir(parents=True, exist_ok=True)
+                write_json(out / "optimize_response.json", response)
+                print(json.dumps(response["summary"], ensure_ascii=False, indent=1))
+                print(f"decision {len(response['decisions'])} รายการ | บันทึกแล้ว: {bool(response['saved'])} | "
+                      f"คืน IDLE: {response['lots_released']}\nไฟล์ผลลัพธ์: {out}")
+                return 0
+            # ---- 2) GET ข้อมูล -> คำนวณ -> 3) POST /optimization-decisions (ถ้าไม่ใช่ --dry-run)
+            result = optimize_and_post(client, run_id=run_id, days_ahead=args.days_ahead, dry_run=not save)
     except ApiError as e:
-        print(f"เรียก server ไม่สำเร็จ: {e}\n(เปิด server ด้วย `fastapi dev main.py` ในโฟลเดอร์ server แล้วหรือยัง?)",
+        print(f"server ตอบ error: {e}", file=sys.stderr)
+        return 1
+    except OSError as e:
+        print(f"ต่อ server ไม่ได้: {e}\n(เปิด server ด้วย `fastapi dev main.py` ในโฟลเดอร์ server แล้วหรือยัง?)",
               file=sys.stderr)
         return 1
     except PlanValidationError as e:
@@ -128,7 +159,13 @@ def main() -> int:
     report = format_report(plan, result["payload"]["decisions"])
     (out / "report.txt").write_text(report, encoding="utf-8")
     print(report)
-    status = "บันทึกแล้ว" if result.get("saved") else "ยังไม่ได้บันทึก (เพิ่ม --save เพื่อบันทึก)"
+    if result.get("saved"):
+        status = (f"บันทึกลง optimization_decisions แล้ว {result['saved'].get('created', len(result['payload']['decisions']))} "
+                  f"รายการ (ดู: GET /api/v1/optimization-decisions?run_id={plan['run_id']})")
+    elif save:
+        status = "ไม่มี decision ให้บันทึก (ไม่มี lot HIGH / CRITICAL ที่ยังไม่ตัดสินใจในรอบสแกนนี้)"
+    else:
+        status = "--dry-run: ยังไม่ได้บันทึก (รันโดยไม่ใส่ --dry-run เพื่อบันทึก)"
     if args.input:
         status = "รันจากไฟล์ ไม่ได้บันทึก"
     print(f"\n{status} | คืน IDLE: {result['lots_to_release'] if result.get('released') else '-'} | ไฟล์ผลลัพธ์: {out}")

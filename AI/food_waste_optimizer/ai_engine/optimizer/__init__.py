@@ -8,10 +8,10 @@
     optimize_and_post(dry_run=False)                                                # อ่าน -> คำนวณ -> บันทึกผ่าน server
 """
 from ai_engine.optimizer.config import ACTION_BY_METHOD, OptimizerConfig, simulated_now
-from ai_engine.optimizer.io import DEFAULT_API_BASE, ApiClient, ApiError, load_from_api
+from ai_engine.optimizer.io import DEFAULT_API_BASE, ApiClient, ApiError, load_from_api, pick_run
 from ai_engine.optimizer.pipeline import (PlanValidationError, attach_decision_ids, lots_to_release,
-                                        optimize_and_post, run_optimizer)
+                                          optimize_and_post, run_optimizer)
 
 __all__ = ["run_optimizer", "optimize_and_post", "attach_decision_ids", "lots_to_release", "OptimizerConfig",
-        "simulated_now", "ApiClient", "ApiError", "load_from_api", "DEFAULT_API_BASE", "PlanValidationError",
-        "ACTION_BY_METHOD"]
+           "simulated_now", "ApiClient", "ApiError", "load_from_api", "pick_run", "DEFAULT_API_BASE", "PlanValidationError",
+           "ACTION_BY_METHOD"]

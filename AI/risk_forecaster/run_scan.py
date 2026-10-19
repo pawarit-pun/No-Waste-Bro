@@ -5,6 +5,8 @@
     python run_scan.py --date 2026-10-16
     python run_scan.py --source api --dry-run           # เรียก scan-inputs จริง แต่ไม่ล็อก / ไม่ POST
     python run_scan.py --source api                     # รอบจริง (ต้องตั้ง API_BASE_URL)
+    python run_scan.py --source api --optimize preview  # รอบจริง แล้วให้ Optimizer คำนวณผลของ run นี้ (ยังไม่บันทึก)
+    python run_scan.py --source api --optimize save     # รอบจริง แล้วให้ Optimizer บันทึก decision ทันที (พร้อมให้ RAG)
 
 ลำดับในโหมด api:
   1. GET   /ai/scan-inputs?history_days=56
@@ -14,6 +16,7 @@
                                recipe_demand_forecasts ใน transaction เดียว) -> run_id + assessment_id
   5. PATCH /inventory-lots/ai-status  IDLE  (ล็อต LOW / MEDIUM ให้สแกนใหม่พรุ่งนี้)
   Optimizer อ่านผลจาก GET /ai/optimize-inputs?run_id=...
+  6. (ถ้าใส่ --optimize) POST /ai/optimize?run_id=...  server รัน Optimizer กับผลรอบนี้
 ถ้าพังระหว่างขั้น 3-4 ล็อตทั้งหมดจะถูกตั้งกลับเป็น IDLE
 """
 import argparse
@@ -62,6 +65,8 @@ def main():
     ap.add_argument("--source", choices=["local", "api"], default="local")
     ap.add_argument("--date", type=date.fromisoformat, default=date(2026, 10, 16), help="วันอ้างอิง (โหมด local)")
     ap.add_argument("--dry-run", action="store_true", help="โหมด api: อ่านอย่างเดียว ไม่ล็อก ไม่ POST")
+    ap.add_argument("--optimize", choices=["preview", "save"], default=None,
+                    help="โหมด api รอบจริง: ส่งต่อให้ Optimizer ทันที (preview = คำนวณอย่างเดียว, save = บันทึก decision)")
     args = ap.parse_args()
 
     source = LocalSource(args.date) if args.source == "local" else ApiSource()
@@ -131,6 +136,17 @@ def main():
           f" | คืน IDLE {len(back)} ล็อต" + (f" | run_id {run_id}" if run_id else " | (ไม่ได้ POST)"))
     print("recipe_demand:", ", ".join(f"{r['recipe_id']} {r['menu_qty']} (฿{r['expected_revenue']:,.0f})"
                                       for r in recipe_rows))
+
+    # ---- เส้นเชื่อมไป Optimizer (AI/food_waste_optimizer ผ่าน server: POST /ai/optimize)
+    if args.optimize and run_id:
+        opt = source.optimize(run_id, dry_run=args.optimize == "preview")
+        write_json(out_dir / "optimize_response.json", opt)
+        s = opt["summary"]
+        print(f"Optimizer ({'บันทึกแล้ว' if opt.get('saved') else 'ยังไม่บันทึก'}): {len(opt['decisions'])} decision | "
+              + ", ".join(f"{k} {v}%" for k, v in s.get("split_pct_by_method", {}).items())
+              + f" | กำไรสุทธิ {s.get('net_profit_thb', 0):,.2f} บาท")
+    elif args.optimize:
+        print("--optimize ใช้ได้เฉพาะรอบจริง (--source api ไม่ใส่ --dry-run) เพราะต้องมี run_id ที่บันทึกแล้ว")
     print(f"ไฟล์ผลลัพธ์: {out_dir}")
 
 
