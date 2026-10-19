@@ -4,15 +4,19 @@ PAGE_SIZE = 1000  # Supabase คืนได้สูงสุด 1,000 แถ�
 
 
 def fetch_all(table: str, columns: str = "*", in_filter: tuple[str, list] | None = None,
-              order_by: tuple[str, ...] = ()) -> list[dict]:
+              order_by: tuple[str, ...] = (), filters: list[tuple[str, str, object]] = ()) -> list[dict]:
     """ดึงทุกแถวของตาราง/view โดยวนดึงทีละหน้า กันข้อมูลถูกตัดที่ 1,000 แถว
-    in_filter=("product_id", [...]) กรองเฉพาะค่าที่ระบุ, order_by ทำให้การแบ่งหน้าไม่สลับลำดับ"""
+    in_filter=("product_id", [...]) กรองเฉพาะค่าที่ระบุ, order_by ทำให้การแบ่งหน้าไม่สลับลำดับ
+    filters=[("gte", "sale_date", "2026-09-18"), ("lt", "sale_date", "2026-10-16")] กรองเพิ่มด้วย operator
+    ของ PostgREST (eq / gt / gte / lt / lte)"""
     rows: list[dict] = []
     start = 0
     while True:
         query = supabase.table(table).select(columns)
         if in_filter is not None:
             query = query.in_(in_filter[0], in_filter[1])
+        for op, column, value in filters:
+            query = getattr(query, op)(column, value)
         for column in order_by:
             query = query.order(column)
         res = query.range(start, start + PAGE_SIZE - 1).execute()

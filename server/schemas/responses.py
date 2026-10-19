@@ -31,20 +31,72 @@ class InventoryLotRow(_Row):
     updated_at: Optional[datetime] = None
 
 
-class SalesHistoryRow(_Row):
+class ScanProductRow(_Row):
+    product_id: str
+    name: str
+    category: str = Field(..., description="DAIRY / BAKERY / MEAT / SEAFOOD / PRODUCE / READY_TO_EAT")
+    unit_of_measure: str = Field(..., description="หน่วยนับของ lot เช่น PIECE / PACK")
+    regular_price: float = Field(..., description="ราคาปกติ (บาท/หน่วย)")
+    min_allowed_price: Optional[float] = Field(None, description="ราคาต่ำสุดที่ลดได้")
+    shelf_life_days: int = Field(..., description="อายุสินค้านับจากวันรับเข้า/ผลิต (วัน) 0 = ต้องขายให้หมดในวันนั้น")
+
+
+class ProductDailyRow(_Row):
     product_id: str
     sale_date: date
-    markdown_pct: float = Field(..., description="% ส่วนลดของวันนั้น (0 = ราคาปกติ)")
-    quantity_sold: int
-    avg_selling_price: float
+    opening_qty: int = Field(..., description="ของบนชั้นตอนเปิดร้าน (08:00)")
+    received_qty: int = Field(..., description="ของรับเข้าวันนั้น (supplier หรือครัวผลิต)")
+    sold_qty: int = Field(..., description="ยอดขายจริงทั้งวัน = sold_full_price_qty + markdown_sold_qty")
+    sold_full_price_qty: int = Field(..., description="ขายได้ในราคาปกติ")
+    markdown_sold_qty: int = Field(..., description="ขายได้ในราคาลด")
+    waste_qty: int = Field(..., description="ทิ้งเพราะหมดอายุ/เสีย")
+    closing_qty: int = Field(..., description="คงเหลือตอนปิดร้าน (22:00) = opening + received - sold - waste")
+    is_stockout: bool = Field(..., description="ของหมดชั้นก่อนปิดร้าน: ยอดขายวันนั้นต่ำกว่า demand จริง (censored)")
+    stockout_hour: Optional[int] = Field(None, description="ชั่วโมงที่ของหมด (8-22) null = ไม่หมด")
+    markdown_pct: float = Field(..., description="ส่วนลดสูงสุดของวัน (0 = ไม่ลด)")
+    regular_price: float
+    avg_selling_price: Optional[float] = Field(None, description="ราคาขายเฉลี่ยถ่วงน้ำหนักของวัน (null ถ้าขายไม่ได้เลย)")
+    latent_demand: int = Field(..., description="demand จริงก่อนถูกจำกัดด้วยสต็อก ใช้วัดผลโมเดลเท่านั้น ห้ามใช้เป็น feature")
 
 
-class SalesVelocityRow(_Row):
-    product_id: str
-    avg_daily_sales_7d: Optional[float] = Field(None, description="ยอดขายเฉลี่ยต่อวัน 7 วันล่าสุด")
-    avg_daily_sales_30d: Optional[float] = Field(None, description="ยอดขายเฉลี่ยต่อวัน 30 วันล่าสุด")
-    avg_daily_sales_regular_30d: Optional[float] = Field(None, description="ยอดขายเฉลี่ยต่อวัน 30 วัน เฉพาะวันขายราคาปกติ")
-    reference_date: Optional[date] = Field(None, description="วันขายล่าสุดใน sales_history ที่ใช้เป็นจุดอ้างอิง")
+class DailyContextRow(_Row):
+    context_date: date
+    dow: int = Field(..., description="ISO day of week 1 = จันทร์ … 7 = อาทิตย์")
+    is_weekend: bool
+    is_public_holiday: bool = Field(..., description="วันหยุดราชการ/วันหยุดพิเศษที่มีผลกับ กทม.")
+    holiday_name: Optional[str] = None
+    is_long_weekend_day: bool = Field(..., description="อยู่ในช่วงหยุดต่อเนื่อง >= 3 วัน")
+    is_pension_day: bool = Field(..., description="วันจ่ายบำนาญ (ปฏิทินกรมบัญชีกลาง)")
+    is_private_payday: bool = Field(..., description="วันเงินเดือนเอกชน (สมมติ = วันทำการสุดท้ายของเดือน)")
+    days_since_any_payday: int = Field(..., description="จำนวนวันนับจากวันเงินเดือนออกล่าสุด (ข้าราชการ/บำนาญ/เอกชน)")
+    rain_mm: float = Field(..., description="ฝนรวมทั้งวัน (มม.) วันที่ผ่านมา = ค่าจริง, วันนี้เป็นต้นไป = ค่าพยากรณ์")
+    rain_mm_16_20: float = Field(..., description="ฝนช่วง 16:00-20:00 ช่วงพีคคนซื้อของ (มม.)")
+    temp_max_c: float
+    temp_min_c: float
+
+
+class ShelfForecastRow(_Row):
+    discount_pct: float = Field(..., description="ส่วนลด (%) 0 = ราคาปัจจุบัน")
+    price: float = Field(..., description="ราคาหลังลด (บาท/หน่วย)")
+    expected_qty: float = Field(..., description="ล็อตนี้คาดว่าขายได้ก่อนหมดอายุ ถ้าลดตั้งแต่เปิดร้านวันนี้จนหมดอายุ")
+    low_qty: float = Field(..., description="ช่วงล่าง (10%)")
+    high_qty: float = Field(..., description="ช่วงบน (90%)")
+    applies_from: date
+    applies_until: date
+    lost_sales_other_lots: float = Field(..., description="ล็อตอื่นของสินค้าเดียวกันขายได้น้อยลงเท่าไร")
+
+
+class RecipeDemandRow(_Row):
+    recipe_id: str
+    output_product_id: str
+    window_from: date
+    window_to: date = Field(..., description="ช่วงอายุเมนู")
+    gross_demand: float = Field(..., description="ความต้องการเมนูทั้งช่วง")
+    current_stock: int = Field(..., description="ของเมนูที่มีบนชั้นแล้ว")
+    menu_qty: float = Field(..., description="ควรผลิตเพิ่ม")
+    low_qty: float
+    high_qty: float
+    expected_revenue: float = Field(..., description="รายได้ที่คาด (บาท)")
 
 
 class AtRiskLot(_Row):
@@ -53,15 +105,17 @@ class AtRiskLot(_Row):
     lot_id: str
     assessed_at: datetime
     days_to_expiry: int
+    sellable_hours: Optional[int] = Field(None, description="ชั่วโมงร้านเปิดที่เหลือจนสิ้นวันหมดอายุ")
     quantity_at_assessment: int
     forecast_daily_demand: float
     predicted_units_sold_before_expiry: float
     predicted_leftover_units: float
     sell_through_probability: Optional[float] = None
     risk_score: float
-    risk_level: str = Field(..., description="MEDIUM / HIGH / CRITICAL")
+    risk_level: str = Field(..., description="HIGH / CRITICAL")
     model_version: Optional[str] = None
     lot: Optional[InventoryLotRow] = Field(None, description="ข้อมูล lot ปัจจุบันทั้งแถว")
+    shelf: list[ShelfForecastRow] = Field(default_factory=list, description="ลด x% แล้วขายได้เท่าไร เรียงตามส่วนลด ([] = หมดอายุแล้ว หรือห้ามลดราคา)")
 
 
 class ProductRule(_Row):
@@ -157,9 +211,11 @@ class TaskRow(_Row):
 # ---------- Response ของแต่ละ route ----------
 
 class ScanInputsResponse(BaseModel):
+    reference_date: date = Field(..., description="วันที่ระบบถือว่าเป็นวันนี้ (เวลาไทย หรือ DEMO_DATE) ใช้คำนวณ days_to_expiry")
     inventory_lots: list[InventoryLotRow] = Field(..., description="lot ที่ ai_status = IDLE (ยังไม่เคยถูกสแกน) เรียงตามวันหมดอายุ")
-    sales_history: list[SalesHistoryRow] = Field(..., description="ยอดขายรายวันของสินค้าใน inventory_lots (แยกตามระดับส่วนลด)")
-    average_daily_sales: list[SalesVelocityRow] = Field(..., description="ยอดขายเฉลี่ยต่อวันของสินค้าใน inventory_lots")
+    products: list[ScanProductRow] = Field(..., description="ข้อมูลสินค้าของ lot ข้างบน (หมวด ราคา อายุสินค้า)")
+    product_daily: list[ProductDailyRow] = Field(..., description="ยอดขาย/สต็อก/ของทิ้งรายวันของสินค้าของ lot ข้างบน ย้อนหลัง history_days วันถึงเมื่อวาน ([] ถ้า history_days = 0)")
+    daily_context: list[DailyContextRow] = Field(..., description="ปัจจัยรายวัน (วันหยุด วันเงินเดือน อากาศ) วันนี้ถึง 7 วันข้างหน้า หรือถึงวันหมดอายุล่าสุดของ lot ถ้าช้ากว่า")
 
 
 class IngredientLot(_Row):
@@ -184,7 +240,8 @@ class IngredientStock(BaseModel):
 class OptimizeInputsResponse(BaseModel):
     reference_date: date = Field(..., description="วันที่ระบบถือว่าเป็นวันนี้")
     run_id: Optional[UUID] = Field(None, description="รอบสแกนที่ใช้ null = ยังไม่เคยสแกน")
-    at_risk_lots: list[AtRiskLot] = Field(..., description="lot ที่ risk MEDIUM ขึ้นไป เรียงจาก risk_score มากไปน้อย")
+    at_risk_lots: list[AtRiskLot] = Field(..., description="lot ที่ risk HIGH / CRITICAL เรียงจาก risk_score มากไปน้อย")
+    recipe_demand: list[RecipeDemandRow] = Field(default_factory=list, description="ความต้องการเมนูครัวต่อสูตรของรอบสแกน เรียงตามรายได้ที่คาด")
     products: list[ProductRule] = Field(..., description="กฎของสินค้าทุกตัว")
     recipes: list[RecipeWithIngredients] = Field(..., description="สูตรที่ active พร้อมวัตถุดิบ")
     kitchen_capacity: list[KitchenCapacityDay] = Field(..., description="ความจุครัวตั้งแต่วันนี้ถึง +days_ahead")

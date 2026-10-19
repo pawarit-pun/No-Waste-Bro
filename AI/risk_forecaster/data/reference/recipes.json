@@ -1,0 +1,140 @@
+[
+ {
+  "recipe_id": "RCP-001",
+  "name": "สเต็กเนื้อสันนอก พร้อมสลัด",
+  "output_product_id": "RTE-001",
+  "output_quantity": 10,
+  "estimated_prep_time_mins": 60,
+  "shelf_life_days": 0,
+  "department_id": "KITCHEN_DELI",
+  "is_active": true,
+  "ingredients": [
+   {
+    "ingredient_product_id": "MEA-002",
+    "required_quantity": 2000,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": true
+   },
+   {
+    "ingredient_product_id": "PRO-002",
+    "required_quantity": 500,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": false
+   }
+  ]
+ },
+ {
+  "recipe_id": "RCP-002",
+  "name": "สลัดอกไก่ย่าง",
+  "output_product_id": "RTE-002",
+  "output_quantity": 10,
+  "estimated_prep_time_mins": 45,
+  "shelf_life_days": 1,
+  "department_id": "KITCHEN_DELI",
+  "is_active": true,
+  "ingredients": [
+   {
+    "ingredient_product_id": "MEA-001",
+    "required_quantity": 1000,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": true
+   },
+   {
+    "ingredient_product_id": "PRO-002",
+    "required_quantity": 750,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": false
+   }
+  ]
+ },
+ {
+  "recipe_id": "RCP-003",
+  "name": "ข้าวหน้าแซลมอนย่าง",
+  "output_product_id": "RTE-003",
+  "output_quantity": 10,
+  "estimated_prep_time_mins": 45,
+  "shelf_life_days": 0,
+  "department_id": "KITCHEN_DELI",
+  "is_active": true,
+  "ingredients": [
+   {
+    "ingredient_product_id": "SEA-001",
+    "required_quantity": 900,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": true
+   }
+  ]
+ },
+ {
+  "recipe_id": "RCP-004",
+  "name": "สมูทตี้กล้วยโยเกิร์ต",
+  "output_product_id": "RTE-004",
+  "output_quantity": 8,
+  "estimated_prep_time_mins": 20,
+  "shelf_life_days": 0,
+  "department_id": "KITCHEN_DELI",
+  "is_active": true,
+  "ingredients": [
+   {
+    "ingredient_product_id": "DAI-001",
+    "required_quantity": 800,
+    "unit_of_measure": "ML",
+    "is_primary_ingredient": false
+   },
+   {
+    "ingredient_product_id": "DAI-002",
+    "required_quantity": 1000,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": true
+   },
+   {
+    "ingredient_product_id": "PRO-001",
+    "required_quantity": 1000,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": true
+   }
+  ]
+ },
+ {
+  "recipe_id": "RCP-005",
+  "name": "เค้กกล้วยหอม",
+  "output_product_id": "BAK-002",
+  "output_quantity": 4,
+  "estimated_prep_time_mins": 75,
+  "shelf_life_days": 3,
+  "department_id": "BAKERY_DEPT",
+  "is_active": true,
+  "ingredients": [
+   {
+    "ingredient_product_id": "PRO-001",
+    "required_quantity": 2000,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": true
+   }
+  ]
+ },
+ {
+  "recipe_id": "RCP-006",
+  "name": "ขนมปังพุดดิ้ง",
+  "output_product_id": "BAK-003",
+  "output_quantity": 12,
+  "estimated_prep_time_mins": 50,
+  "shelf_life_days": 3,
+  "department_id": "BAKERY_DEPT",
+  "is_active": true,
+  "ingredients": [
+   {
+    "ingredient_product_id": "BAK-001",
+    "required_quantity": 480,
+    "unit_of_measure": "G",
+    "is_primary_ingredient": true
+   },
+   {
+    "ingredient_product_id": "DAI-001",
+    "required_quantity": 1300,
+    "unit_of_measure": "ML",
+    "is_primary_ingredient": true
+   }
+  ]
+ }
+]
