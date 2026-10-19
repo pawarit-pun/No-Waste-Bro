@@ -1,13 +1,10 @@
-"""
-Sample decisions in the same shape as GET /optimization-decisions, for offline runs and tests.
+"""Sample decisions shaped like GET /optimization-decisions (IDs, lots, partners are fictional).
 
-Product names come from the demo catalogue; decision IDs, lots, recipes and partners are
-fictional. Covers all four action types plus the edge cases the agent must handle:
-  1. MARKDOWN                 normal case with alternatives
-  2. KITCHEN_REPURPOSE        lot without a shelf location
-  3. DONATE                   partner context present
-  4. DISCARD with a partner   partner context missing (the server only sends it for DONATE)
-  5. DISCARD, no partner      no assessment and no due time
+  1. MARKDOWN                 with alternatives
+  2. KITCHEN_REPURPOSE        no shelf location
+  3. DONATE                   with partner
+  4. DISCARD + partner        no partner context (server sends it only for DONATE)
+  5. DISCARD, no partner      no assessment, no due time
 """
 
 from models import OptimizationDecision
@@ -16,7 +13,7 @@ RUN_ID = "11111111-1111-1111-1111-111111111111"
 
 
 def _decision(n: int, **fields) -> dict:
-    """Fields every action shares; unused action fields are null like in the API."""
+    """Shared fields; unused action fields are null like in the API."""
     base = {
         "decision_id": f"00000000-0000-0000-0000-{n:012d}",
         "run_id": RUN_ID,
@@ -140,5 +137,5 @@ RAW_DECISIONS = [
 
 
 def get_mock_decisions() -> list[OptimizationDecision]:
-    """Return fictional decisions for local development (validated like API data)."""
+    """Validated like API data."""
     return [OptimizationDecision.model_validate(d) for d in RAW_DECISIONS]

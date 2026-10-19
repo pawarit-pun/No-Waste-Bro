@@ -1,7 +1,7 @@
-"""AWS Lambda entry point: handler = handler.lambda_handler
+"""AWS Lambda entry point (handler.lambda_handler).
 
-event (all optional): {"run_id": "...", "dry_run": false, "limit": 5}
-Set OUTPUT_DIR=/tmp/task_agent on Lambda (only /tmp is writable).
+event, all optional: {"run_id": "...", "dry_run": false, "limit": 5}
+Set OUTPUT_DIR=/tmp/task_agent (only /tmp is writable).
 """
 
 from agent import run
@@ -20,6 +20,6 @@ def lambda_handler(event, context):
         run_id=event.get("run_id"),
         limit=event.get("limit"),
     )
-    # The whole run goes to CloudWatch Logs as the audit trail
+    # Audit trail in CloudWatch Logs
     print({"summary": report["summary"], "post_results": report["post_results"], "audit": report["audit"]})
     return {"run_id": report["run_id"], "summary": report["summary"], "post_results": report["post_results"]}

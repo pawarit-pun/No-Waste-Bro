@@ -1,4 +1,4 @@
-"""Retrieve SOP chunks (RAG) from the Bedrock Knowledge Base, filtered by action_type."""
+"""Retrieve SOP chunks (RAG) from the Bedrock Knowledge Base by action_type."""
 
 from config import settings
 
@@ -13,10 +13,10 @@ MAX_CHUNK_CHARS = 1200
 
 
 class KBRetriever:
-    """Each chunk: {"doc_id", "score", "text"}. Results are cached per action + category for one run."""
+    """Chunks: {"doc_id", "score", "text"}, cached per action + category."""
 
     def __init__(self):
-        import boto3  # imported here so offline runs work without AWS access
+        import boto3  # lazy: offline runs need no AWS
 
         self.client = boto3.client("bedrock-agent-runtime", region_name=settings.BEDROCK_REGION)
         self._cache: dict[str, list[dict]] = {}
@@ -30,7 +30,7 @@ class KBRetriever:
         if category:
             query += f" สินค้าหมวด {category}"
 
-        # Documents tagged with this action, plus those that apply to every action
+        # Docs for this action + docs for ALL actions
         response = self.client.retrieve(
             knowledgeBaseId=settings.BEDROCK_KB_ID,
             retrievalQuery={"text": query},
@@ -56,7 +56,7 @@ class KBRetriever:
 
 
 class NullRetriever:
-    """No Knowledge Base (offline runs and tests)."""
+    """No KB (offline runs and tests)."""
 
     def retrieve(self, action: str, category: str | None = None) -> list[dict]:
         return []

@@ -1,4 +1,4 @@
-"""Bedrock Converse calls, prompts, and JSON parsing of the model's answer."""
+"""Prompts, Bedrock Converse calls, and JSON parsing."""
 
 import json
 import re
@@ -40,7 +40,7 @@ def build_user_prompt(facts: Facts, specs: list[StepSpec], sop_chunks: list[dict
     for i, spec in enumerate(specs, 1):
         line = f"{i}. {spec.title}"
         if spec.must:
-            # Value first, label in brackets: with "label value" the model wrote "จำนวน 8" as the whole detail
+            # Value first: with "label value" the model wrote just "จำนวน 8"
             line += " — ประโยคต้องมี: " + ", ".join(f"\"{m.value}\" ({m.label})" for m in spec.must)
         required.append(line)
 
@@ -61,10 +61,9 @@ def build_user_prompt(facts: Facts, specs: list[StepSpec], sop_chunks: list[dict
 
 
 def feedback_prompt(errors: list[str], specs: list[StepSpec]) -> str:
-    """Follow-up message listing validator errors so the model can fix its answer.
+    """Validator errors + a passing example per failed step.
 
-    Each failing step gets a known-good example; without it the model often fixed one error
-    by breaking another (e.g. dropped the safety condition when told not to start with "ถ้า").
+    Without examples the model fixed one error by breaking another.
     """
     failed = sorted({int(n) for e in errors for n in re.findall(r"ขั้นที่ (\d+)", e)})
     examples = [
@@ -78,7 +77,7 @@ def feedback_prompt(errors: list[str], specs: list[StepSpec]) -> str:
 
 
 def parse_json(text: str) -> dict:
-    """Strip <think>...</think> and ``` fences, then parse from the first { to the last }."""
+    """Strip <think> and ``` fences, parse the first { ... last }."""
     cleaned = re.sub(r"<think>.*?</think>", "", text or "", flags=re.S)
     cleaned = re.sub(r"```(?:json)?", "", cleaned)
     start, end = cleaned.find("{"), cleaned.rfind("}")
@@ -89,7 +88,7 @@ def parse_json(text: str) -> dict:
 
 class BedrockLLM:
     def __init__(self):
-        import boto3  # imported here so offline runs work without AWS access
+        import boto3  # lazy: offline runs need no AWS
 
         self.client = boto3.client("bedrock-runtime", region_name=settings.BEDROCK_REGION)
 

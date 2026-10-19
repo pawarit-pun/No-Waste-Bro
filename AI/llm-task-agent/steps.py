@@ -1,10 +1,5 @@
-"""Task structure decided by code, not by the LLM.
-
-- REQUIRED_STEPS: step titles, their order, and the data each step's detail must contain
-- staff_instructions: one-line instruction built from a template
-- fallback detail / reasoning: standard text used when the LLM output fails validation
-- priority: prototype heuristic (not a real store policy)
-"""
+"""Parts of a task decided by code, not the LLM: step titles and required data,
+staff_instructions, standard (fallback) text, and priority."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -12,21 +7,18 @@ from datetime import datetime
 from facts import ACTION_TH, Facts
 
 STOP_TEXT = "ถ้าพบสินค้าเสียหาย จำนวนไม่ตรง หรือข้อมูลไม่ตรงกับระบบ ให้หยุดและแจ้งหัวหน้า"
-# Safety gates the LLM tended to drop; they are required text in their step's detail
+# Safety conditions the LLM tended to drop, so they are required text
 KITCHEN_GATE = "ถ้าไม่พร้อมให้แจ้งหัวหน้า"
 DONATE_GATE = "ถ้ายังไม่ได้รับการยืนยันให้หยุดและแจ้งหัวหน้า"
 DISCARD_GATE = "ถ้ายังไม่ได้รับอนุมัติห้ามดำเนินการต่อ"
-# Required in ai_reasoning when an alternative scores better than the chosen action
+# Required in ai_reasoning when an alternative beats the chosen action
 REVIEW_TEXT = "ให้ผู้จัดการตรวจสอบก่อนอนุมัติ"
 
 
 @dataclass
 class Must:
-    """Data a step's detail must contain. kind 'num' = this number, 'text' = this text.
-
-    pattern: optional regex (matched against the detail without spaces) that also counts as present,
-    for wording with the same meaning, e.g. "ตรวจสอบตำแหน่งกับระบบ" for "ตรวจสอบกับระบบ".
-    """
+    """Data a step's detail must contain: a number (kind 'num') or text.
+    pattern: regex that also accepts same-meaning wording."""
     label: str
     value: str
     kind: str = "text"
@@ -47,7 +39,7 @@ def _must(label: str, value: str | None, kind: str = "text") -> list[Must]:
 def _location_must(f: Facts) -> list[Must]:
     if f.location:
         return _must("ตำแหน่ง", f.location)
-    # No location: any "ตรวจสอบ ... กับระบบ" phrasing is fine
+    # No location: any "ตรวจสอบ ... กับระบบ" is fine
     return [Must("ตำแหน่ง", f.location_or_check, pattern=r"ตรวจสอบ.{0,15}กับระบบ")]
 
 
@@ -188,7 +180,7 @@ _STEPS_BY_ACTION = {
 
 
 def required_steps(f: Facts) -> list[StepSpec]:
-    """Every action starts by locating the lot; unknown actions go to a supervisor."""
+    """Locate the lot first; unknown actions go to a supervisor."""
     build = _STEPS_BY_ACTION.get(f.action)
     if build is None:
         return [
@@ -202,7 +194,7 @@ def required_steps(f: Facts) -> list[StepSpec]:
 
 
 def staff_instructions(f: Facts) -> str:
-    """One sentence shown on the staff app, built from data only (no LLM)."""
+    """One sentence for the staff app, from data only."""
     where = f"ที่ {f.location}" if f.location else f"(ตำแหน่ง: {f.location_or_check})"
     item = f"{f.product_name} {f.qty} {f.unit} (lot {f.lot_id}) {where}"
     due = f" ภายใน {f.due}" if f.due else ""
@@ -225,7 +217,7 @@ def staff_instructions(f: Facts) -> str:
 
 
 def fallback_reasoning(f: Facts) -> str:
-    """Standard ai_reasoning used when no LLM answer passes validation."""
+    """Used when no LLM answer passes validation."""
     parts = [
         f"Optimizer เลือก{ACTION_TH.get(f.action, f.action)} {f.qty} {f.unit} "
         f"ของ{f.product_name} (lot {f.lot_id})"
@@ -243,7 +235,7 @@ def fallback_reasoning(f: Facts) -> str:
 
 
 def compute_priority(f: Facts, now: datetime) -> int:
-    """Prototype heuristic, 1 = most urgent ... 5. Not a real store policy.
+    """Prototype heuristic, not a real store policy.
 
     1 = expired / expires today, or due within 4 hours
     2 = due within 12 hours, or 1 day left for kitchen / donate / discard

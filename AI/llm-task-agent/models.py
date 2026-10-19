@@ -32,7 +32,7 @@ class OptimizationDecision(BaseModel):
     optimizer_version: Optional[str] = None
     created_at: Optional[str] = None
 
-    # Context used by the LLM (the server sends null when it has none)
+    # Context for the LLM (null from the server becomes {})
     assessment: dict[str, Any] = Field(default_factory=dict)
     lot: dict[str, Any] = Field(default_factory=dict)
     product: dict[str, Any] = Field(default_factory=dict)
@@ -50,7 +50,7 @@ class OptimizationDecision(BaseModel):
         return value
 
 
-# Limits below mirror the server's TaskCreate schema
+# Limits match the server's TaskCreate
 class InstructionStep(BaseModel):
     title: str = Field(min_length=1, max_length=80)
     detail: str = Field(min_length=1, max_length=300)

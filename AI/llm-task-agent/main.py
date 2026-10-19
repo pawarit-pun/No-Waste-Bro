@@ -1,9 +1,8 @@
-"""Run the Task Agent from a terminal or CloudShell. Nothing is POSTed unless --post is given.
+"""Run the Task Agent locally. Nothing is POSTed without --post.
 
-Examples
-  python main.py --source mock --no-llm --no-kb     # fully offline: check structure and payload
-  python main.py --source mock                      # sample data + real Knowledge Base and LLM
-  python main.py --source api                       # real decisions, preview only
+  python main.py --source mock --no-llm --no-kb     # fully offline
+  python main.py --source mock                      # sample data + real KB and LLM
+  python main.py --source api                       # real decisions, preview
   python main.py --source api --post                # real decisions, create tasks
 """
 
@@ -15,7 +14,7 @@ from config import settings
 
 
 class MockSource:
-    """Sample decisions from mock_data.py; cannot create tasks."""
+    """Decisions from mock_data.py (read only)."""
 
     def pending_decisions(self, run_id=None):
         from mock_data import get_mock_decisions

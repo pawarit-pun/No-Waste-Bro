@@ -1,27 +1,26 @@
-"""Check the LLM's answer before it reaches staff. Returns a list of errors (empty = pass)."""
+"""Check the LLM's answer before it reaches staff. Empty error list = pass."""
 
 import re
 
 from facts import Facts
 from steps import REVIEW_TEXT, StepSpec
 
-# Any number, including those inside codes and dates (used to build the allowed list)
+# Any number, incl. inside codes and dates (for the allowed list)
 NUM_RE = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?")
-# Standalone numbers only: skips digits inside codes (RCP-001, LOT-000009, E-01) and dates
-# (2026-10-16), otherwise RCP-001 would count as "batch 1"
+# Standalone numbers only, so RCP-001 or 2026-10-16 are not read as "1" or "16"
 STRICT_NUM_RE = re.compile(r"(?<![A-Za-z0-9_\-.])\d+(?:,\d{3})*(?:\.\d+)?(?![A-Za-z0-9_\-])")
 SOP_NAME_RE = re.compile(r"\b[A-Z][A-Z_]*_(?:SOP|POLICY)\b")
 BUDDHIST_YEAR_RE = re.compile(r"\b25[6-9]\d\b")
 PROMPT_TERM_RE = re.compile(r"FACTS|ALTERNATIVES|REQUIRED_STEPS")
-# A detail that starts with a data label ("จำนวน 8") is a list, not an instruction
+# "จำนวน 8" is a data list, not an instruction
 LABEL_START_RE = re.compile(r"^\s*(?:จำนวน|รหัสสูตร|ครัว|เงื่อนไข|ตำแหน่ง|ผู้รับ|วันหมดอายุ|ราคาใหม่|lot)\s")
-# A detail that starts with a condition drops the action itself ("ถ้ายังไม่ได้รับอนุมัติ...")
+# Starting with a condition drops the action ("ถ้ายังไม่ได้รับอนุมัติ...")
 CONDITION_START_RE = re.compile(r"^\s*(?:ถ้า|หาก)")
 MIN_DETAIL = 20
-# "ดีกว่าทางเลือกอื่น 224 บาท": the number must be a difference computed in code
+# "ดีกว่า ... 224 บาท": the number must be a difference computed in code
 COMPARE_RE = re.compile(r"(?:ดีกว่า|แย่กว่า)[^\d\-\n]{0,25}?(\d+(?:,\d{3})*(?:\.\d+)?)\s*บาท")
 
-MAX_DETAIL = 300  # same limit as the server's InstructionStep.detail
+MAX_DETAIL = 300  # server limit
 MAX_REASONING = 800
 
 
@@ -38,12 +37,12 @@ def standalone_numbers(text: str) -> set[float]:
 
 
 def _norm(text: str) -> str:
-    """Compare without spaces, treating "หาก" and "ถ้า" (both "if") as the same word."""
+    """Ignore spaces; "หาก" = "ถ้า"."""
     return re.sub(r"\s+", "", text or "").replace("หาก", "ถ้า")
 
 
 def allowed_numbers(facts: Facts, specs: list[StepSpec]) -> set[float]:
-    """Numbers the LLM may use: those in FACTS, ALTERNATIVES and REQUIRED_STEPS titles."""
+    """Numbers in FACTS, ALTERNATIVES and step titles."""
     pool = "\n".join([facts.to_prompt(), facts.alternatives_prompt(), *(s.title for s in specs)])
     return numbers_in(pool)
 
@@ -85,8 +84,7 @@ def validate_output(out: dict, facts: Facts, specs: list[StepSpec]) -> list[str]
         errors.append(f"instruction_steps ต้องมี {len(specs)} ข้อ แต่ได้ {len(steps)} ข้อ")
 
     allowed = allowed_numbers(facts, specs)
-    # When expected output equals the ingredient qty or batch count we cannot tell which one
-    # a number refers to, so the "คาดว่า" rule is skipped (e.g. yogurt 24 -> 24)
+    # Skip the "คาดว่า" rule when expected output equals qty or batch (ambiguous number)
     check_expected = bool(facts.expected_output) and facts.expected_output not in (facts.qty, facts.batch)
     texts_to_check = [("ai_reasoning", reasoning)]
 

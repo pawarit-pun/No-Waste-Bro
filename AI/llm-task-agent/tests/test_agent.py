@@ -1,7 +1,4 @@
-"""Offline tests for the Task Agent (no AWS, no network).
-
-Run:  python tests/test_agent.py      (or: python -m pytest tests -q, if pytest is installed)
-"""
+"""Offline tests (no AWS, no network). Run: python tests/test_agent.py"""
 
 import copy
 import json
@@ -45,7 +42,7 @@ KITCHEN = OptimizationDecision.model_validate({
 F = build_facts(KITCHEN)
 SPECS = required_steps(F)
 
-# Real Nova Lite answer (Playground, with REQUIRED_STEPS) that still had 2 mistakes
+# Real Nova Lite answer from the Playground, with known mistakes
 NOVA_CASE2 = {
     "ai_reasoning": "ตาม REPURPOSING_SOP เราต้องยืนยันสินค้า lot จำนวน และตำแหน่ง ตรวจความพร้อมของครัว "
                     "โดยต้องเสร็จภายในวันที่ 16 ตุลาคม 2026 เวลา 17:00 น.",

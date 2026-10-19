@@ -1,4 +1,4 @@
-"""Build Facts: every number the task uses comes from the decision, never from the LLM."""
+"""Build Facts: every number comes from the decision, never from the LLM."""
 
 import re
 from dataclasses import dataclass, field
@@ -14,7 +14,7 @@ ACTION_TH = {
     "DONATE": "บริจาค",
     "DISCARD": "แยกทิ้ง",
 }
-# Labels for alternatives (the Optimizer may use action types or disposal methods)
+# Alternatives may use action types or disposal methods
 OPTION_TH = {
     **ACTION_TH,
     "SELF_DISCARD": "ทิ้งเอง",
@@ -31,7 +31,7 @@ MAX_ALTERNATIVES = 3
 
 
 def fmt_num(value) -> str | None:
-    """Format a number without trailing zeros, e.g. 28.0 -> '28', 143.20 -> '143.2'."""
+    """28.0 -> '28', 143.20 -> '143.2'"""
     if value is None:
         return None
     try:
@@ -44,7 +44,7 @@ def fmt_num(value) -> str | None:
 
 
 def parse_dt(value: str | None) -> datetime | None:
-    """Parse an ISO datetime; a value without timezone is Thai time."""
+    """ISO datetime; no timezone = Thai time."""
     if not value:
         return None
     dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -94,13 +94,13 @@ class Facts:
 
     @property
     def comparison_diffs(self) -> set[float]:
-        """Differences (baht) computed in code for each alternative."""
+        """Baht differences computed in code, one per alternative."""
         found = re.findall(r"ทางที่เลือก(?:ดีกว่า|แย่กว่า) ([\d.]+) บาท", self.alternatives_prompt())
         return {float(n) for n in found}
 
     @property
     def chosen_is_worse(self) -> bool:
-        """An alternative scores better than the chosen action: a manager should review it."""
+        """An alternative beats the chosen action, so a manager should review."""
         return any("ทางที่เลือกแย่กว่า" in line for line in self.alternatives)
 
     @property
@@ -114,7 +114,7 @@ class Facts:
         return self.partner_name or self.partner_id
 
     def to_prompt(self) -> str:
-        """FACTS block for the LLM. Missing values say NO_DATA so the model does not guess."""
+        """FACTS for the LLM; missing values say NO_DATA so it does not guess."""
         days = f" (เหลือ {self.days_to_expiry} วัน)" if self.days_to_expiry is not None else ""
         lines = [
             f"- action_type: {self.action} ({ACTION_TH.get(self.action, self.action)})",
@@ -154,7 +154,7 @@ class Facts:
 
 
 def _comparison(chosen: float | None, other: float | None) -> str:
-    """Compare in code: the LLM tends to get the direction wrong with negative numbers."""
+    """Compared in code: the LLM gets the direction wrong with negative numbers."""
     if chosen is None or other is None:
         return ""
     diff = round(float(chosen) - float(other), 2)
@@ -166,7 +166,7 @@ def _comparison(chosen: float | None, other: float | None) -> str:
 
 
 def _alternative_line(alt: dict, chosen_impact: float | None) -> str | None:
-    """One readable line per alternative the Optimizer did not choose."""
+    """One line per alternative the Optimizer did not choose."""
     if alt.get("role") == "chosen":
         return None
     label = alt.get("disposal_method") or alt.get("action_type") or "ทางเลือก"

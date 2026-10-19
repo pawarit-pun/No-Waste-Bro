@@ -1,10 +1,6 @@
-"""Task Agent: decision -> Build Facts -> Retrieve SOP -> LLM -> Validate -> POST /tasks -> report
+"""Task Agent: decision -> Facts -> SOP -> LLM -> Validate -> POST /tasks -> report
 
-Attempts per decision:
-  1. PRIMARY_MODEL
-  2. PRIMARY_MODEL again, with its previous answer and the validator errors (one fix)
-  3. FALLBACK_MODEL, fresh conversation plus the latest errors
-  4. Standard text from templates, so every decision still reaches staff
+Per decision: primary model -> primary fixes its errors once -> fallback model -> standard text.
 """
 
 import json
@@ -22,11 +18,11 @@ from task_generator import build_task, fallback_steps, resolve_now
 from validate import validate_output
 
 TEMPLATE = "TEMPLATE"
-MAX_RAW_TEXT = 4000  # raw model answer kept in the report for prompt tuning
+MAX_RAW_TEXT = 4000  # raw answer kept in the report
 
 
 def clean_detail(text: str) -> str:
-    """The model sometimes copies the prompt's quotes around values ('33.25')."""
+    """Remove quotes the model copies from the prompt ('33.25')."""
     return " ".join(text.replace("'", "").replace('"', "").split())
 
 
@@ -40,7 +36,7 @@ def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> di
 
         for n, model in enumerate(plan):
             if n == 2:
-                # New model: start a fresh conversation but pass on the latest errors
+                # Fallback model: fresh conversation + latest errors
                 last_errors = attempts[-1]["errors"]
                 text = user_prompt + ("\n\n" + feedback_prompt(last_errors, specs) if last_errors else "")
                 messages = [{"role": "user", "text": text}]
@@ -55,7 +51,7 @@ def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> di
                 )
                 out = parse_json(response["text"])
                 record["errors"] = validate_output(out, facts, specs)
-            except Exception as e:  # Bedrock error or broken JSON counts as a failed attempt
+            except Exception as e:  # Bedrock error or bad JSON = failed attempt
                 record["errors"] = [f"{type(e).__name__}: {e}"]
             attempts.append(record)
 
@@ -85,8 +81,7 @@ def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> di
 
 
 def batch_key(facts: Facts) -> str:
-    """POST /tasks is all-or-nothing, so kitchen tasks go in one batch per kitchen + day
-    (a full kitchen then only fails its own tasks). Everything else goes in one batch."""
+    """POST is all-or-nothing: one batch per kitchen + day, so a full kitchen fails only its own tasks."""
     if facts.action == "KITCHEN_REPURPOSE":
         day = facts.due_dt.date().isoformat() if facts.due_dt else "no-date"
         return f"KITCHEN:{facts.kitchen or 'UNKNOWN'}@{day}"
@@ -110,7 +105,7 @@ def post_batches(source, batches: dict[str, list[TaskCreate]], dry_run: bool) ->
                 "kitchen_bookings": response.get("kitchen_bookings", []),
             })
         except ApiError as e:
-            # The decisions stay PENDING so a manager can see and retry them
+            # Decisions stay PENDING for a manager to retry
             results.append({**result, "status": f"FAILED_{e.status}", "error": e.body[:500]})
     return results
 
@@ -137,7 +132,7 @@ def run(
         specs = required_steps(facts)
         try:
             sop, sop_error = retriever.retrieve(facts.action, facts.category), None
-        except Exception as e:  # Knowledge Base down: continue with standard steps
+        except Exception as e:  # KB down: continue without SOP
             sop, sop_error = [], f"{type(e).__name__}: {e}"
 
         written = write_steps(facts, specs, sop, llm)
@@ -182,7 +177,7 @@ def run(
 
 
 def save_report(report: dict) -> str:
-    """Keep every run as a JSON audit trail."""
+    """JSON audit trail of every run."""
     os.makedirs(settings.OUTPUT_DIR, exist_ok=True)
     stamp = datetime.now(TH_TZ).strftime("%Y%m%d_%H%M%S")
     path = os.path.join(settings.OUTPUT_DIR, f"task_agent_{stamp}.json")
