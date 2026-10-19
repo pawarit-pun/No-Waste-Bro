@@ -1,7 +1,20 @@
-"""PART 4 — ประกอบ Context: เอากฎ (rules.py) ไปตรวจกับข้อมูลจริงทุก lot / partner / สูตร ก่อนเข้า solver
+"""PART 4 — ประกอบ Context: เอากฎ (rules.py) ไปตรวจกับข้อมูลจริงทุก lot / partner / สูตร / ครัว ก่อนเข้า solver
 
-ผลลัพธ์คือ "ทางเลือกที่ผ่านกฎแล้วเท่านั้น" + เหตุผลของทางที่ถูกตัด (excluded) ต่อ lot
-Solver ไม่ต้องตรวจกฎซ้ำ มีหน้าที่แค่เลือกสัดส่วนที่กำไรสูงสุดจากทางที่ผ่านกฎ
+ผลลัพธ์ = "ทางเลือกที่ผ่านกฎแล้วเท่านั้น" + รหัสเหตุผลของทางที่ถูกตัด (excluded) ต่อ lot
+solver ไม่ตรวจกฎซ้ำ มีหน้าที่เลือกสัดส่วนที่กำไรสุทธิสูงสุดจากทางที่ผ่านกฎ
+
+งานครัว (ให้ตรงกับที่ server ทำจริงตอน POST /tasks และ complete_task):
+  1 decision KITCHEN_REPURPOSE = 1 งาน (สูตร r, วัน d, lot หลัก a)
+    - lot หลัก a = lot เสี่ยงที่เป็นวัตถุดิบหลัก (is_primary_ingredient) ของสูตร
+      action_quantity = ceil(required_quantity x batch_count / net_content)  (สูตรเดียวกับ demo_seed ใน DB)
+    - วัตถุดิบตัวอื่นของสูตร DB ตัดเองตอน complete แบบหมดอายุก่อนตัดก่อน (FEFO) จาก ingredient_stock
+      -> Optimizer ต้องรวมความต้องการทุกงานเองแล้วเทียบกับสต็อก และนับว่า lot เสี่ยงที่ถูก FEFO ตัดไปก็ถูกใช้ในครัวด้วย
+    - ชั่วโมงครัวที่ server จอง = estimated_prep_time_mins x batch_count ของแต่ละ decision (ไม่จองซ้ำ)
+  ตรวจ: สูตร active / แผนกมีในตารางครัว / ครัวว่างพอ (FULL = 0) / ทำเสร็จก่อน lot หมดอายุ / มีคนซื้อเมนู
+        (recipe_demand) ในช่วงที่ของออกจากครัว / หน่วย G-ML ตรงกัน / วัตถุดิบอื่นมีพอ
+  รหัส U0 สูตรไม่ active  U1 ไม่มีแผนก/เวลาทำ หรือแผนกไม่มีในตารางครัว  U2 สินค้าห้ามเข้าครัว / ไม่ใช่วัตถุดิบหลัก
+       U3 ชั่วโมงครัวไม่พอ  U4 lot หมดอายุก่อนงานเสร็จ  U5 ไม่มีความต้องการเมนูในช่วงนั้น  U6 หน่วยไม่ตรง
+       U7 ไม่รู้จักสินค้าผลผลิต  U8 วัตถุดิบตัวอื่นในสต็อกไม่พอ 1 batch
 """
 from __future__ import annotations
 
@@ -9,13 +22,14 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Callable, Optional
+from typing import Optional
 
-from ai_engine.clock import now_for
-from ai_engine.optimizer.config import OptimizerConfig
-from ai_engine.optimizer.demand import resolve_demand
+from ai_engine.optimizer.config import OptimizerConfig, simulated_now
+from ai_engine.optimizer.demand import conservative, lot_curve, menu_cap
 from ai_engine.optimizer.models import Inputs
-from ai_engine.optimizer.rules import (EPS, expiry_dt, is_expired, kitchen_due, kitchen_hours_budget,markdown_tiers, next_pickup, partner_handling_per_kg,partner_reasons, partner_trip_cost)
+from ai_engine.optimizer.rules import (EPS, expiry_dt, is_expired, kitchen_due, kitchen_hours_budget,
+                                       lot_skip_reasons, markdown_tiers, next_pickup, partner_handling_per_kg,
+                                       partner_reasons, partner_trip_cost, stale_notes)
 
 
 @dataclass
@@ -25,19 +39,20 @@ class LotCtx:
     tiers: list
     partner_ok: list
     excluded: dict
+    notes: list
     weight_kg: Optional[float]
     expired: bool
+    demand_source: str
+    demand_fraction: float
 
 
 @dataclass
 class PartnerCtx:
     partner: object
     pickup: Optional[datetime]
-    booked_kg: float
-    cap_kg: float                     # ความจุที่เหลือของรอบรับ = max - ที่จองไปแล้ว
-    trip_cost: float                  # fixed (+ travel ถ้าไม่ใช่ DONATION)
-    handling: float                   # ต่อ kg
-    sunk: bool                        # จองเที่ยวไว้แล้ว -> ไม่คิดค่าเที่ยวซ้ำ
+    cap_kg: float
+    trip_cost: float
+    handling: float
 
 
 @dataclass
@@ -49,19 +64,39 @@ class DayCtx:
 
 
 @dataclass
-class RecipeCtx:
-    recipe: object
-    eligible: bool
-    reasons: list
-    days: list
+class Job:
+    """งานครัว 1 งาน = 1 decision: สูตร r วัน d โดยใช้ lot หลัก a"""
+    job_id: str
+    recipe_id: str
+    day: date
+    due: datetime
+    anchor_lot_id: str
+    anchor_product_id: str
+    anchor_need: float                 # g/ml ต่อ batch ของวัตถุดิบหลักตัวนี้
+    anchor_content: float              # g/ml ต่อ 1 หน่วยของ lot หลัก
+    others: list                       # [(product_id, need ต่อ batch, is_primary)] DB ตัดเองแบบ FEFO
     hours_per_batch: float
-    out_price: float
-    demand_units: float
-    batch_profit: float               # yield × ราคาขาย − utility_cost
-    primary: list
-    secondary: list
-    suppliers: dict                   # (product_id, day) -> [lot_id]  วัตถุดิบหลักจาก lot เสี่ยง
-    sec_suppliers: dict               # (product_id, day) -> [lot_id]  วัตถุดิบรองจาก lot เสี่ยง
+    nmax: int
+
+
+@dataclass
+class RecipeDay:
+    recipe_id: str
+    day: date
+    cap_units: float                   # เมนูที่คาดว่าขายได้ (แบบระวัง) ถ้าของออกจากครัววันนั้น
+    expected: float
+    low: float
+    fraction: float
+
+
+@dataclass
+class FefoLot:
+    lot_id: str
+    product_id: str
+    content: float
+    quantity: int
+    expiration_date: date
+    at_risk: bool
 
 
 @dataclass
@@ -70,51 +105,48 @@ class Context:
     cfg: OptimizerConfig
     now: datetime
     lots: dict
+    skipped: dict
     partners: dict
-    recipes: dict
     hours: dict
+    jobs: list
+    recipe_days: dict
+    fefo: dict                          # product_id -> [FefoLot] เรียง FEFO
+    fefo_days: dict                     # product_id -> [date]
+    recipe_status: dict                 # recipe_id -> {"eligible": bool, "reasons": [...]}
     warnings: list = field(default_factory=list)
 
-    def nr_stock(self, product_id: str, day: date) -> float:
-        """สต็อกวัตถุดิบ (g/ml) จาก lot ที่ "ไม่ใช่ lot เสี่ยง" และยังไม่หมดอายุ ณ วัน day
-        (ingredient_stock.total_content ลบส่วนของ lot เสี่ยงที่ถูกจัดสรรไปทางอื่น)"""
-        product = self.inputs.products.get(product_id)
-        if product is None or not product.content:
-            return 0.0
-        return sum(s.quantity * product.content for s in self.inputs.stock.get(product_id, [])
-                   if s.lot_id not in self.lots and s.expiration_date >= day)
 
-
-def build_context(inputs: Inputs, demand: Optional[dict] = None, now: Optional[datetime] = None,
-                  cfg: Optional[OptimizerConfig] = None,
-                  booked_kg: Optional[Callable[[str, date], float]] = None) -> Context:
+def build_context(inputs: Inputs, now: Optional[datetime] = None, cfg: Optional[OptimizerConfig] = None,
+                  decided: frozenset = frozenset()) -> Context:
     cfg = cfg or OptimizerConfig()
-    now = now or now_for(inputs.reference_date)
-    curves, menu = resolve_demand(inputs, demand, cfg)
-    warnings: list = []
+    now = now or simulated_now(inputs.reference_date)
+    warnings = list(inputs.warnings)
+    if now.date() != inputs.reference_date:
+        warnings.append(f"T1_NOW_NOT_REFERENCE_DATE now {now.date()} vs reference_date {inputs.reference_date}")
 
-    # ---- lot + markdown ----
-    lots: dict = {}
+    # ---- 4.1 lot ที่ต้องจัดการ + markdown
+    lots, skipped = {}, {}
     for lot in inputs.lots:
         product = inputs.products.get(lot.product_id)
-        if product is None:
-            warnings.append(f"lot {lot.lot_id}: ไม่พบ product {lot.product_id} ใน products — ข้าม")
+        reasons = lot_skip_reasons(lot, product, decided, cfg)
+        if reasons:
+            skipped[lot.lot_id] = {"assessment_id": lot.assessment_id, "reasons": reasons}
             continue
-        tiers, excluded = markdown_tiers(lot, product, curves.get(lot.lot_id, []), now, cfg)
-        lots[lot.lot_id] = LotCtx(lot, product, tiers, [], excluded, product.weight_kg, is_expired(lot, now, cfg))
-    if inputs.lots and any(v is None for p in inputs.products.values() for v in p.disposal.values()):
-        warnings.append("products ไม่มี allow_animal_feed/composting/anaerobic_digestion/landfill "
-                        f"(นโยบาย={cfg.missing_flag_policy}) — ดู io.enrich_products_with_flags")
+        rows, frac, source = lot_curve(lot, now, inputs.reference_date, cfg)
+        tiers, excluded, notes = markdown_tiers(lot, product, rows, now, cfg)
+        notes = stale_notes(lot, inputs.reference_date) + notes
+        lots[lot.lot_id] = LotCtx(lot, product, tiers, [], excluded, notes, product.weight_kg,
+                                  is_expired(lot, now, cfg), source, round(frac, 4))
+    if any(v is None for lc in lots.values() for v in lc.product.disposal.values()):
+        warnings.append("W0_DISPOSAL_FLAGS_MISSING: ไม่มี allow_animal_feed / composting / anaerobic_digestion / landfill "
+                        f"ของบางสินค้า (นโยบาย {cfg.missing_flag_policy}) ส่ง products จาก GET /products มาด้วย")
 
-    # ---- partner ----
-    partners: dict = {}
+    # ---- 4.2 partner
+    partners = {}
     for p in inputs.partners.values():
         pickup = next_pickup(p, now, cfg)
-        booked = booked_kg(p.partner_id, pickup.date()) if (booked_kg and pickup) else 0.0
-        partners[p.partner_id] = PartnerCtx(p, pickup, booked, max(0.0, p.max_kg - booked),
-                                            partner_trip_cost(p), partner_handling_per_kg(p), booked > 0)
-
-    possible_kg: dict = defaultdict(float)
+        partners[p.partner_id] = PartnerCtx(p, pickup, p.max_kg, partner_trip_cost(p), partner_handling_per_kg(p))
+    possible_kg = defaultdict(float)
     for lc in lots.values():
         for pid, pc in partners.items():
             reasons = partner_reasons(lc.lot, lc.product, pc.partner, pc.pickup, pc.cap_kg, cfg, now)
@@ -123,110 +155,133 @@ def build_context(inputs: Inputs, demand: Optional[dict] = None, now: Optional[d
             else:
                 lc.partner_ok.append(pid)
                 possible_kg[pid] += lc.lot.quantity * lc.weight_kg
-    # P7: ต่อให้ส่งทุก lot ที่เข้าเกณฑ์ ก็ไม่ถึง min_kg_per_pickup -> partner นี้ใช้ไม่ได้รอบนี้
-    for pid, pc in partners.items():
+    for pid, pc in partners.items():       # P7: ต่อให้ส่งทุก lot ที่เข้าเกณฑ์ยังไม่ถึงขั้นต่ำต่อรอบ
         if pid in possible_kg and pc.partner.min_kg > possible_kg[pid] + EPS:
             for lc in lots.values():
                 if pid in lc.partner_ok:
                     lc.partner_ok.remove(pid)
                     lc.excluded[f"{pc.partner.partner_type}:{pid}"] = [
-                        f"P7_BELOW_MIN_KG_{possible_kg[pid]:.1f}_NEED_{pc.partner.min_kg:g}"]
+                        f"P7_BELOW_MIN_KG {possible_kg[pid]:.2f} kg < {pc.partner.min_kg:g} kg"]
 
-    # ---- ครัว: ชั่วโมงต่อ (แผนก, วัน) ----
-    hours: dict = {}
+    # ---- 4.3 ชั่วโมงครัวต่อ (แผนก, วัน)
+    hours = {}
     for (dept, day), kd in inputs.kitchen.items():
-        if day < now.date():
-            continue
-        hours[(dept, day)] = DayCtx(dept, day, kitchen_hours_budget(kd.remaining_hrs, kd.status, day, now, cfg),
-                                    kitchen_due(day, cfg))
+        if day >= now.date():
+            hours[(dept, day)] = DayCtx(dept, day, kitchen_hours_budget(kd.remaining_hrs, kd.status, day, now, cfg),
+                                        kitchen_due(day, cfg))
 
-    ctx = Context(inputs, cfg, now, lots, partners, {}, hours, warnings)
-
-    # ---- สูตรอาหาร ----
-    for r in inputs.recipes.values():
-        ctx.recipes[r.recipe_id] = _recipe_ctx(ctx, r, menu)
-    for rid, rc in ctx.recipes.items():
-        for ing in rc.primary + rc.secondary:
-            for lc in lots.values():
-                if lc.product.product_id != ing.product_id:
-                    continue
-                if not lc.product.allow_kitchen:
-                    lc.excluded[f"KITCHEN:{rid}"] = ["U1_KITCHEN_NOT_ALLOWED"]
-                elif not rc.eligible:
-                    lc.excluded[f"KITCHEN:{rid}"] = list(rc.reasons)
+    ctx = Context(inputs, cfg, now, lots, skipped, partners, hours, [], {}, {}, {}, {}, warnings)
+    _build_kitchen(ctx)
     return ctx
 
 
-def _recipe_ctx(ctx: Context, r, menu: dict) -> RecipeCtx:
-    inputs, cfg, now = ctx.inputs, ctx.cfg, ctx.now
-    reasons: list = []
-    out = inputs.products.get(r.output_product_id)
-    primary = [i for i in r.ingredients if i.primary]
-    secondary = [i for i in r.ingredients if not i.primary]
-    if not r.active:
-        reasons.append("U0_RECIPE_INACTIVE")
-    if out is None:
-        reasons.append("U7_OUTPUT_PRODUCT_UNKNOWN")
-    if not r.department_id or not r.prep_mins or r.output_qty <= 0:
-        reasons.append("U1_NO_DEPARTMENT_OR_PREP_TIME")
-    daily = float(menu.get(r.recipe_id, 0.0))
-    if daily <= 0:
-        reasons.append("U5_NO_MENU_DEMAND")
-    if not primary:
-        reasons.append("U2_NO_PRIMARY_INGREDIENT")
-    for ing in r.ingredients:
-        prod = inputs.products.get(ing.product_id)
-        if prod is None or not prod.content or ing.need is None or prod.family != ing.family:
-            reasons.append(f"U6_UNIT_MISMATCH_{ing.product_id}")
+def _stock_content(ctx: Context, product_id: str, day: date) -> float:
+    prod = ctx.inputs.products.get(product_id)
+    if prod is None or not prod.content:
+        return 0.0
+    return sum(s.quantity * prod.content for s in ctx.inputs.stock.get(product_id, []) if s.expiration_date >= day)
 
-    hours_per_batch = (r.prep_mins or 0) / 60.0
-    out_price = out.regular_price if out else 0.0
-    # ASSUMPTION: ขายสินค้าที่ผลิตได้ภายใน shelf_life_days + 1 วัน (0 = ขายให้หมดในวันนั้น)
-    demand_units = math.floor(daily * max(1, r.shelf_life_days + 1) + EPS)
-    rc = RecipeCtx(r, False, reasons, [], hours_per_batch, out_price, float(demand_units),
-                   r.output_qty * out_price - r.utility_cost, primary, secondary, {}, {})
-    if reasons:
-        return rc
 
-    # lot เสี่ยงที่เป็นวัตถุดิบของสูตร + ทำทันก่อนหมดอายุ (due_by ของวันนั้นต้องไม่เกินเวลาหมดอายุ)
-    def usable(lc, day) -> bool:
-        return lc.product.allow_kitchen and not lc.expired and expiry_dt(lc.lot, cfg) >= ctx.hours[(r.department_id, day)].due
+def _build_kitchen(ctx: Context) -> None:
+    inputs, cfg = ctx.inputs, ctx.cfg
+    ingredient_of = defaultdict(set)
+    for r in inputs.recipes.values():
+        for ing in r.ingredients:
+            ingredient_of[ing.product_id].add(r.recipe_id)
+    for lc in ctx.lots.values():
+        if not ingredient_of.get(lc.product.product_id):
+            lc.excluded["KITCHEN:ALL"] = ["U2_NOT_AN_INGREDIENT"]
+        elif not lc.product.allow_kitchen:
+            lc.excluded["KITCHEN:ALL"] = ["U2_KITCHEN_NOT_ALLOWED"]
 
-    day_hours = {d: dc.hours for (dept, d), dc in ctx.hours.items() if dept == r.department_id}
-    hour_days = [d for d, h in sorted(day_hours.items()) if h >= hours_per_batch - EPS]
-    if not hour_days:
-        reasons.append("U3_NO_KITCHEN_HOURS")
-        return rc
-    for ing in primary:
-        if not any(lc.product.product_id == ing.product_id and lc.product.allow_kitchen and not lc.expired
-                   for lc in ctx.lots.values()):
-            reasons.append(f"U2_PRIMARY_MISSING_{ing.product_id}")
-    if reasons:
-        return rc
+    lot_reasons = defaultdict(lambda: defaultdict(set))       # lot_id -> recipe_id -> reasons
+    for r in inputs.recipes.values():
+        reasons = []
+        out = inputs.products.get(r.output_product_id)
+        if not r.active:
+            reasons.append("U0_RECIPE_INACTIVE")
+        if out is None:
+            reasons.append("U7_OUTPUT_PRODUCT_UNKNOWN")
+        if not r.department_id or not r.prep_mins or r.output_qty <= 0:
+            reasons.append("U1_NO_DEPARTMENT_OR_PREP_TIME")
+        elif not any(dept == r.department_id for dept, _ in inputs.kitchen):
+            reasons.append(f"U1_DEPARTMENT_{r.department_id}_NOT_IN_KITCHEN_CAPACITY")
+        for ing in r.ingredients:
+            prod = inputs.products.get(ing.product_id)
+            if prod is None or not prod.content or ing.need is None or prod.family != ing.family:
+                reasons.append(f"U6_UNIT_MISMATCH_{ing.product_id}")
+        primaries = [i for i in r.ingredients if i.primary]
+        anchors_possible = [lc for lc in ctx.lots.values()
+                            if lc.product.allow_kitchen and any(i.product_id == lc.product.product_id for i in primaries)]
+        if not reasons and not anchors_possible:
+            reasons.append("U2_NO_AT_RISK_PRIMARY_INGREDIENT")
+        ctx.recipe_status[r.recipe_id] = {"eligible": not reasons, "reasons": list(reasons)}
+        if reasons:
+            for lc in ctx.lots.values():
+                if lc.product.product_id in {i.product_id for i in r.ingredients}:
+                    lot_reasons[lc.lot.lot_id][r.recipe_id].update(reasons)
+            continue
 
-    feasible = []
-    for d in hour_days:
-        ok = True
-        for ing in primary:
-            sup = [lid for lid, lc in ctx.lots.items() if lc.product.product_id == ing.product_id and usable(lc, d)]
-            rc.suppliers[(ing.product_id, d)] = sup
-            ok = ok and bool(sup)
-        for ing in secondary:
-            rc.sec_suppliers[(ing.product_id, d)] = [
-                lid for lid, lc in ctx.lots.items() if lc.product.product_id == ing.product_id and usable(lc, d)]
-        if ok:
-            feasible.append(d)
-    if not feasible:
-        reasons.append("U4_CANNOT_FINISH_BEFORE_EXPIRY")
-        return rc
-    # วัตถุดิบรองต้องมีพอ (สต็อกที่ไม่เสี่ยง + lot เสี่ยง) อย่างน้อย 1 batch
-    for ing in secondary:
-        prod = inputs.products[ing.product_id]
-        have = ctx.nr_stock(ing.product_id, feasible[0]) + sum(
-            ctx.lots[lid].lot.quantity * prod.content for lid in rc.sec_suppliers.get((ing.product_id, feasible[0]), []))
-        if have + EPS < ing.need:
-            reasons.append(f"U7_SECONDARY_SHORT_{ing.product_id}")
-    if reasons:
-        return rc
-    rc.days, rc.eligible = feasible, True
-    return rc
+        day_reasons = []
+        for (dept, day), dc in sorted(ctx.hours.items(), key=lambda kv: kv[0][1]):
+            if dept != r.department_id:
+                continue
+            if dc.hours + EPS < r.hours_per_batch:
+                day_reasons.append(f"U3_KITCHEN_HOURS {day} {dc.hours:.2f}h < {r.hours_per_batch:.2f}h")
+                continue
+            expected, low, frac = menu_cap(inputs.recipe_demand.get(r.recipe_id), dc.due, cfg)
+            cap = conservative(expected, low, cfg.demand_kappa)
+            if cap < 0.5:
+                day_reasons.append(f"U5_NO_MENU_DEMAND {day} cap {cap:.2f}")
+                continue
+            ctx.recipe_days[(r.recipe_id, day)] = RecipeDay(r.recipe_id, day, cap, round(expected, 3), round(low, 3), frac)
+            for ing in primaries:
+                for lc in anchors_possible:
+                    if lc.product.product_id != ing.product_id:
+                        continue
+                    lot = lc.lot
+                    if lc.expired or expiry_dt(lot.expiration_date, cfg) < dc.due:
+                        lot_reasons[lot.lot_id][r.recipe_id].add(f"U4_EXPIRES_BEFORE_DUE {day}")
+                        continue
+                    others = [(i.product_id, i.need, i.primary) for i in r.ingredients if i.product_id != ing.product_id]
+                    short = [pid for pid, need, _ in others if _stock_content(ctx, pid, day) + EPS < need]
+                    if short:
+                        lot_reasons[lot.lot_id][r.recipe_id].add(f"U8_INGREDIENT_SHORT {','.join(short)} {day}")
+                        continue
+                    content = lc.product.content
+                    nmax = min(int(math.floor(dc.hours / r.hours_per_batch + EPS)),
+                               int(math.ceil(cap / r.output_qty - EPS)),
+                               int(math.floor(lot.quantity * content / ing.need + EPS)))
+                    if nmax < 1:
+                        lot_reasons[lot.lot_id][r.recipe_id].add(f"U8_LOT_TOO_SMALL_FOR_1_BATCH {day}")
+                        continue
+                    ctx.jobs.append(Job(f"{r.recipe_id}@{day.isoformat()}#{lot.lot_id}", r.recipe_id, day, dc.due,
+                                        lot.lot_id, lc.product.product_id, ing.need, content, others,
+                                        r.hours_per_batch, nmax))
+        if not any(j.recipe_id == r.recipe_id for j in ctx.jobs):
+            ctx.recipe_status[r.recipe_id]["eligible"] = False
+            ctx.recipe_status[r.recipe_id]["reasons"] = day_reasons or ["U4_NO_FEASIBLE_JOB"]
+            for lc in anchors_possible:
+                lot_reasons[lc.lot.lot_id][r.recipe_id].update(day_reasons)
+
+    for lot_id, per_recipe in lot_reasons.items():
+        lc = ctx.lots[lot_id]
+        for rid, rs in per_recipe.items():
+            if rs and not any(j.anchor_lot_id == lot_id and j.recipe_id == rid for j in ctx.jobs):
+                lc.excluded[f"KITCHEN:{rid}"] = sorted(rs)
+
+    # ---- FEFO: วัตถุดิบที่ DB ตัดเองตอน complete
+    for j in ctx.jobs:
+        for pid, _, _ in j.others:
+            days = ctx.fefo_days.setdefault(pid, [])
+            if j.day not in days:
+                days.append(j.day)
+    for pid, days in ctx.fefo_days.items():
+        days.sort()
+        prod = inputs.products[pid]
+        rows = []
+        for s in inputs.stock.get(pid, []):
+            lc = ctx.lots.get(s.lot_id)
+            qty = lc.lot.quantity if lc else s.quantity
+            rows.append(FefoLot(s.lot_id, pid, prod.content, qty, s.expiration_date, lc is not None))
+        ctx.fefo[pid] = rows

@@ -1,0 +1,1362 @@
+{
+ "_meta": {
+  "what": "ผลจริงของ GET /api/v1/ai/optimize-inputs และ GET /api/v1/products บนข้อมูล Supabase วันที่ 2026-10-16 (scan run 70228a23...)",
+  "used_by": "ai_engine/tests/test_optimizer.py เท่านั้น (เทสต์ offline) โค้ดใช้งานจริงอ่านจาก server/Supabase เสมอ",
+  "note": "assessment_id / run_id ในภาพ Supabase ถูกตัดท้าย จึงเติม 0 ให้ครบรูปแบบ uuid"
+ },
+ "optimize_inputs": {
+  "ingredient_stock": [
+   {
+    "product_id": "BAK-001",
+    "name": "ขนมปังแซนวิช 480g",
+    "net_content_value": 480,
+    "net_content_unit": "G",
+    "total_units": 70,
+    "total_content": 33600,
+    "content_unit": "G",
+    "lots": [
+     {
+      "lot_id": "LOT-000009",
+      "product_id": "BAK-001",
+      "current_quantity": 70,
+      "expiration_date": "2026-10-17",
+      "location_aisle": "BAKERY-E",
+      "location_shelf": "E-01"
+     }
+    ]
+   },
+   {
+    "product_id": "DAI-001",
+    "name": "นมสดพาสเจอร์ไรส์ รสจืด 830ml",
+    "net_content_value": 830,
+    "net_content_unit": "ML",
+    "total_units": 322,
+    "total_content": 267260,
+    "content_unit": "ML",
+    "lots": [
+     {
+      "lot_id": "LOT-000001",
+      "product_id": "DAI-001",
+      "current_quantity": 150,
+      "expiration_date": "2026-10-18",
+      "location_aisle": "CHILL-A",
+      "location_shelf": "A-01"
+     },
+     {
+      "lot_id": "LOT-000002",
+      "product_id": "DAI-001",
+      "current_quantity": 172,
+      "expiration_date": "2026-10-24",
+      "location_aisle": "CHILL-A",
+      "location_shelf": "A-01"
+     }
+    ]
+   },
+   {
+    "product_id": "DAI-002",
+    "name": "โยเกิร์ต รสธรรมชาติ 125g",
+    "net_content_value": 125,
+    "net_content_unit": "G",
+    "total_units": 45,
+    "total_content": 5625,
+    "content_unit": "G",
+    "lots": [
+     {
+      "lot_id": "LOT-000003",
+      "product_id": "DAI-002",
+      "current_quantity": 45,
+      "expiration_date": "2026-10-17",
+      "location_aisle": "CHILL-A",
+      "location_shelf": "A-03"
+     }
+    ]
+   },
+   {
+    "product_id": "MEA-001",
+    "name": "อกไก่สด 500g",
+    "net_content_value": 500,
+    "net_content_unit": "G",
+    "total_units": 58,
+    "total_content": 29000,
+    "content_unit": "G",
+    "lots": [
+     {
+      "lot_id": "LOT-000004",
+      "product_id": "MEA-001",
+      "current_quantity": 58,
+      "expiration_date": "2026-10-17",
+      "location_aisle": "MEAT-B",
+      "location_shelf": "B-01"
+     }
+    ]
+   },
+   {
+    "product_id": "MEA-002",
+    "name": "เนื้อวัวสันนอก สเต็ก 500g",
+    "net_content_value": 500,
+    "net_content_unit": "G",
+    "total_units": 24,
+    "total_content": 12000,
+    "content_unit": "G",
+    "lots": [
+     {
+      "lot_id": "LOT-000005",
+      "product_id": "MEA-002",
+      "current_quantity": 24,
+      "expiration_date": "2026-10-17",
+      "location_aisle": "MEAT-B",
+      "location_shelf": "B-02"
+     }
+    ]
+   },
+   {
+    "product_id": "PRO-001",
+    "name": "กล้วยหอม 1kg",
+    "net_content_value": 1,
+    "net_content_unit": "KG",
+    "total_units": 50,
+    "total_content": 50000,
+    "content_unit": "G",
+    "lots": [
+     {
+      "lot_id": "LOT-000007",
+      "product_id": "PRO-001",
+      "current_quantity": 50,
+      "expiration_date": "2026-10-17",
+      "location_aisle": "PRODUCE-D",
+      "location_shelf": "D-04"
+     }
+    ]
+   },
+   {
+    "product_id": "PRO-002",
+    "name": "ผักกาดหอม 250g",
+    "net_content_value": 250,
+    "net_content_unit": "G",
+    "total_units": 90,
+    "total_content": 22500,
+    "content_unit": "G",
+    "lots": [
+     {
+      "lot_id": "LOT-000008",
+      "product_id": "PRO-002",
+      "current_quantity": 90,
+      "expiration_date": "2026-10-18",
+      "location_aisle": "PRODUCE-D",
+      "location_shelf": "D-02"
+     }
+    ]
+   },
+   {
+    "product_id": "SEA-001",
+    "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+    "net_content_value": 300,
+    "net_content_unit": "G",
+    "total_units": 20,
+    "total_content": 6000,
+    "content_unit": "G",
+    "lots": [
+     {
+      "lot_id": "LOT-000006",
+      "product_id": "SEA-001",
+      "current_quantity": 20,
+      "expiration_date": "2026-10-16",
+      "location_aisle": "SEAFOOD-C",
+      "location_shelf": "C-01"
+     }
+    ]
+   }
+  ],
+  "reference_date": "2026-10-16",
+  "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+  "at_risk_lots": [
+   {
+    "assessment_id": "cca52f03-5903-4ae6-b026-d1820bdf0000",
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "lot_id": "LOT-000013",
+    "assessed_at": "2026-10-17T12:19:49.826303+00:00",
+    "days_to_expiry": -1,
+    "quantity_at_assessment": 8,
+    "forecast_daily_demand": 0.0,
+    "predicted_units_sold_before_expiry": 0.0,
+    "predicted_leftover_units": 8.0,
+    "sell_through_probability": 0.0,
+    "risk_score": 100.0,
+    "risk_level": "CRITICAL",
+    "model_version": "risk-v3+forecaster_v3",
+    "sellable_hours": 0,
+    "lot": {
+     "lot_id": "LOT-000013",
+     "product_id": "BAK-001",
+     "received_date": "2026-10-11",
+     "expiration_date": "2026-10-15",
+     "initial_quantity": 60,
+     "current_quantity": 8,
+     "unit_cost": 32.0,
+     "location_aisle": "BAKERY-E",
+     "location_shelf": "E-01",
+     "ai_status": "PROCESSING",
+     "current_selling_price": 40.0,
+     "last_price_changed_at": null,
+     "source_task_id": null,
+     "created_at": "2026-10-17T12:16:09.599966+00:00",
+     "updated_at": "2026-10-17T12:16:09.72233+00:00"
+    },
+    "shelf": []
+   },
+   {
+    "assessment_id": "c1ccb78e-c5a6-4011-9cc9-e61e186d4000",
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "lot_id": "LOT-000011",
+    "assessed_at": "2026-10-17T12:19:49.826303+00:00",
+    "days_to_expiry": 1,
+    "quantity_at_assessment": 55,
+    "forecast_daily_demand": 10.02,
+    "predicted_units_sold_before_expiry": 20.05,
+    "predicted_leftover_units": 34.95,
+    "sell_through_probability": 0.0,
+    "risk_score": 63.55,
+    "risk_level": "HIGH",
+    "model_version": "risk-v3+forecaster_v3",
+    "sellable_hours": 28,
+    "lot": {
+     "lot_id": "LOT-000011",
+     "product_id": "BAK-003",
+     "received_date": "2026-10-14",
+     "expiration_date": "2026-10-17",
+     "initial_quantity": 70,
+     "current_quantity": 55,
+     "unit_cost": 11.99,
+     "location_aisle": "BAKERY-E",
+     "location_shelf": "E-03",
+     "ai_status": "PROCESSING",
+     "current_selling_price": 35.0,
+     "last_price_changed_at": null,
+     "source_task_id": null,
+     "created_at": "2026-10-17T12:16:09.599966+00:00",
+     "updated_at": "2026-10-17T12:16:09.72233+00:00"
+    },
+    "shelf": [
+     {
+      "assessment_id": "c1ccb78e-c5a6-4011-9cc9-e61e186d4000",
+      "discount_pct": 0,
+      "price": 35.0,
+      "expected_qty": 20.0,
+      "low_qty": 13,
+      "high_qty": 27,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-17",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "c1ccb78e-c5a6-4011-9cc9-e61e186d4000",
+      "discount_pct": 20,
+      "price": 28.0,
+      "expected_qty": 21.6,
+      "low_qty": 14,
+      "high_qty": 29,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-17",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "c1ccb78e-c5a6-4011-9cc9-e61e186d4000",
+      "discount_pct": 30,
+      "price": 24.5,
+      "expected_qty": 24.1,
+      "low_qty": 16,
+      "high_qty": 32,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-17",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "c1ccb78e-c5a6-4011-9cc9-e61e186d4000",
+      "discount_pct": 50,
+      "price": 17.5,
+      "expected_qty": 25.7,
+      "low_qty": 18,
+      "high_qty": 34,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-17",
+      "lost_sales_other_lots": 0.0
+     }
+    ]
+   },
+   {
+    "assessment_id": "4eeb175a-6baf-4e97-812a-f2981ba26000",
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "lot_id": "LOT-000006",
+    "assessed_at": "2026-10-17T12:19:49.826303+00:00",
+    "days_to_expiry": 0,
+    "quantity_at_assessment": 20,
+    "forecast_daily_demand": 7.78,
+    "predicted_units_sold_before_expiry": 7.78,
+    "predicted_leftover_units": 12.22,
+    "sell_through_probability": 0.0034,
+    "risk_score": 61.11,
+    "risk_level": "CRITICAL",
+    "model_version": "risk-v3+forecaster_v3",
+    "sellable_hours": 14,
+    "lot": {
+     "lot_id": "LOT-000006",
+     "product_id": "SEA-001",
+     "received_date": "2026-10-14",
+     "expiration_date": "2026-10-16",
+     "initial_quantity": 30,
+     "current_quantity": 20,
+     "unit_cost": 83.16,
+     "location_aisle": "SEAFOOD-C",
+     "location_shelf": "C-01",
+     "ai_status": "PROCESSING",
+     "current_selling_price": 115.5,
+     "last_price_changed_at": null,
+     "source_task_id": null,
+     "created_at": "2026-10-17T12:16:09.599966+00:00",
+     "updated_at": "2026-10-17T12:16:09.72233+00:00"
+    },
+    "shelf": [
+     {
+      "assessment_id": "4eeb175a-6baf-4e97-812a-f2981ba26000",
+      "discount_pct": 0,
+      "price": 115.5,
+      "expected_qty": 7.8,
+      "low_qty": 4,
+      "high_qty": 12,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "4eeb175a-6baf-4e97-812a-f2981ba26000",
+      "discount_pct": 20,
+      "price": 92.4,
+      "expected_qty": 8.4,
+      "low_qty": 4,
+      "high_qty": 13,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "4eeb175a-6baf-4e97-812a-f2981ba26000",
+      "discount_pct": 30,
+      "price": 80.85,
+      "expected_qty": 9.4,
+      "low_qty": 5,
+      "high_qty": 14,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "4eeb175a-6baf-4e97-812a-f2981ba26000",
+      "discount_pct": 50,
+      "price": 57.75,
+      "expected_qty": 10.0,
+      "low_qty": 5,
+      "high_qty": 15,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     }
+    ]
+   },
+   {
+    "assessment_id": "eb742153-17e7-4de3-ad85-5b6878ed0000",
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "lot_id": "LOT-000012",
+    "assessed_at": "2026-10-17T12:19:49.826303+00:00",
+    "days_to_expiry": 0,
+    "quantity_at_assessment": 30,
+    "forecast_daily_demand": 14.21,
+    "predicted_units_sold_before_expiry": 14.21,
+    "predicted_leftover_units": 15.79,
+    "sell_through_probability": 0.0031,
+    "risk_score": 52.63,
+    "risk_level": "HIGH",
+    "model_version": "risk-v3+forecaster_v3",
+    "sellable_hours": 14,
+    "lot": {
+     "lot_id": "LOT-000012",
+     "product_id": "RTE-002",
+     "received_date": "2026-10-15",
+     "expiration_date": "2026-10-16",
+     "initial_quantity": 40,
+     "current_quantity": 30,
+     "unit_cost": 20.8,
+     "location_aisle": "DELI-F",
+     "location_shelf": "F-02",
+     "ai_status": "PROCESSING",
+     "current_selling_price": 59.0,
+     "last_price_changed_at": null,
+     "source_task_id": null,
+     "created_at": "2026-10-17T12:16:09.599966+00:00",
+     "updated_at": "2026-10-17T12:16:09.72233+00:00"
+    },
+    "shelf": [
+     {
+      "assessment_id": "eb742153-17e7-4de3-ad85-5b6878ed0000",
+      "discount_pct": 0,
+      "price": 59.0,
+      "expected_qty": 14.2,
+      "low_qty": 8,
+      "high_qty": 20,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "eb742153-17e7-4de3-ad85-5b6878ed0000",
+      "discount_pct": 20,
+      "price": 47.2,
+      "expected_qty": 15.3,
+      "low_qty": 9,
+      "high_qty": 22,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "eb742153-17e7-4de3-ad85-5b6878ed0000",
+      "discount_pct": 30,
+      "price": 41.3,
+      "expected_qty": 17.1,
+      "low_qty": 11,
+      "high_qty": 24,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     },
+     {
+      "assessment_id": "eb742153-17e7-4de3-ad85-5b6878ed0000",
+      "discount_pct": 50,
+      "price": 29.5,
+      "expected_qty": 18.2,
+      "low_qty": 12,
+      "high_qty": 25,
+      "applies_from": "2026-10-16",
+      "applies_until": "2026-10-16",
+      "lost_sales_other_lots": 0.0
+     }
+    ]
+   }
+  ],
+  "recipe_demand": [
+   {
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "recipe_id": "RCP-001",
+    "output_product_id": "RTE-001",
+    "window_from": "2026-10-16",
+    "window_to": "2026-10-16",
+    "gross_demand": 6.5,
+    "current_stock": 0,
+    "menu_qty": 6.5,
+    "low_qty": 3.0,
+    "high_qty": 11.0,
+    "expected_revenue": 1095.35
+   },
+   {
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "recipe_id": "RCP-003",
+    "output_product_id": "RTE-003",
+    "window_from": "2026-10-16",
+    "window_to": "2026-10-16",
+    "gross_demand": 8.8,
+    "current_stock": 0,
+    "menu_qty": 8.8,
+    "low_qty": 4.0,
+    "high_qty": 14.0,
+    "expected_revenue": 958.73
+   },
+   {
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "recipe_id": "RCP-004",
+    "output_product_id": "RTE-004",
+    "window_from": "2026-10-16",
+    "window_to": "2026-10-16",
+    "gross_demand": 10.8,
+    "current_stock": 0,
+    "menu_qty": 10.8,
+    "low_qty": 6.0,
+    "high_qty": 16.0,
+    "expected_revenue": 703.94
+   },
+   {
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "recipe_id": "RCP-005",
+    "output_product_id": "BAK-002",
+    "window_from": "2026-10-16",
+    "window_to": "2026-10-19",
+    "gross_demand": 22.1,
+    "current_stock": 22,
+    "menu_qty": 0.1,
+    "low_qty": 0.0,
+    "high_qty": 8.0,
+    "expected_revenue": 10.12
+   },
+   {
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "recipe_id": "RCP-002",
+    "output_product_id": "RTE-002",
+    "window_from": "2026-10-16",
+    "window_to": "2026-10-17",
+    "gross_demand": 29.6,
+    "current_stock": 30,
+    "menu_qty": 0.0,
+    "low_qty": 0.0,
+    "high_qty": 9.0,
+    "expected_revenue": 0.0
+   },
+   {
+    "run_id": "70228a23-d15d-4d4f-ad3b-c4fa25adb000",
+    "recipe_id": "RCP-006",
+    "output_product_id": "BAK-003",
+    "window_from": "2026-10-16",
+    "window_to": "2026-10-19",
+    "gross_demand": 40.2,
+    "current_stock": 55,
+    "menu_qty": 0.0,
+    "low_qty": 0.0,
+    "high_qty": 0.0,
+    "expected_revenue": 0.0
+   }
+  ],
+  "products": [
+   {
+    "product_id": "BAK-001",
+    "name": "ขนมปังแซนวิช 480g",
+    "category": "BAKERY",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 480,
+    "net_content_unit": "G",
+    "base_cost": 32,
+    "regular_price": 40,
+    "min_allowed_price": 20,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": true
+   },
+   {
+    "product_id": "BAK-002",
+    "name": "เค้กกล้วยหอม 700g",
+    "category": "BAKERY",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 700,
+    "net_content_unit": "G",
+    "base_cost": 65.19,
+    "regular_price": 179,
+    "min_allowed_price": 89.5,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": false,
+    "allow_donation": true
+   },
+   {
+    "product_id": "BAK-003",
+    "name": "ขนมปังพุดดิ้ง 150g",
+    "category": "BAKERY",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 150,
+    "net_content_unit": "G",
+    "base_cost": 11.99,
+    "regular_price": 35,
+    "min_allowed_price": 17.5,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": false,
+    "allow_donation": true
+   },
+   {
+    "product_id": "DAI-001",
+    "name": "นมสดพาสเจอร์ไรส์ รสจืด 830ml",
+    "category": "DAIRY",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 830,
+    "net_content_unit": "ML",
+    "base_cost": 38.95,
+    "regular_price": 47.5,
+    "min_allowed_price": 23.75,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": true
+   },
+   {
+    "product_id": "DAI-002",
+    "name": "โยเกิร์ต รสธรรมชาติ 125g",
+    "category": "DAIRY",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 125,
+    "net_content_unit": "G",
+    "base_cost": 11.89,
+    "regular_price": 14.5,
+    "min_allowed_price": 7.25,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": true
+   },
+   {
+    "product_id": "MEA-001",
+    "name": "อกไก่สด 500g",
+    "category": "MEAT",
+    "unit_of_measure": "PACK",
+    "net_content_value": 500,
+    "net_content_unit": "G",
+    "base_cost": 33.38,
+    "regular_price": 44.5,
+    "min_allowed_price": 22.25,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": false
+   },
+   {
+    "product_id": "MEA-002",
+    "name": "เนื้อวัวสันนอก สเต็ก 500g",
+    "category": "MEAT",
+    "unit_of_measure": "PACK",
+    "net_content_value": 500,
+    "net_content_unit": "G",
+    "base_cost": 97.5,
+    "regular_price": 130,
+    "min_allowed_price": 65,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": false
+   },
+   {
+    "product_id": "PRO-001",
+    "name": "กล้วยหอม 1kg",
+    "category": "PRODUCE",
+    "unit_of_measure": "PACK",
+    "net_content_value": 1,
+    "net_content_unit": "KG",
+    "base_cost": 24.5,
+    "regular_price": 35,
+    "min_allowed_price": 17.5,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": true
+   },
+   {
+    "product_id": "PRO-002",
+    "name": "ผักกาดหอม 250g",
+    "category": "PRODUCE",
+    "unit_of_measure": "PACK",
+    "net_content_value": 250,
+    "net_content_unit": "G",
+    "base_cost": 16.63,
+    "regular_price": 23.75,
+    "min_allowed_price": 11.88,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": true
+   },
+   {
+    "product_id": "RTE-001",
+    "name": "สเต็กเนื้อสันนอก พร้อมสลัด 300g",
+    "category": "READY_TO_EAT",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 300,
+    "net_content_unit": "G",
+    "base_cost": 59.04,
+    "regular_price": 169,
+    "min_allowed_price": 84.5,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": false,
+    "allow_donation": true
+   },
+   {
+    "product_id": "RTE-002",
+    "name": "สลัดอกไก่ย่าง 200g",
+    "category": "READY_TO_EAT",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 200,
+    "net_content_unit": "G",
+    "base_cost": 20.8,
+    "regular_price": 59,
+    "min_allowed_price": 29.5,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": false,
+    "allow_donation": true
+   },
+   {
+    "product_id": "RTE-003",
+    "name": "ข้าวหน้าแซลมอนย่าง 300g",
+    "category": "READY_TO_EAT",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 300,
+    "net_content_unit": "G",
+    "base_cost": 36.46,
+    "regular_price": 109,
+    "min_allowed_price": 54.5,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": false,
+    "allow_donation": true
+   },
+   {
+    "product_id": "RTE-004",
+    "name": "สมูทตี้กล้วยโยเกิร์ต 400ml",
+    "category": "READY_TO_EAT",
+    "unit_of_measure": "PIECE",
+    "net_content_value": 400,
+    "net_content_unit": "ML",
+    "base_cost": 22.8,
+    "regular_price": 65,
+    "min_allowed_price": 32.5,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": false,
+    "allow_donation": false
+   },
+   {
+    "product_id": "SEA-001",
+    "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+    "category": "SEAFOOD",
+    "unit_of_measure": "PACK",
+    "net_content_value": 300,
+    "net_content_unit": "G",
+    "base_cost": 83.16,
+    "regular_price": 115.5,
+    "min_allowed_price": 57.75,
+    "allow_markdown": true,
+    "allow_kitchen_repurposing": true,
+    "allow_donation": false
+   }
+  ],
+  "recipes": [
+   {
+    "recipe_id": "RCP-001",
+    "name": "สเต็กเนื้อสันนอก พร้อมสลัด",
+    "target_category": "READY_TO_EAT",
+    "output_product_id": "RTE-001",
+    "output_quantity": 10,
+    "estimated_prep_time_mins": 60,
+    "shelf_life_days": 0,
+    "is_active": true,
+    "department_id": "KITCHEN_DELI",
+    "utility_cost": 77.09,
+    "ingredients": [
+     {
+      "recipe_id": "RCP-001",
+      "ingredient_product_id": "MEA-002",
+      "required_quantity": 2000,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": true
+     },
+     {
+      "recipe_id": "RCP-001",
+      "ingredient_product_id": "PRO-002",
+      "required_quantity": 500,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": false
+     }
+    ]
+   },
+   {
+    "recipe_id": "RCP-002",
+    "name": "สลัดอกไก่ย่าง",
+    "target_category": "READY_TO_EAT",
+    "output_product_id": "RTE-002",
+    "output_quantity": 10,
+    "estimated_prep_time_mins": 45,
+    "shelf_life_days": 1,
+    "is_active": true,
+    "department_id": "KITCHEN_DELI",
+    "utility_cost": 51.33,
+    "ingredients": [
+     {
+      "recipe_id": "RCP-002",
+      "ingredient_product_id": "MEA-001",
+      "required_quantity": 1000,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": true
+     },
+     {
+      "recipe_id": "RCP-002",
+      "ingredient_product_id": "PRO-002",
+      "required_quantity": 750,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": false
+     }
+    ]
+   },
+   {
+    "recipe_id": "RCP-003",
+    "name": "ข้าวหน้าแซลมอนย่าง",
+    "target_category": "READY_TO_EAT",
+    "output_product_id": "RTE-003",
+    "output_quantity": 10,
+    "estimated_prep_time_mins": 45,
+    "shelf_life_days": 0,
+    "is_active": true,
+    "department_id": "KITCHEN_DELI",
+    "utility_cost": 45.14,
+    "ingredients": [
+     {
+      "recipe_id": "RCP-003",
+      "ingredient_product_id": "SEA-001",
+      "required_quantity": 900,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": true
+     }
+    ]
+   },
+   {
+    "recipe_id": "RCP-004",
+    "name": "สมูทตี้กล้วยโยเกิร์ต",
+    "target_category": "READY_TO_EAT",
+    "output_product_id": "RTE-004",
+    "output_quantity": 8,
+    "estimated_prep_time_mins": 20,
+    "shelf_life_days": 0,
+    "is_active": true,
+    "department_id": "KITCHEN_DELI",
+    "utility_cost": 17.23,
+    "ingredients": [
+     {
+      "recipe_id": "RCP-004",
+      "ingredient_product_id": "DAI-001",
+      "required_quantity": 800,
+      "unit_of_measure": "ML",
+      "is_primary_ingredient": false
+     },
+     {
+      "recipe_id": "RCP-004",
+      "ingredient_product_id": "DAI-002",
+      "required_quantity": 1000,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": true
+     },
+     {
+      "recipe_id": "RCP-004",
+      "ingredient_product_id": "PRO-001",
+      "required_quantity": 1000,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": true
+     }
+    ]
+   },
+   {
+    "recipe_id": "RCP-005",
+    "name": "เค้กกล้วยหอม",
+    "target_category": "BAKERY",
+    "output_product_id": "BAK-002",
+    "output_quantity": 4,
+    "estimated_prep_time_mins": 75,
+    "shelf_life_days": 3,
+    "is_active": true,
+    "department_id": "BAKERY_DEPT",
+    "utility_cost": 41.76,
+    "ingredients": [
+     {
+      "recipe_id": "RCP-005",
+      "ingredient_product_id": "PRO-001",
+      "required_quantity": 2000,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": true
+     }
+    ]
+   },
+   {
+    "recipe_id": "RCP-006",
+    "name": "ขนมปังพุดดิ้ง",
+    "target_category": "BAKERY",
+    "output_product_id": "BAK-003",
+    "output_quantity": 12,
+    "estimated_prep_time_mins": 50,
+    "shelf_life_days": 3,
+    "is_active": true,
+    "department_id": "BAKERY_DEPT",
+    "utility_cost": 26.9,
+    "ingredients": [
+     {
+      "recipe_id": "RCP-006",
+      "ingredient_product_id": "BAK-001",
+      "required_quantity": 480,
+      "unit_of_measure": "G",
+      "is_primary_ingredient": true
+     },
+     {
+      "recipe_id": "RCP-006",
+      "ingredient_product_id": "DAI-001",
+      "required_quantity": 1300,
+      "unit_of_measure": "ML",
+      "is_primary_ingredient": true
+     }
+    ]
+   }
+  ],
+  "kitchen_capacity": [
+   {
+    "department_id": "BAKERY_DEPT",
+    "capacity_date": "2026-10-16",
+    "available_hrs": 8.0,
+    "booked_hrs": 0.0,
+    "remaining_hrs": 8.0,
+    "workload_status": "AVAILABLE"
+   },
+   {
+    "department_id": "KITCHEN_DELI",
+    "capacity_date": "2026-10-16",
+    "available_hrs": 8.0,
+    "booked_hrs": 0.0,
+    "remaining_hrs": 8.0,
+    "workload_status": "AVAILABLE"
+   },
+   {
+    "department_id": "BAKERY_DEPT",
+    "capacity_date": "2026-10-17",
+    "available_hrs": 8.0,
+    "booked_hrs": 0.0,
+    "remaining_hrs": 8.0,
+    "workload_status": "AVAILABLE"
+   },
+   {
+    "department_id": "KITCHEN_DELI",
+    "capacity_date": "2026-10-17",
+    "available_hrs": 8.0,
+    "booked_hrs": 0.0,
+    "remaining_hrs": 8.0,
+    "workload_status": "AVAILABLE"
+   }
+  ],
+  "donation_partners": [
+   {
+    "partner_id": "P-ADG-01",
+    "name": "บริษัท ไบโอเอเนอร์จี ก๊าซชีวภาพ จำกัด",
+    "partner_type": "ANAEROBIC_DIGESTION",
+    "accepted_categories": [
+     "DAIRY",
+     "BAKERY",
+     "MEAT",
+     "SEAFOOD",
+     "PRODUCE",
+     "READY_TO_EAT"
+    ],
+    "pickup_days": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "pickup_time_start": "07:00:00",
+    "pickup_time_end": "10:00:00",
+    "min_days_before_expiry": null,
+    "max_capacity_kg_per_pickup": 950,
+    "contact_name": "คุณนภา แสงทอง",
+    "contact_phone": "02-555-0103",
+    "is_active": true,
+    "created_at": "2026-10-15T08:08:12.1594+00:00",
+    "fixed_cost_per_trip": 1750,
+    "travel_cost_per_trip": 100.64,
+    "handling_fee_per_kg": 0.9,
+    "buyback_price_per_kg": 0.0,
+    "min_kg_per_pickup": 100
+   },
+   {
+    "partner_id": "P-ANI-01",
+    "name": "ฟาร์มอาหารสัตว์ทุ่งรวงทอง",
+    "partner_type": "ANIMAL_FEED",
+    "accepted_categories": [
+     "BAKERY",
+     "PRODUCE",
+     "READY_TO_EAT"
+    ],
+    "pickup_days": [
+     2,
+     3,
+     4,
+     6
+    ],
+    "pickup_time_start": "16:00:00",
+    "pickup_time_end": "18:00:00",
+    "min_days_before_expiry": null,
+    "max_capacity_kg_per_pickup": 1000,
+    "contact_name": "คุณมาลี ทองแท้",
+    "contact_phone": "02-555-0105",
+    "is_active": true,
+    "created_at": "2026-10-15T08:08:12.1594+00:00",
+    "fixed_cost_per_trip": 1000,
+    "travel_cost_per_trip": 37.74,
+    "handling_fee_per_kg": 0.3,
+    "buyback_price_per_kg": 0.92,
+    "min_kg_per_pickup": 0
+   },
+   {
+    "partner_id": "P-CMP-01",
+    "name": "โรงงานปุ๋ยหมักเกษตรสุขดิน",
+    "partner_type": "COMPOSTING",
+    "accepted_categories": [
+     "BAKERY",
+     "PRODUCE",
+     "READY_TO_EAT"
+    ],
+    "pickup_days": [
+     1,
+     2,
+     4,
+     6
+    ],
+    "pickup_time_start": "13:00:00",
+    "pickup_time_end": "16:00:00",
+    "min_days_before_expiry": null,
+    "max_capacity_kg_per_pickup": 1000,
+    "contact_name": "คุณประเสริฐ ดินดี",
+    "contact_phone": "02-555-0104",
+    "is_active": true,
+    "created_at": "2026-10-15T08:08:12.1594+00:00",
+    "fixed_cost_per_trip": 1600,
+    "travel_cost_per_trip": 53.465,
+    "handling_fee_per_kg": 0.6,
+    "buyback_price_per_kg": 0.0,
+    "min_kg_per_pickup": 100
+   },
+   {
+    "partner_id": "P-DON-01",
+    "name": "ธนาคารอาหารสยามสุข",
+    "partner_type": "DONATION",
+    "accepted_categories": [
+     "BAKERY",
+     "DAIRY",
+     "PRODUCE"
+    ],
+    "pickup_days": [
+     1,
+     3,
+     5,
+     6,
+     7
+    ],
+    "pickup_time_start": "09:00:00",
+    "pickup_time_end": "11:00:00",
+    "min_days_before_expiry": 2,
+    "max_capacity_kg_per_pickup": 800,
+    "contact_name": "คุณสมศรี ใจดี",
+    "contact_phone": "02-555-0101",
+    "is_active": true,
+    "created_at": "2026-10-15T08:08:12.1594+00:00",
+    "fixed_cost_per_trip": 550,
+    "travel_cost_per_trip": 0.0,
+    "handling_fee_per_kg": 0.0,
+    "buyback_price_per_kg": 0.0,
+    "min_kg_per_pickup": 100
+   },
+   {
+    "partner_id": "P-LDF-01",
+    "name": "บริษัท กรีนเมย์ ดังกอน จำกัด",
+    "partner_type": "LANDFILL",
+    "accepted_categories": [
+     "DAIRY",
+     "BAKERY",
+     "MEAT",
+     "SEAFOOD",
+     "PRODUCE",
+     "READY_TO_EAT"
+    ],
+    "pickup_days": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ],
+    "pickup_time_start": "20:00:00",
+    "pickup_time_end": "22:00:00",
+    "min_days_before_expiry": null,
+    "max_capacity_kg_per_pickup": 1000,
+    "contact_name": "คุณวิชัย มั่นคง",
+    "contact_phone": "02-555-0102",
+    "is_active": true,
+    "created_at": "2026-10-15T08:08:12.1594+00:00",
+    "fixed_cost_per_trip": 650,
+    "travel_cost_per_trip": 78.625,
+    "handling_fee_per_kg": 1.15,
+    "buyback_price_per_kg": 0.0,
+    "min_kg_per_pickup": 0
+   }
+  ]
+ },
+ "products": [
+  {
+   "product_id": "BAK-001",
+   "name": "ขนมปังแซนวิช 480g",
+   "category": "BAKERY",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 480,
+   "net_content_unit": "G",
+   "base_cost": 32,
+   "regular_price": 40,
+   "min_allowed_price": 20,
+   "shelf_life_days": 4,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "BAK-002",
+   "name": "เค้กกล้วยหอม 700g",
+   "category": "BAKERY",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 700,
+   "net_content_unit": "G",
+   "base_cost": 65.19,
+   "regular_price": 179,
+   "min_allowed_price": 89.5,
+   "shelf_life_days": 3,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": false,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "BAK-003",
+   "name": "ขนมปังพุดดิ้ง 150g",
+   "category": "BAKERY",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 150,
+   "net_content_unit": "G",
+   "base_cost": 11.99,
+   "regular_price": 35,
+   "min_allowed_price": 17.5,
+   "shelf_life_days": 3,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": false,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "DAI-001",
+   "name": "นมสดพาสเจอร์ไรส์ รสจืด 830ml",
+   "category": "DAIRY",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 830,
+   "net_content_unit": "ML",
+   "base_cost": 38.95,
+   "regular_price": 47.5,
+   "min_allowed_price": 23.75,
+   "shelf_life_days": 9,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "DAI-002",
+   "name": "โยเกิร์ต รสธรรมชาติ 125g",
+   "category": "DAIRY",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 125,
+   "net_content_unit": "G",
+   "base_cost": 11.89,
+   "regular_price": 14.5,
+   "min_allowed_price": 7.25,
+   "shelf_life_days": 28,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "MEA-001",
+   "name": "อกไก่สด 500g",
+   "category": "MEAT",
+   "unit_of_measure": "PACK",
+   "net_content_value": 500,
+   "net_content_unit": "G",
+   "base_cost": 33.38,
+   "regular_price": 44.5,
+   "min_allowed_price": 22.25,
+   "shelf_life_days": 4,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": false,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "MEA-002",
+   "name": "เนื้อวัวสันนอก สเต็ก 500g",
+   "category": "MEAT",
+   "unit_of_measure": "PACK",
+   "net_content_value": 500,
+   "net_content_unit": "G",
+   "base_cost": 97.5,
+   "regular_price": 130,
+   "min_allowed_price": 65,
+   "shelf_life_days": 6,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": false,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "PRO-001",
+   "name": "กล้วยหอม 1kg",
+   "category": "PRODUCE",
+   "unit_of_measure": "PACK",
+   "net_content_value": 1,
+   "net_content_unit": "KG",
+   "base_cost": 24.5,
+   "regular_price": 35,
+   "min_allowed_price": 17.5,
+   "shelf_life_days": 5,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "PRO-002",
+   "name": "ผักกาดหอม 250g",
+   "category": "PRODUCE",
+   "unit_of_measure": "PACK",
+   "net_content_value": 250,
+   "net_content_unit": "G",
+   "base_cost": 16.63,
+   "regular_price": 23.75,
+   "min_allowed_price": 11.88,
+   "shelf_life_days": 4,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "RTE-001",
+   "name": "สเต็กเนื้อสันนอก พร้อมสลัด 300g",
+   "category": "READY_TO_EAT",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 300,
+   "net_content_unit": "G",
+   "base_cost": 59.04,
+   "regular_price": 169,
+   "min_allowed_price": 84.5,
+   "shelf_life_days": 0,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": false,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "RTE-002",
+   "name": "สลัดอกไก่ย่าง 200g",
+   "category": "READY_TO_EAT",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 200,
+   "net_content_unit": "G",
+   "base_cost": 20.8,
+   "regular_price": 59,
+   "min_allowed_price": 29.5,
+   "shelf_life_days": 1,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": false,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "RTE-003",
+   "name": "ข้าวหน้าแซลมอนย่าง 300g",
+   "category": "READY_TO_EAT",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 300,
+   "net_content_unit": "G",
+   "base_cost": 36.46,
+   "regular_price": 109,
+   "min_allowed_price": 54.5,
+   "shelf_life_days": 0,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": false,
+   "allow_donation": true,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "RTE-004",
+   "name": "สมูทตี้กล้วยโยเกิร์ต 400ml",
+   "category": "READY_TO_EAT",
+   "unit_of_measure": "PIECE",
+   "net_content_value": 400,
+   "net_content_unit": "ML",
+   "base_cost": 22.8,
+   "regular_price": 65,
+   "min_allowed_price": 32.5,
+   "shelf_life_days": 0,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": false,
+   "allow_donation": false,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  },
+  {
+   "product_id": "SEA-001",
+   "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+   "category": "SEAFOOD",
+   "unit_of_measure": "PACK",
+   "net_content_value": 300,
+   "net_content_unit": "G",
+   "base_cost": 83.16,
+   "regular_price": 115.5,
+   "min_allowed_price": 57.75,
+   "shelf_life_days": 2,
+   "allow_markdown": true,
+   "allow_kitchen_repurposing": true,
+   "allow_donation": false,
+   "allow_animal_feed": true,
+   "allow_composting": true,
+   "allow_anaerobic_digestion": true,
+   "allow_landfill": true,
+   "image_url": null
+  }
+ ]
+}

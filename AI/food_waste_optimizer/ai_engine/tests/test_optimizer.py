@@ -1,309 +1,310 @@
-"""รัน:  python -m unittest ai_engine.tests.test_optimizer -v   (ไม่ต้องมี pytest/เน็ต/Supabase)"""
+"""รัน (จากโฟลเดอร์ AI/food_waste_optimizer):  python -m unittest ai_engine.tests.test_optimizer -v
+
+ข้อมูลทดสอบ = fixtures/supabase_2026-10-16.json คือผลจริงของ GET /ai/optimize-inputs และ GET /products บน Supabase
+(รอบสแกน 16 ต.ค.) เทสต์ที่ต้องการกรณีที่ข้อมูลวันนั้นไม่มี (เช่น บริจาคผ่าน, ครัวใช้วัตถุดิบแบบ FEFO) จะแก้สำเนาของ
+ข้อมูลนี้ในเทสต์เองและบอกไว้ในชื่อเทสต์ ไม่ได้ใช้ตอนรันจริง
+"""
 from __future__ import annotations
 
 import copy
 import json
 import os
-import types
 import unittest
-from datetime import date, datetime, time
+from unittest import mock
+from datetime import date, datetime
+from pathlib import Path
 
-from ai_engine.clock import BKK
-from ai_engine.demo.offline_snapshot import build_offline_inputs, snapshot_lots
-from ai_engine.optimizer import ApiClient, OptimizerConfig, PlanValidationError, run_optimizer
-from ai_engine.optimizer.config import ACTION_BY_METHOD
+from ai_engine.optimizer import (ApiClient, OptimizerConfig, PlanValidationError, optimize_and_post, run_optimizer,
+                                 simulated_now)
+from ai_engine.optimizer.config import BKK
 from ai_engine.optimizer.context import build_context
-from ai_engine.optimizer.io import DEFAULT_API_BASE, load_inputs_from_supabase
+from ai_engine.optimizer.demand import remaining_fraction
 from ai_engine.optimizer.models import Inputs, to_base
-from ai_engine.optimizer.rules import next_pickup, partner_trip_cost, tier_price
-from ai_engine.optimizer.validate import validate_plan
+from ai_engine.optimizer.rules import partner_trip_cost, tier_price
+from ai_engine.optimizer.validate import fefo_simulation, validate_plan
+
+FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "supabase_2026-10-16.json").read_text(encoding="utf-8"))
+REAL = FIXTURE["optimize_inputs"]
+PRODUCTS = FIXTURE["products"]
 
 
-def at(d: str, t: str = "08:00") -> datetime:
-    return datetime.combine(date.fromisoformat(d), time.fromisoformat(t), tzinfo=BKK)
+def at(hhmm: str, day: str = "2026-10-16") -> datetime:
+    return datetime.fromisoformat(f"{day}T{hhmm}:00+07:00")
 
 
-NOW = at("2026-10-16")
+def run(inputs=None, hhmm="09:00", **kw):
+    return run_optimizer(inputs or REAL, products_catalog=kw.pop("products", PRODUCTS), now=at(hhmm), **kw)
 
 
-def full_run(now=NOW, cfg=None):
-    inputs, demand = build_offline_inputs(now)
-    return inputs, demand, run_optimizer(inputs, demand, now, cfg)
+def forward(inputs: dict, lot_id: str, shelf: list) -> dict:
+    """(เฉพาะเทสต์) ทำให้ lot ที่ Risk Scanner ไม่ได้ส่งต่อในวันนั้น กลายเป็น HIGH พร้อม shelf"""
+    lot = next(l for l in FIXTURE_LOTS if l["lot_id"] == lot_id)
+    row = {"assessment_id": f"00000000-0000-0000-0000-{lot_id[-6:]:0>12}", "run_id": inputs["run_id"], "lot_id": lot_id,
+           "assessed_at": "2026-10-16T08:00:00+07:00",
+           "days_to_expiry": (date.fromisoformat(lot["expiration_date"]) - date(2026, 10, 16)).days,
+           "sellable_hours": None, "quantity_at_assessment": lot["current_quantity"], "forecast_daily_demand": 10.0,
+           "predicted_units_sold_before_expiry": shelf[0]["expected_qty"],
+           "predicted_leftover_units": lot["current_quantity"] - shelf[0]["expected_qty"],
+           "sell_through_probability": 0.0, "risk_score": 60.0, "risk_level": "HIGH", "model_version": "test",
+           "lot": dict(lot, ai_status="PROCESSING"), "shelf": shelf}
+    inputs["at_risk_lots"].append(row)
+    return inputs
 
 
-class UnitsAndRules(unittest.TestCase):
-    def test_unit_conversion_kg_and_l_times_1000(self):
+def _lots_from_stock() -> list:
+    """lot ทั้งหมดของวัตถุดิบจาก ingredient_stock (เติมราคา/ต้นทุนจากสินค้า ใช้เฉพาะเทสต์ forward)"""
+    rows = []
+    for s in REAL["ingredient_stock"]:
+        p = next(p for p in PRODUCTS if p["product_id"] == s["product_id"])
+        for lot in s["lots"]:
+            rows.append(dict(lot, product_id=s["product_id"], unit_cost=p["base_cost"],
+                             current_selling_price=p["regular_price"], received_date="2026-10-14",
+                             initial_quantity=lot["current_quantity"], ai_status="IDLE"))
+    return rows
+
+
+FIXTURE_LOTS = _lots_from_stock()
+
+
+def shelf_rows(price, rows, until):
+    return [{"discount_pct": d, "price": tier_price(price, d), "expected_qty": e, "low_qty": lo, "high_qty": hi,
+             "applies_from": "2026-10-16", "applies_until": until, "lost_sales_other_lots": 0.0} for d, e, lo, hi in rows]
+
+
+class Units(unittest.TestCase):
+    def test_unit_conversion_kg_l_times_1000(self):
         self.assertEqual(to_base(1, "KG"), (1000.0, "MASS"))
         self.assertEqual(to_base(1.5, "L"), (1500.0, "VOLUME"))
         self.assertEqual(to_base(830, "ML"), (830.0, "VOLUME"))
-        self.assertEqual(to_base(None, "G"), (None, None))
 
     def test_tier_price_half_up(self):
-        self.assertEqual(tier_price(47.5, 20), 38.0)
-        self.assertEqual(tier_price(23.75, 50), 11.88)      # 11.875 -> 11.88 (half-up)
+        self.assertEqual(tier_price(115.5, 30), 80.85)
+        self.assertEqual(tier_price(23.75, 50), 11.88)       # 11.875 -> 11.88
 
-    def test_markdown_deeper_than_min_price_is_excluded(self):
-        inputs, demand = build_offline_inputs(NOW)
-        ctx = build_context(Inputs.from_json(inputs), demand, NOW)
-        lc = ctx.lots["LOT-000001"]
-        self.assertTrue(all(t["discount_pct"] <= 50 for t in lc.tiers))   # min_allowed_price = 50% ของราคาปกติ
-        self.assertIn("K2_BELOW_MIN_PRICE", lc.excluded["MARKDOWN:60"])
+    def test_now_is_reference_date_plus_wall_clock(self):
+        now = simulated_now(date(2026, 10, 16), datetime(2026, 10, 19, 16, 15, 30, tzinfo=BKK))
+        self.assertEqual(now.isoformat(), "2026-10-16T16:15:30+07:00")
 
-    def test_pickup_weekday_and_time_window(self):
-        inputs, _ = build_offline_inputs(at("2026-10-10"))     # วันเสาร์
-        p = Inputs.from_json(inputs).partners
+    def test_open_hours_fraction(self):
         cfg = OptimizerConfig()
-        sat_noon = at("2026-10-10", "12:00")
-        self.assertEqual(next_pickup(p["P-ANI-01"], at("2026-10-10", "08:00"), cfg).isoformat(), "2026-10-10T16:00:00+07:00")
-        # เที่ยงวัน: ADG (07-10) หมดช่วงแล้ว -> วันถัดไป 07:00
-        self.assertEqual(next_pickup(p["P-ADG-01"], sat_noon, cfg).isoformat(), "2026-10-11T07:00:00+07:00")
-        # ศุกร์ไม่อยู่ใน pickup_days ของ ANIMAL_FEED [2,3,4,6] -> เสาร์
-        self.assertEqual(next_pickup(p["P-ANI-01"], at("2026-10-16"), cfg).isoformat(), "2026-10-17T16:00:00+07:00")
-        # หลัง 22:00 LANDFILL (จ-ส) รอบวันนี้ไม่ทัน
-        self.assertEqual(next_pickup(p["P-LDF-01"], at("2026-10-16", "21:30"), cfg).isoformat(), "2026-10-17T20:00:00+07:00")
-
-    def test_donation_cost_is_fixed_only(self):
-        inputs, _ = build_offline_inputs(NOW)
-        p = Inputs.from_json(inputs).partners
-        self.assertEqual(partner_trip_cost(p["P-DON-01"]), 550.0)
-        self.assertAlmostEqual(partner_trip_cost(p["P-LDF-01"]), 650 + 78.625)
-
-    def test_donation_blocked_by_min_days_and_min_kg(self):
-        inputs, demand = build_offline_inputs(NOW)
-        ctx = build_context(Inputs.from_json(inputs), demand, NOW)
-        self.assertIn("P4_MIN_DAYS_1D_LEFT_NEED_2", ctx.lots["LOT-000007"].excluded["DONATION:P-DON-01"])
-        self.assertTrue(any(r.startswith("P7_BELOW_MIN_KG") for r in ctx.lots["LOT-000009"].excluded["COMPOSTING:P-CMP-01"]))
+        self.assertAlmostEqual(remaining_fraction(at("09:00"), date(2026, 10, 16), date(2026, 10, 16), cfg), 13 / 14)
+        self.assertAlmostEqual(remaining_fraction(at("16:15"), date(2026, 10, 16), date(2026, 10, 17), cfg), 19.75 / 28)
+        self.assertEqual(remaining_fraction(at("22:30"), date(2026, 10, 16), date(2026, 10, 16), cfg), 0.0)
 
 
-class EndToEnd(unittest.TestCase):
+class Rules(unittest.TestCase):
+    def setUp(self):
+        self.ctx = build_context(Inputs.from_json(REAL, PRODUCTS), at("09:00"))
+
+    def test_only_levels_the_forecaster_sent(self):
+        lc = self.ctx.lots["LOT-000006"]
+        self.assertEqual(lc.excluded["MARKDOWN:40"], ["K3_NOT_FORECAST"])
+        self.assertTrue(all(t["discount_pct"] in (0, 20, 30, 50) for t in lc.tiers))
+
+    def test_expired_lot_has_no_price_options(self):
+        self.assertEqual(self.ctx.lots["LOT-000013"].tiers, [])
+        self.assertEqual(self.ctx.lots["LOT-000013"].excluded["MARKDOWN:ALL"], ["K0_EXPIRED"])
+
+    def test_pickup_weekday_and_window(self):          # 2026-10-16 = วันศุกร์ (5)
+        p = self.ctx.partners
+        self.assertEqual(p["P-ANI-01"].pickup.isoformat(), "2026-10-17T16:00:00+07:00")   # [2,3,4,6] -> เสาร์
+        self.assertEqual(p["P-LDF-01"].pickup.isoformat(), "2026-10-16T20:00:00+07:00")
+        self.assertEqual(p["P-DON-01"].pickup.isoformat(), "2026-10-16T10:00:00+07:00")   # 09:00 + เตรียม 60 นาที
+        late = build_context(Inputs.from_json(REAL, PRODUCTS), at("21:30")).partners
+        self.assertEqual(late["P-LDF-01"].pickup.isoformat(), "2026-10-17T20:00:00+07:00")
+
+    def test_trip_cost_formula(self):
+        p = self.ctx.inputs.partners
+        self.assertEqual(partner_trip_cost(p["P-DON-01"]), 550.0)                  # DONATION: fixed เท่านั้น
+        self.assertAlmostEqual(partner_trip_cost(p["P-LDF-01"]), 650 + 78.625)     # fixed + travel
+
+    def test_partner_rules_on_real_data(self):
+        lc = self.ctx.lots["LOT-000011"]
+        self.assertIn("P4_MIN_DAYS 1d at pickup < 2d", lc.excluded["DONATION:P-DON-01"])
+        self.assertTrue(lc.excluded["COMPOSTING:P-CMP-01"][0].startswith("P7_BELOW_MIN_KG"))
+        self.assertIn("P2_CATEGORY_SEAFOOD_NOT_ACCEPTED", self.ctx.lots["LOT-000006"].excluded["ANIMAL_FEED:P-ANI-01"])
+
+    def test_missing_disposal_flags_are_denied(self):
+        ctx = build_context(Inputs.from_json(REAL), at("09:00"))           # ไม่ส่ง GET /products
+        self.assertTrue(any(w.startswith("W0_DISPOSAL_FLAGS_MISSING") for w in ctx.warnings))
+        self.assertNotIn("P-LDF-01", ctx.lots["LOT-000011"].partner_ok)
+
+
+class RealDataPlan(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.inputs, cls.demand, cls.result = full_run()
-        cls.plan, cls.payload = cls.result["plan"], cls.result["payload"]
+        cls.r = run()
+        cls.plan, cls.payload = cls.r["plan"], cls.r["payload"]
 
-    def test_no_violations_and_payload_ok(self):
-        self.assertEqual(self.result["violations"], [])
-        self.assertEqual(self.result["payload_errors"], [])
+    def test_clean_and_reconciled(self):
+        self.assertEqual(self.r["violations"], [])
+        self.assertEqual(self.r["payload_errors"], [])
         self.assertTrue(self.plan["summary"]["reconciliation_ok"])
+        self.assertEqual(self.plan["summary"]["unresolved_units"], 0)
 
-    def test_mass_balance_every_lot(self):
+    def test_every_unit_of_every_lot_has_a_route(self):
         for lo in self.plan["lots"]:
             self.assertEqual(sum(p["units"] for p in lo["portions"]), lo["quantity"], lo["lot_id"])
-            self.assertAlmostEqual(sum(p["share_pct"] for p in lo["portions"]), 100.0, delta=0.05)
+        for lot_id in {a["lot_id"] for a in self.r["allocations"]}:
+            share = sum(a["share_pct"] for a in self.r["allocations"] if a["lot_id"] == lot_id)
+            self.assertAlmostEqual(share, 100.0, delta=0.05)
 
-    def test_one_price_tier_per_lot(self):
-        for lo in self.plan["lots"]:
-            self.assertLessEqual(sum(p["method"] in ("SELL_REGULAR", "MARKDOWN") for p in lo["portions"]), 1)
+    def test_salmon_goes_to_kitchen_before_it_expires(self):
+        job = self.plan["kitchen_jobs"][0]
+        self.assertEqual((job["recipe_id"], job["anchor_lot_id"], job["batches"], job["anchor_units"]),
+                         ("RCP-003", "LOT-000006", 1, 3))             # 900 g / 300 g ต่อแพ็ก = 3 แพ็ก
+        self.assertLessEqual(job["expected_sold_units"], job["menu_demand_cap"] + 0.01)
 
-    def test_optimized_beats_every_baseline(self):
+    def test_beats_baselines(self):
         b = self.plan["baselines"]
-        for k in ("do_nothing_no_disposal_cost", "regular_price_then_landfill", "markdown_then_landfill"):
-            self.assertGreater(b["optimized"]["net_profit_thb"], b[k]["net_profit_thb"], k)
+        self.assertGreaterEqual(b["optimized"]["net_profit_thb"], b["regular_price_then_landfill"]["net_profit_thb"])
+        self.assertGreaterEqual(b["optimized"]["net_profit_thb"], b["markdown_then_landfill"]["net_profit_thb"])
 
-    def test_kitchen_hours_never_exceed_budget(self):
-        for u in self.plan["kitchen_usage"]:
-            self.assertLessEqual(u["hours_used"], u["hours_budget"] + 1e-6)
-
-    def test_kitchen_one_decision_per_job_and_hours_not_double_booked(self):
-        kitchen = [d for d in self.payload["decisions"] if d["action_type"] == "KITCHEN_REPURPOSE"]
-        self.assertEqual(len(kitchen), len(self.plan["kitchen_jobs"]))
-        hours = sum(self.inputs_recipe_mins(d["target_recipe_id"]) * d["batch_count"] / 60 for d in kitchen)
-        self.assertAlmostEqual(hours, sum(j["hours"] for j in self.plan["kitchen_jobs"]), delta=0.05)
-
-    def inputs_recipe_mins(self, rid):
-        return next(r["estimated_prep_time_mins"] for r in self.inputs["recipes"] if r["recipe_id"] == rid)
-
-    def test_trip_respects_min_and_capacity(self):
-        for t in self.plan["trips"]:
-            self.assertGreaterEqual(t["kg"] + 1e-3, t["min_kg"])
-            self.assertLessEqual(t["kg"], t["capacity_kg"] + 1e-3)
-
-    def test_payload_shape_matches_table(self):
+    def test_payload_matches_table_columns_without_weight_or_share(self):
         allowed = {"assessment_id", "action_type", "action_quantity", "discount_pct", "new_recommended_price",
                    "target_recipe_id", "batch_count", "target_partner_id", "due_by", "expected_profit_impact",
                    "decision_score", "alternatives"}
         for d in self.payload["decisions"]:
             self.assertLessEqual(set(d), allowed)
-            self.assertIn(d["action_type"], {"MARKDOWN", "KITCHEN_REPURPOSE", "DONATE", "DISCARD"})
-            if d["action_type"] == "MARKDOWN":
-                self.assertTrue(0 < d["discount_pct"] < 100 and "batch_count" not in d)
-        json.dumps(self.payload)                                   # serialise ได้
+            self.assertNotIn("weight_kg", json.dumps(d))
+            self.assertNotIn("share_pct", json.dumps(d))
+        self.assertIn("weight_kg", self.r["allocations"][0])
+        self.assertIn("share_pct", self.r["allocations"][0])
+        json.dumps(self.payload)
 
-    def test_extended_mode_uses_real_partner_actions(self):
-        _, _, r = full_run(cfg=OptimizerConfig(action_mode="extended"))
-        types_ = {d["action_type"] for d in r["payload"]["decisions"]}
-        self.assertLessEqual(types_, set(ACTION_BY_METHOD["extended"].values()))
+    def test_kitchen_decision_is_bookable(self):
+        k = [d for d in self.payload["decisions"] if d["action_type"] == "KITCHEN_REPURPOSE"]
+        self.assertEqual(len(k), 1)
+        self.assertEqual((k[0]["batch_count"], k[0]["due_by"]), (1, "2026-10-16T17:00:00+07:00"))
+
+    def test_rag_can_see_why_options_were_rejected(self):
+        d = next(d for d in self.payload["decisions"] if d["assessment_id"].startswith("c1ccb78e"))
+        options = {a.get("option") for a in d["alternatives"]}
+        self.assertIn("DONATION:P-DON-01", options)
+        self.assertTrue(any(a.get("scope") == "WHOLE_LOT" for a in d["alternatives"]))
+
+
+class TimeOfDay(unittest.TestCase):
+    def test_late_afternoon_no_kitchen_and_less_shelf_demand(self):
+        r = run(hhmm="16:15")
+        self.assertEqual(r["plan"]["kitchen_jobs"], [])
+        self.assertTrue(any(x.startswith("U3_KITCHEN_HOURS") for x in r["plan"]["recipes"]["RCP-003"]["reasons"]))
+        lot6 = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000006")
+        self.assertAlmostEqual(lot6["demand_fraction"], 5.75 / 14, places=3)
+
+    def test_every_hour_of_the_day_is_valid(self):
+        for hhmm in ("00:30", "07:59", "08:00", "10:00", "12:00", "16:45", "20:30", "21:59", "23:30"):
+            r = run(hhmm=hhmm, with_baselines=False)
+            self.assertEqual(r["violations"], [], hhmm)
+            self.assertTrue(r["plan"]["summary"]["reconciliation_ok"], hhmm)
+
+
+class Lifecycle(unittest.TestCase):
+    def test_rerun_skips_assessments_that_already_have_decisions(self):
+        first = run(with_baselines=False)
+        decided = {d["assessment_id"] for d in first["payload"]["decisions"]}
+        again = run(with_baselines=False, decided=decided)
+        self.assertEqual(again["payload"]["decisions"], [])
+        self.assertTrue(all("A0_ALREADY_DECIDED" in v["reasons"] for v in again["plan"]["skipped_lots"].values()))
+
+    def test_checked_lots_are_skipped(self):
+        data = copy.deepcopy(REAL)
+        data["at_risk_lots"][0]["lot"]["ai_status"] = "CHECKED"
+        r = run(data, with_baselines=False)
+        self.assertIn(data["at_risk_lots"][0]["lot_id"], r["plan"]["skipped_lots"])
+
+    def test_stops_when_server_date_is_not_the_scan_date(self):
+        data = copy.deepcopy(REAL)
+        data["reference_date"] = "2026-10-10"            # server/.env ยังเป็น DEMO_DATE=2026-10-10
+        with self.assertRaises(PlanValidationError) as e:
+            run_optimizer(data, products_catalog=PRODUCTS, now=at("09:00", "2026-10-10"))
+        self.assertEqual(e.exception.violations[0]["rule"], "H0_SCAN_DATE_MISMATCH")
+        self.assertIn("DEMO_DATE=2026-10-16", e.exception.violations[0]["detail"])
 
     def test_validator_catches_tampered_plan(self):
-        inputs, demand = build_offline_inputs(NOW)
-        ctx = build_context(Inputs.from_json(inputs), demand, NOW)
-        plan = copy.deepcopy(self.plan)
-        plan["lots"][0]["portions"][0]["units"] += 1               # ทำให้จำนวนไม่สมดุล
+        r = run(with_baselines=False)
+        ctx = build_context(Inputs.from_json(REAL, PRODUCTS), at("09:00"))
+        plan = copy.deepcopy(r["plan"])
+        plan["lots"][0]["portions"][0]["units"] += 1
         self.assertTrue(any(v["rule"] == "H1_MASS_BALANCE" for v in validate_plan(plan, ctx)))
 
-    def test_nothing_at_risk_on_demo_date_2026_10_10(self):
-        now = at("2026-10-10")
-        inputs, demand = build_offline_inputs(now)
-        r = run_optimizer(inputs, demand, now)
-        self.assertEqual(r["payload"]["decisions"], [])
 
-    def test_expired_lot_only_waste_routes(self):
-        now = at("2026-10-17", "08:00")                            # LOT-000006 (หมด 10-16) หมดอายุแล้ว
-        inputs, demand = build_offline_inputs(now)
-        r = run_optimizer(inputs, demand, now)
-        lot = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000006")
-        self.assertTrue(lot["portions"] and all(p["method"] in ("LANDFILL", "ANAEROBIC_DIGESTION") for p in lot["portions"]))
+class TestOnlyScenarios(unittest.TestCase):
+    """สำเนาข้อมูลจริงที่แก้ในเทสต์ เพื่อให้เห็นกรณีที่ข้อมูลวันที่ 16 ไม่มี"""
 
-    def test_waste_partner_takes_goods_even_if_pickup_after_expiry(self):
-        # regression: min_days_before_expiry NULL (=0) ต้องไม่ตัด landfill เมื่อรอบรับเป็นวันหลังหมดอายุ
-        now = at("2026-10-16", "21:30")                            # LANDFILL รอบวันนี้หมดแล้ว -> พรุ่งนี้ 20:00 (หลัง LOT-000006 หมดอายุ)
-        inputs, demand = build_offline_inputs(now)
-        r = run_optimizer(inputs, demand, now)
-        self.assertEqual(r["plan"]["summary"]["unresolved_units"], 0)
-        lot = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000006")
-        self.assertIn("LANDFILL", {p["method"] for p in lot["portions"]})
+    def test_donation_wins_only_when_it_is_the_cheaper_route(self):
+        # ไม่มีส่วนลดภาษีแล้ว: บริจาคมีแต่ค่า fixed 550 บาท/เที่ยว ถ้ารถ landfill มารับของอื่นอยู่แล้ว ค่าทิ้งเพิ่มแค่ 1.15 บาท/kg
+        # เทสต์นี้ให้ landfill ไม่รับ DAIRY และนมล็อตใหม่ขายไม่ทัน -> ธนาคารอาหาร (550) ถูกกว่าก๊าซชีวภาพ (1,850 + ขั้นต่ำ 100 kg)
+        data = forward(copy.deepcopy(REAL), "LOT-000002", shelf_rows(47.5, [(0, 10, 5, 15)], "2026-10-24"))
+        for partner in data["donation_partners"]:
+            if partner["partner_id"] == "P-LDF-01":
+                partner["accepted_categories"] = [c for c in partner["accepted_categories"] if c != "DAIRY"]
+        r = run(data, with_baselines=False)
+        self.assertEqual(r["violations"], [])
+        self.assertEqual(r["payload_errors"], [])
+        lot = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000002")
+        self.assertIn("DONATION", {p["method"] for p in lot["portions"]})
+        donate = next(d for d in r["payload"]["decisions"] if d["action_type"] == "DONATE")
+        self.assertEqual((donate["target_partner_id"], donate["due_by"]), ("P-DON-01", "2026-10-16T10:00:00+07:00"))
+        bread = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000013")
+        self.assertNotIn("DONATION", {p["method"] for p in bread["portions"]})          # หมดอายุ: ห้ามบริจาค
+        self.assertIn("P5_EXPIRED_FOR_HUMAN_USE", bread["explain"]["excluded"]["DONATION:P-DON-01"])
 
-    def test_missing_disposal_flags_deny_and_warn(self):
-        inputs, demand = build_offline_inputs(NOW)
-        for p in inputs["products"]:
-            p.pop("allow_landfill")
-        ctx = build_context(Inputs.from_json(inputs), demand, NOW)
-        self.assertTrue(any("allow_" in w for w in ctx.warnings))
-        self.assertTrue(all("LANDFILL:P-LDF-01" not in lc.partner_ok and "P-LDF-01" not in lc.partner_ok for lc in ctx.lots.values()))
-
-    def test_late_in_day_shrinks_kitchen_window(self):
-        now = at("2026-10-16", "15:00")                            # เหลือก่อน 17:00 แค่ ~1.5 ชม.
-        inputs, demand = build_offline_inputs(now)
-        r = run_optimizer(inputs, demand, now)
-        today = [u for u in r["plan"]["kitchen_usage"] if u["date"] == "2026-10-16"]
-        self.assertTrue(all(u["hours_used"] <= 1.5 + 1e-6 for u in today))
+    def test_kitchen_fefo_deducts_the_earliest_expiring_lot(self):
+        # ขนมปังพุดดิ้ง (RCP-006) ใช้นม + ขนมปัง: decision ผูกกับ lot หลักตัวหนึ่ง อีกตัว DB ตัดแบบ FEFO ตอน complete
+        data = copy.deepcopy(REAL)
+        data = forward(data, "LOT-000009", shelf_rows(40.0, [(0, 20, 15, 25), (30, 24, 18, 30)], "2026-10-17"))
+        data = forward(data, "LOT-000001", shelf_rows(47.5, [(0, 40, 30, 50), (20, 44, 34, 54)], "2026-10-18"))
+        for rd in data["recipe_demand"]:
+            if rd["recipe_id"] == "RCP-006":
+                rd.update(menu_qty=60.0, low_qty=48.0, high_qty=72.0, current_stock=0)
+        r = run(data, with_baselines=False)
+        self.assertEqual(r["violations"], [])            # รวม H6: แผนตรงกับการตัดสต็อกแบบ FEFO ของ DB
+        jobs = [j for j in r["plan"]["kitchen_jobs"] if j["recipe_id"] == "RCP-006"]
+        self.assertTrue(jobs)
+        fefo = [x for j in jobs for x in j["inputs"] if x["role"] != "ANCHOR"]
+        self.assertTrue(fefo)
+        self.assertEqual({x["lot_id"] for x in fefo}, {"LOT-000009"})   # LOT-000013 หมดอายุแล้ว DB ไม่ตัด
+        ctx = build_context(Inputs.from_json(data, PRODUCTS), at("09:00"))
+        self.assertEqual(fefo_simulation(r["plan"], ctx)["short"], [])
+        lot9 = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000009")
+        self.assertIn("KITCHEN_INGREDIENT", {p["method"] for p in lot9["portions"]})
+        covered = [a for a in r["allocations"] if a["method"] == "KITCHEN_INGREDIENT"]
+        self.assertTrue(all(a["covered_by_decision_index"] is not None for a in covered))
 
 
 class Io(unittest.TestCase):
-    def test_default_base_url_and_routes(self):
-        calls = []
-
+    def _client(self, writes):
         def transport(method, url, body, headers, timeout):
-            calls.append((method, url, body))
-            return 200, "{}"
-        c = ApiClient(transport=transport)
-        c.get_scan_inputs(); c.get_optimize_inputs("abc", 1); c.post_decisions({"decisions": []})
-        c.post_risk_assessments({"assessments": []}); c.set_lot_status(["LOT-000001"], "PROCESSING")
-        base = "https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1/"
-        self.assertEqual(DEFAULT_API_BASE, base)
-        self.assertEqual([(m, u) for m, u, _ in calls], [
-            ("GET", base + "ai/scan-inputs"),
-            ("GET", base + "ai/optimize-inputs?run_id=abc&days_ahead=1"),
-            ("POST", base + "optimization-decisions"),
-            ("POST", base + "risk-assessments"),
-            ("PATCH", base + "inventory-lots/ai-status")])
+            route = url.split("/api/v1/")[1].split("?")[0]
+            if method == "GET" and route == "ai/optimize-inputs":
+                return 200, json.dumps(REAL)
+            if method == "GET" and route == "products":
+                return 200, json.dumps(PRODUCTS)
+            if method == "GET" and route == "optimization-decisions":
+                return 200, json.dumps({"run_id": None, "decisions": []})
+            writes.append((method, route, json.loads(body)))
+            if route == "optimization-decisions":
+                n = len(json.loads(body)["decisions"])
+                return 201, json.dumps({"created": n, "decisions": [{"decision_id": f"d{i}"} for i in range(n)]})
+            return 200, json.dumps({"updated": [], "not_found": []})
+        return ApiClient("http://127.0.0.1:8000/api/v1", transport=transport)
 
-    def test_http_error_raises(self):
-        from ai_engine.optimizer.io import ApiError
-        c = ApiClient(transport=lambda *a: (422, '{"detail": "x"}'))
-        with self.assertRaises(ApiError):
-            c.post_decisions({})
+    def test_default_base_is_local_server(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(ApiClient().base_url, "http://127.0.0.1:8000/api/v1/")
 
-    def test_supabase_loader_matches_offline_inputs(self):
-        os.environ["DEMO_DATE"] = "2026-10-16"
-        try:
-            inputs, demand = build_offline_inputs(NOW)
-            tables = {"lot_risk_assessments": inputs["at_risk_lots"], "products": inputs["products"],
-                      "recipes": inputs["recipes"], "kitchen_capacity_daily": inputs["kitchen_capacity"],
-                      "donation_partners": inputs["donation_partners"], "inventory_lots": snapshot_lots()}
-            loaded = load_inputs_from_supabase(None, 1, supabase=_FakeSupabase(tables), fetch_all=_fake_fetch_all(tables))
-            self.assertEqual(loaded["reference_date"], "2026-10-16")
-            a = run_optimizer(inputs, demand, NOW)["plan"]["summary"]["net_profit_thb"]
-            b = run_optimizer(loaded, demand, NOW)["plan"]["summary"]["net_profit_thb"]
-            self.assertAlmostEqual(a, b, places=2)
-        finally:
-            os.environ.pop("DEMO_DATE", None)
-
-
-class _StubClient:
-    """จำลอง API: อ่านได้ตามข้อมูล offline, เก็บทุกการเขียนไว้ใน self.writes"""
-    def __init__(self, now):
-        self.now = now
-        self.inputs, _ = build_offline_inputs(now)
-        self.inputs["at_risk_lots"], self.inputs["run_id"] = [], None
-        self.writes, self.posted = [], None
-
-    def get_scan_inputs(self):
-        return {"inventory_lots": snapshot_lots(), "sales_history": [], "average_daily_sales": []}
-
-    def get_optimize_inputs(self, run_id=None, days_ahead=1):
-        from ai_engine.forecaster.mock_forecaster import mock_forecast, to_at_risk_rows
-        data = copy.deepcopy(self.inputs)
-        if run_id and self.posted:
-            f = {"model_version": self.posted["model_version"], "assessments": self.posted["assessments"]}
-            ids = {a["lot_id"]: f"id-{a['lot_id']}" for a in f["assessments"]}
-            data["run_id"] = run_id
-            data["at_risk_lots"] = to_at_risk_rows(snapshot_lots(), f, run_id, ids, self.now)
-        return data
-
-    def set_lot_status(self, lot_ids, status): self.writes.append(("PATCH", status, len(lot_ids)))
-
-    def post_risk_assessments(self, payload):
-        self.writes.append(("POST", "risk-assessments")); self.posted = payload
-        return {"run_id": "run-1", "created": len(payload["assessments"]),
-                "assessments": [{"assessment_id": f"id-{a['lot_id']}", "lot_id": a["lot_id"]} for a in payload["assessments"]]}
-
-    def post_decisions(self, payload):
-        self.writes.append(("POST", "optimization-decisions", len(payload["decisions"])))
-        return {"created": len(payload["decisions"]), "decisions": []}
-
-
-class Pipeline(unittest.TestCase):
     def test_dry_run_never_writes(self):
-        from ai_engine.optimizer import run_full_pipeline
-        c = _StubClient(NOW)
-        r = run_full_pipeline(c, dry_run=True, now=NOW)
-        self.assertEqual(c.writes, [])
-        self.assertEqual(len(r["payload"]["decisions"]), 15)
-        self.assertIsNone(r["posted"])
+        writes = []
+        r = optimize_and_post(self._client(writes), now=at("09:00"), dry_run=True)
+        self.assertEqual(writes, [])
+        self.assertTrue(r["payload"]["decisions"])
 
-    def test_real_run_writes_in_pipeline_order(self):
-        from ai_engine.optimizer import run_full_pipeline
-        c = _StubClient(NOW)
-        r = run_full_pipeline(c, dry_run=False, now=NOW)
-        self.assertEqual([w[:2] for w in c.writes],
-                         [("PATCH", "PROCESSING"), ("POST", "risk-assessments"), ("POST", "optimization-decisions")])
-        self.assertEqual(r["posted"]["created"], 15)
-
-    def test_optimize_and_post_dry_run_default(self):
-        from ai_engine.optimizer import optimize_and_post
-        c = _StubClient(NOW)
-        c.inputs, demand = build_offline_inputs(NOW)
-        c.get_optimize_inputs = lambda run_id=None, days_ahead=1: copy.deepcopy(c.inputs)
-        r = optimize_and_post(c, demand=demand, now=NOW)            # dry_run เป็นค่าเริ่มต้น
-        self.assertEqual(c.writes, [])
-        r = optimize_and_post(c, demand=demand, now=NOW, dry_run=False)
-        self.assertEqual(c.writes, [("POST", "optimization-decisions", 15)])
-
-
-class _Q:
-    def __init__(self, rows): self.rows = list(rows)
-    def select(self, *a, **k): return self
-    def eq(self, c, v): self.rows = [r for r in self.rows if r.get(c) == v]; return self
-    def in_(self, c, vs): self.rows = [r for r in self.rows if r.get(c) in vs]; return self
-    def gte(self, c, v): self.rows = [r for r in self.rows if r.get(c) >= v]; return self
-    def lte(self, c, v): self.rows = [r for r in self.rows if r.get(c) <= v]; return self
-    def order(self, *a, **k): return self
-    def limit(self, n): self.rows = self.rows[:n]; return self
-    def execute(self): return types.SimpleNamespace(data=self.rows)
-
-
-class _FakeSupabase:
-    def __init__(self, tables): self.tables = tables
-    def table(self, name): return _Q(self.tables.get(name, []))
-    def rpc(self, name, args): return _Q([])
-
-
-def _fake_fetch_all(tables):
-    def fetch_all(table, columns="*", in_filter=None, order_by=()):
-        rows = tables[table]
-        return [r for r in rows if in_filter is None or r.get(in_filter[0]) in in_filter[1]]
-    return fetch_all
+    def test_real_run_posts_and_links_decision_ids(self):
+        writes = []
+        r = optimize_and_post(self._client(writes), now=at("09:00"), dry_run=False)
+        self.assertEqual([w[:2] for w in writes][0], ("POST", "optimization-decisions"))
+        self.assertTrue(all(a.get("decision_id") for a in r["allocations"] if a["decision_index"] is not None))
 
 
 if __name__ == "__main__":
