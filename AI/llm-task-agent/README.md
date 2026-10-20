@@ -11,6 +11,7 @@ GET /optimization-decisions?status=PENDING
   -> Validate         ตัวเลข / title / ข้อมูลบังคับ / ชื่อ SOP / พ.ศ. / ความยาว / เงื่อนไขหยุด
        ไม่ผ่าน -> Nova Lite แก้ 1 ครั้ง -> Qwen3 Next -> ข้อความมาตรฐาน (งานถึงพนักงานเสมอ)
   -> POST /tasks      แยก batch: งานทั่วไป 1 ก้อน, งานครัวแยกตามครัว + วัน
+  -> PATCH /inventory-lots/ai-status   lot ที่ได้ task ครบทุก decision -> CHECKED (เรียกครั้งเดียว)
   -> report JSON      audit trail ทุกรอบ
 ```
 
@@ -29,14 +30,14 @@ GET /optimization-decisions?status=PENDING
 | --- | --- |
 | `config.py` | ค่าตั้งต้นทั้งหมด อ่านจาก env / `.env` |
 | `models.py` | รูปแบบ decision และ task (ขีดจำกัดตรงกับ server) |
-| `api_client.py` | GET decision, POST task |
+| `api_client.py` | GET decision, POST task, PATCH ai_status ของ lot |
 | `facts.py` | Build Facts |
 | `steps.py` | REQUIRED_STEPS, staff_instructions, ข้อความมาตรฐาน, priority |
 | `knowledge_base.py` | ค้น SOP จาก Knowledge Base |
 | `llm.py` | prompt, เรียก Bedrock Converse, parse JSON |
 | `validate.py` | ตรวจคำตอบ LLM |
 | `task_generator.py` | ประกอบ task จากส่วนของโค้ดและส่วนที่เขียนแล้ว |
-| `agent.py` | ร้อยทุกขั้น, retry, แยก batch, POST, report |
+| `agent.py` | ร้อยทุกขั้น, retry, แยก batch, POST, ตั้ง lot เป็น CHECKED, report |
 | `main.py` | รันจากเครื่อง / CloudShell |
 | `handler.py` | entry point ของ AWS Lambda |
 | `mock_data.py` | decision ตัวอย่างครบ 4 action สำหรับทดสอบ |
@@ -75,7 +76,7 @@ python main.py --source api
 python main.py --source api --post
 ```
 
-ตัวเลือกอื่น: `--run-id`, `--limit N`, `--now 2026-10-16T08:00:00+07:00`
+ตัวเลือกอื่น: `--run-id`, `--limit N`, `--now 2026-10-19T08:00:00+07:00`
 
 ผลแต่ละรอบอยู่ใน `output/task_agent_<เวลา>.json` มี task ทุกตัว, โมเดลที่ใช้, คำตอบดิบของโมเดล,
 ข้อผิดพลาดที่ validator เจอ, SOP ที่ดึงมา และผล POST
@@ -106,4 +107,5 @@ python main.py --source api --post
 
 - `priority` เป็น heuristic ของ Prototype ไม่ใช่นโยบายร้านจริง
 - `GET /optimization-decisions` ส่ง `partner` มาเฉพาะ DONATE งาน DISCARD ที่มี partner จึงเห็นแค่รหัส ไม่เห็นชื่อ
-- `POST /tasks` สร้างทั้ง batch หรือไม่สร้างเลย ถ้า batch ล้ม (เช่น ครัวเต็ม 409) decision จะยังเป็น PENDING ให้ผู้จัดการดู
+- `POST /tasks` สร้างทั้ง batch หรือไม่สร้างเลย ถ้า batch ล้ม (เช่น ครัวเต็ม 409) decision จะยังเป็น PENDING ให้ผู้จัดการดู และ lot นั้นยังเป็น PROCESSING (อยู่ใน `lot_status.pending_lots` ของ report)
+- `--source api` แบบไม่ใส่ `--post` จะไม่ PATCH lot แต่แสดงว่าจะตั้ง lot ไหนเป็น CHECKED

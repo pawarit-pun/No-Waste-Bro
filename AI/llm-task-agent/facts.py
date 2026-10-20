@@ -28,6 +28,32 @@ OPTION_TH = {
 }
 NO_DATA = "ไม่มีข้อมูล"
 MAX_ALTERNATIVES = 3
+MAX_REJECTED = 5
+# Optimizer reason codes ("P2_CATEGORY_DAIRY_NOT_ACCEPTED") -> short Thai, matched after the "P2_" prefix.
+# Unknown codes are shown as is.
+REJECT_REASON_TH = [
+    (r"^EXPIRED_FOR_HUMAN_USE", "หมดอายุสำหรับคนแล้ว"),
+    (r"^EXPIRED_TO_KITCHEN", "หมดอายุแล้ว ส่งเข้าครัวไม่ได้"),
+    (r"^EXPIRED", "หมดอายุแล้ว"),
+    (r"^MIN_DAYS", "อายุคงเหลือไม่ถึงเกณฑ์ของผู้รับ"),
+    (r"^CATEGORY_(\w+?)_NOT_ACCEPTED", "ผู้รับไม่รับสินค้าหมวด {0}"),
+    (r"^FLAG_ALLOW_(\w+?)_FALSE", "สินค้าไม่อนุญาตให้{0}"),
+    (r"^(\w+?)_NOT_ALLOWED", "สินค้าไม่อนุญาตให้{0}"),
+    (r"^KITCHEN_HOURS", "ชั่วโมงครัวไม่พอ"),
+    (r"^EXPIRES_BEFORE_DUE", "หมดอายุก่อนกำหนดผลิต"),
+    (r"^NOT_AN_INGREDIENT", "ไม่ใช่วัตถุดิบของสูตร"),
+    (r"^NO_AT_RISK_PRIMARY_INGREDIENT", "ไม่ใช่วัตถุดิบหลักของสูตร"),
+    (r"^(?:OVER_)?(?:NO_)?MENU_DEMAND", "ไม่มีความต้องการเมนูพอ"),
+    (r"^RECIPE_INACTIVE", "สูตรปิดใช้งาน"),
+    (r"^NOT_IN_TIME", "ทำไม่ทันเวลา"),
+    (r"^INGREDIENT_SHORT", "วัตถุดิบอื่นของสูตรไม่พอ"),
+    (r"^BELOW_MIN_PRICE", "ราคาต่ำกว่าราคาขั้นต่ำ"),
+    (r"^(?:NO_SALES_EXPECTED|NO_EXTRA_SALES)", "ลดราคาแล้วก็ขายเพิ่มไม่ได้"),
+    (r"^(?:NO_)?PICKUP_SLOT", "ไม่มีรอบรับของ"),
+    (r"^(?:NO_|PARTNER_)CAPACITY", "ผู้รับรับเพิ่มไม่ได้"),
+    (r"^PARTNER_INACTIVE", "ผู้รับปิดใช้งาน"),
+    (r"^BELOW_MIN_KG", "น้ำหนักต่ำกว่าขั้นต่ำของผู้รับ"),
+]
 
 
 def fmt_num(value) -> str | None:
@@ -82,7 +108,9 @@ class Facts:
     partner_name: str | None = None
     partner_type: str | None = None
     expected_profit: str | None = None
-    alternatives: list[str] = field(default_factory=list)
+    alternatives: list[str] = field(default_factory=list)  # feasible, compared with the chosen action
+    rejected: list[str] = field(default_factory=list)  # ruled out by the Optimizer, with reasons
+    references: list[str] = field(default_factory=list)  # reference values only, never compared
 
     @property
     def due(self) -> str | None:
@@ -91,6 +119,22 @@ class Facts:
     @property
     def location_or_check(self) -> str:
         return self.location or "ตรวจสอบกับระบบ"
+
+    @property
+    def expiry_text(self) -> str | None:
+        """Negative days written out: the LLM read "เหลือ -2 วัน" as "expires in 2 days"."""
+        d = self.days_to_expiry
+        if d is None:
+            return None
+        if d < 0:
+            return f"หมดอายุไปแล้ว {-d} วัน"
+        return "หมดอายุวันนี้" if d == 0 else f"เหลืออายุ {d} วัน"
+
+    @property
+    def reference_values(self) -> set[float]:
+        """Reference-only amounts, which must not appear in the LLM's text."""
+        found = re.findall(r"(-?[\d.]+) บาท$", "\n".join(self.references), flags=re.M)
+        return {abs(float(n)) for n in found}
 
     @property
     def comparison_diffs(self) -> set[float]:
@@ -115,7 +159,7 @@ class Facts:
 
     def to_prompt(self) -> str:
         """FACTS for the LLM; missing values say NO_DATA so it does not guess."""
-        days = f" (เหลือ {self.days_to_expiry} วัน)" if self.days_to_expiry is not None else ""
+        days = f" ({self.expiry_text})" if self.expiry_text else ""
         lines = [
             f"- action_type: {self.action} ({ACTION_TH.get(self.action, self.action)})",
             f"- สินค้า: {self.product_name} ({self.category or NO_DATA}), lot: {self.lot_id}",
@@ -150,7 +194,8 @@ class Facts:
         return "\n".join(lines)
 
     def alternatives_prompt(self) -> str:
-        return "\n".join(self.alternatives) if self.alternatives else "- ไม่มีข้อมูลทางเลือกอื่น"
+        lines = [*self.alternatives, *self.rejected, *self.references]
+        return "\n".join(lines) if lines else "- ไม่มีข้อมูลทางเลือกอื่น"
 
 
 def _comparison(chosen: float | None, other: float | None) -> str:
@@ -165,19 +210,59 @@ def _comparison(chosen: float | None, other: float | None) -> str:
     return " → เท่ากับทางที่เลือก"
 
 
-def _alternative_line(alt: dict, chosen_impact: float | None) -> str | None:
-    """One line per alternative the Optimizer did not choose."""
-    if alt.get("role") == "chosen":
-        return None
+def _option_label(alt: dict) -> str:
     label = alt.get("disposal_method") or alt.get("action_type") or "ทางเลือก"
     label = OPTION_TH.get(label, label)
     if alt.get("discount_pct") is not None:
         label += f" {fmt_num(alt['discount_pct'])}%"
+    return label
+
+
+def _alternative_line(alt: dict, chosen_impact: float | None) -> str:
+    """Feasible alternative, compared with the chosen action."""
     raw_impact = alt.get("expected_profit_impact", alt.get("net_profit_thb"))
-    text = f"- ทางเลือกอื่น: {label}, ผลกระทบกำไร {fmt_num(raw_impact) or NO_DATA} บาท"
+    text = f"- ทางเลือกอื่น: {_option_label(alt)}, ผลกระทบกำไร {fmt_num(raw_impact) or NO_DATA} บาท"
     text += _comparison(chosen_impact, raw_impact)
     note = alt.get("note")
     return text + (f" ({note})" if note else "")
+
+
+def _reason_th(code: str) -> str:
+    key = re.sub(r"^[A-Z]\d+_", "", code.split(" ")[0])  # "P4_MIN_DAYS -3d ..." -> "MIN_DAYS"
+    for pattern, text in REJECT_REASON_TH:
+        m = re.match(pattern, key)
+        if m:
+            return text.format(*(OPTION_TH.get(g, g) for g in m.groups()))
+    return key
+
+
+def _rejected_line(alt: dict) -> str:
+    """{"option": "DONATION:P-DON-01", "rejected_because": [...]} -> one line without numbers."""
+    kind, _, target = alt["option"].partition(":")
+    label = OPTION_TH.get(kind, kind) + (f" {target}" if target and target != "ALL" else "")
+    reasons = list(dict.fromkeys(_reason_th(r) for r in alt.get("rejected_because") or []))
+    return f"- ตัดออก: {label} เพราะ{', '.join(reasons) or NO_DATA}"
+
+
+def _reference_line(alt: dict) -> str:
+    """feasible: false = a reference value, not something staff could do."""
+    impact = fmt_num(alt.get("expected_profit_impact"))
+    note = re.sub(r"^ค่าอ้างอิง\S*:\s*", "", alt.get("note") or _option_label(alt))
+    return f"- ค่าอ้างอิง (ไม่ใช่ทางเลือก ห้ามนำไปเปรียบเทียบ): {note} {impact or NO_DATA} บาท"
+
+
+def _split_alternatives(alts: list[dict], chosen_impact: float | None) -> tuple[list[str], list[str], list[str]]:
+    feasible, rejected, references = [], [], []
+    for alt in alts:
+        if alt.get("role") == "chosen":
+            continue
+        if alt.get("rejected_because") is not None or "option" in alt:
+            rejected.append(_rejected_line(alt))
+        elif alt.get("feasible") is False:
+            references.append(_reference_line(alt))
+        else:
+            feasible.append(_alternative_line(alt, chosen_impact))
+    return feasible[:MAX_ALTERNATIVES], rejected[:MAX_REJECTED], references
 
 
 def build_facts(d: OptimizationDecision) -> Facts:
@@ -192,9 +277,7 @@ def build_facts(d: OptimizationDecision) -> Facts:
     if d.batch_count and recipe.get("output_quantity"):
         expected_output = fmt_num(d.batch_count * float(recipe["output_quantity"]))
 
-    alternatives = [
-        line for line in (_alternative_line(a, d.expected_profit_impact) for a in d.alternatives) if line
-    ]
+    alternatives, rejected, references = _split_alternatives(d.alternatives, d.expected_profit_impact)
 
     return Facts(
         decision_id=d.decision_id,
@@ -224,5 +307,7 @@ def build_facts(d: OptimizationDecision) -> Facts:
         partner_name=partner.get("name"),
         partner_type=partner.get("partner_type"),
         expected_profit=fmt_num(d.expected_profit_impact),
-        alternatives=alternatives[:MAX_ALTERNATIVES],
+        alternatives=alternatives,
+        rejected=rejected,
+        references=references,
     )

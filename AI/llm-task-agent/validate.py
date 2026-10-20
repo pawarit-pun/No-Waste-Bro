@@ -7,8 +7,9 @@ from steps import REVIEW_TEXT, StepSpec
 
 # Any number, incl. inside codes and dates (for the allowed list)
 NUM_RE = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?")
-# Standalone numbers only, so RCP-001 or 2026-10-16 are not read as "1" or "16"
-STRICT_NUM_RE = re.compile(r"(?<![A-Za-z0-9_\-.])\d+(?:,\d{3})*(?:\.\d+)?(?![A-Za-z0-9_\-])")
+# Standalone numbers only, so RCP-001 or 2026-10-16 are not read as "1" or "16".
+# A "-" after a space is a minus sign (-5842.5); compared without sign.
+STRICT_NUM_RE = re.compile(r"(?<![A-Za-z0-9_\-.])-?\d+(?:,\d{3})*(?:\.\d+)?(?![A-Za-z0-9_\-])")
 SOP_NAME_RE = re.compile(r"\b[A-Z][A-Z_]*_(?:SOP|POLICY)\b")
 BUDDHIST_YEAR_RE = re.compile(r"\b25[6-9]\d\b")
 PROMPT_TERM_RE = re.compile(r"FACTS|ALTERNATIVES|REQUIRED_STEPS")
@@ -25,7 +26,7 @@ MAX_REASONING = 800
 
 
 def _to_numbers(matches: list[str]) -> set[float]:
-    return {float(n.replace(",", "")) for n in matches}
+    return {abs(float(n.replace(",", ""))) for n in matches}
 
 
 def numbers_in(text: str) -> set[float]:
@@ -133,6 +134,8 @@ def validate_output(out: dict, facts: Facts, specs: list[StepSpec]) -> list[str]
             errors.append(f"{label} แปลงปีเป็น พ.ศ. ให้ใช้รูปแบบวันที่ตาม FACTS")
         if PROMPT_TERM_RE.search(text):
             errors.append(f"{label} มีคำ FACTS / ALTERNATIVES / REQUIRED_STEPS ซึ่งผู้อ่านไม่เห็น ให้เขียนเป็นข้อมูลจริงแทน")
+        if standalone_numbers(text) & facts.reference_values:
+            errors.append(f"{label} อ้างค่าอ้างอิงซึ่งไม่ใช่ทางเลือก ห้ามนำมาเขียนหรือเปรียบเทียบ")
         extra = sorted(n for n in standalone_numbers(text) if n not in allowed)
         if extra:
             errors.append(f"{label} มีตัวเลขที่ไม่อยู่ใน FACTS: {', '.join(_fmt(n) for n in extra[:5])}")

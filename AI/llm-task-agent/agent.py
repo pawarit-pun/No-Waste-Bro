@@ -1,4 +1,4 @@
-"""Task Agent: decision -> Facts -> SOP -> LLM -> Validate -> POST /tasks -> report
+"""Task Agent: decision -> Facts -> SOP -> LLM -> Validate -> POST /tasks -> lots CHECKED -> report
 
 Per decision: primary model -> primary fixes its errors once -> fallback model -> standard text.
 """
@@ -91,7 +91,7 @@ def batch_key(facts: Facts) -> str:
 def post_batches(source, batches: dict[str, list[TaskCreate]], dry_run: bool) -> list[dict]:
     results = []
     for key, tasks in batches.items():
-        result = {"batch": key, "count": len(tasks)}
+        result = {"batch": key, "count": len(tasks), "decision_ids": [t.decision_id for t in tasks]}
         if dry_run:
             results.append({**result, "status": "DRY_RUN"})
             continue
@@ -110,6 +110,41 @@ def post_batches(source, batches: dict[str, list[TaskCreate]], dry_run: bool) ->
     return results
 
 
+def update_lot_status(source, decisions: list, post_results: list[dict], dry_run: bool) -> dict:
+    """Step 8: lots whose every decision in this run got a task -> CHECKED (one PATCH call).
+
+    Lots with a failed batch or an unprocessed decision (--limit) stay PROCESSING.
+    A failed PATCH is recorded, never raised.
+    """
+    created = {d_id for r in post_results if r["status"] in ("CREATED", "DRY_RUN") for d_id in r["decision_ids"]}
+    failed = {d_id: r["status"] for r in post_results if r["status"].startswith("FAILED") for d_id in r["decision_ids"]}
+
+    reasons: dict[str, set[str]] = defaultdict(set)
+    for d in decisions:
+        if d.lot_id and d.decision_id not in created:
+            reasons[d.lot_id].add(failed.get(d.decision_id, "NOT_PROCESSED"))
+    lots = {d.lot_id for d in decisions if d.lot_id}
+    to_check = sorted(lots - set(reasons))
+    pending = [{"lot_id": lot, "reasons": sorted(r)} for lot, r in sorted(reasons.items())]
+
+    result = {"to_check": to_check, "pending_lots": pending}
+    if dry_run:
+        return {**result, "status": "DRY_RUN"}
+    if not to_check:
+        return {**result, "status": "SKIPPED"}
+    try:
+        response = source.set_lots_ai_status(to_check, "CHECKED")
+        return {
+            **result,
+            "status": "UPDATED",
+            "updated": [u.get("lot_id") for u in response.get("updated", [])],
+            "not_found": response.get("not_found", []),
+        }
+    except Exception as e:  # incl. 404 when no lot exists
+        status = f"FAILED_{e.status}" if isinstance(e, ApiError) else "FAILED"
+        return {**result, "status": status, "error": str(e)[:500]}
+
+
 def run(
     source,
     retriever,
@@ -119,9 +154,8 @@ def run(
     limit: int | None = None,
 ) -> dict:
     now = resolve_now()
-    used_run_id, decisions = source.pending_decisions(run_id)
-    if limit:
-        decisions = decisions[:limit]
+    used_run_id, all_decisions = source.pending_decisions(run_id)
+    decisions = all_decisions[:limit] if limit else all_decisions
 
     tasks: list[TaskCreate] = []
     audit: list[dict] = []
@@ -153,6 +187,7 @@ def run(
         })
 
     post_results = post_batches(source, batches, dry_run)
+    lot_status = update_lot_status(source, all_decisions, post_results, dry_run)
 
     report = {
         "run_id": used_run_id,
@@ -167,8 +202,11 @@ def run(
             "llm_ok": sum(1 for a in audit if not a["fallback_used"]),
             "template_fallback": sum(1 for a in audit if a["fallback_used"]),
             "llm_calls": sum(len(a["attempts"]) for a in audit),
+            "lots_checked": len(lot_status.get("updated", [])),
+            "lots_pending": len(lot_status["pending_lots"]),
         },
         "post_results": post_results,
+        "lot_status": lot_status,
         "audit": audit,
         "tasks": [t.model_dump(mode="json") for t in tasks],
     }
