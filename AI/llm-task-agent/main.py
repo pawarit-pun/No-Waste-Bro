@@ -24,6 +24,9 @@ class MockSource:
     def post_tasks(self, tasks):
         raise RuntimeError("MockSource cannot create tasks; use --source api")
 
+    def set_lots_ai_status(self, lot_ids, ai_status):
+        raise RuntimeError("MockSource cannot update lots; use --source api")
+
 
 def print_report(report: dict) -> None:
     print(json.dumps(report["summary"], ensure_ascii=False))
@@ -44,7 +47,16 @@ def print_report(report: dict) -> None:
         for attempt in audit["attempts"]:
             for error in attempt["errors"]:
                 print(f"     ! {attempt['model']}: {error}")
-    print("\nPOST:", json.dumps(report["post_results"], ensure_ascii=False))
+    print("\nPOST:", json.dumps(
+        [{k: v for k, v in r.items() if k != "decision_ids"} for r in report["post_results"]], ensure_ascii=False))
+    lots = report["lot_status"]
+    print(f"LOTS -> CHECKED ({lots['status']}): {lots['to_check']}")
+    for lot in lots["pending_lots"]:
+        print(f"  stays PROCESSING: {lot['lot_id']} {lot['reasons']}")
+    if lots.get("not_found"):
+        print("  not_found:", lots["not_found"])
+    if lots.get("error"):
+        print("  ! PATCH:", lots["error"])
     print("report:", report["report_path"])
 
 
@@ -56,7 +68,7 @@ def main():
     parser.add_argument("--no-kb", action="store_true", help="skip the Knowledge Base")
     parser.add_argument("--run-id", help="decision run to use (default: latest)")
     parser.add_argument("--limit", type=int, help="process only the first N decisions")
-    parser.add_argument("--now", help="time used for priority, e.g. 2026-10-16T08:00:00+07:00")
+    parser.add_argument("--now", help="time used for priority, e.g. 2026-10-19T08:00:00+07:00")
     args = parser.parse_args()
 
     if args.now:

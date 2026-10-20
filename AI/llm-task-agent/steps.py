@@ -223,7 +223,7 @@ def fallback_reasoning(f: Facts) -> str:
         f"ของ{f.product_name} (lot {f.lot_id})"
     ]
     if f.risk_level:
-        parts.append(f"ความเสี่ยง {f.risk_level} (score {f.risk_score}) เหลืออายุ {f.days_to_expiry} วัน")
+        parts.append(f"ความเสี่ยง {f.risk_level} (score {f.risk_score}) {f.expiry_text or ''}".rstrip())
     if f.expected_profit:
         parts.append(f"ผลกระทบกำไรที่คาด {f.expected_profit} บาท")
     text = " ".join(parts)

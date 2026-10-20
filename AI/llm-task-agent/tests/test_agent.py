@@ -160,6 +160,71 @@ def test_alternatives_compared_in_code():
     assert "→ ทางที่เลือกแย่กว่า 23.4 บาท (ไม่รวมค่าขนย้าย)" in build_facts(BY_ID["4"]).alternatives_prompt()
 
 
+# Alternatives in the shape the real Optimizer sends (LOT-000001, run f84a00f5)
+REAL_ALTERNATIVES = [
+    {"note": "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว", "partner_id": "P-ADG-01", "action_type": "DISCARD",
+     "disposal_method": "ANAEROBIC_DIGESTION", "expected_profit_impact": -7805.19},
+    {"option": "MARKDOWN:ALL", "rejected_because": ["K0_EXPIRED"]},
+    {"option": "DONATION:P-DON-01", "rejected_because": ["P4_MIN_DAYS -3d at pickup < 2d", "P5_EXPIRED_FOR_HUMAN_USE"]},
+    {"option": "KITCHEN:RCP-006", "rejected_because": ["U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.83h", "X9_SOMETHING_NEW"]},
+    {"note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด", "feasible": False, "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE", "expected_profit_impact": -5842.5},
+]
+
+
+def real_alternatives_decision() -> OptimizationDecision:
+    d = BY_ID["4"].model_copy(deep=True)
+    d.expected_profit_impact = -6295.68
+    d.alternatives = REAL_ALTERNATIVES
+    return d
+
+
+def test_alternatives_split_feasible_rejected_reference():
+    f = build_facts(real_alternatives_decision())
+    assert f.alternatives == [
+        "- ทางเลือกอื่น: ส่งย่อยแบบไม่ใช้ออกซิเจน, ผลกระทบกำไร -7805.19 บาท → ทางที่เลือกดีกว่า 1509.51 บาท"
+        " (เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว)"]
+    assert f.rejected == [
+        "- ตัดออก: ลดราคา เพราะหมดอายุแล้ว",
+        "- ตัดออก: บริจาค P-DON-01 เพราะอายุคงเหลือไม่ถึงเกณฑ์ของผู้รับ, หมดอายุสำหรับคนแล้ว",
+        "- ตัดออก: ส่งเข้าครัว RCP-006 เพราะชั่วโมงครัวไม่พอ, SOMETHING_NEW",  # unknown code kept as is
+    ]
+    assert f.references == [
+        "- ค่าอ้างอิง (ไม่ใช่ทางเลือก ห้ามนำไปเปรียบเทียบ): ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด -5842.5 บาท"]
+
+
+def test_reference_value_never_triggers_escalation():
+    # -5842.5 is "better" than the chosen -6295.68, but it is not an option staff could take
+    f = build_facts(real_alternatives_decision())
+    assert not f.chosen_is_worse and f.comparison_diffs == {1509.51}
+    specs = required_steps(f)
+    assert validate_output(fallback_answer(f, specs), f, specs) == []
+
+
+def test_negative_days_written_as_expired():
+    f = build_facts(real_alternatives_decision())
+    for days, text in ((-2, "หมดอายุไปแล้ว 2 วัน"), (0, "หมดอายุวันนี้"), (3, "เหลืออายุ 3 วัน")):
+        f.days_to_expiry = days
+        assert f"({text})" in f.to_prompt() and text in fallback_reasoning(f)
+
+
+def test_negative_numbers_are_checked_but_codes_are_not():
+    from validate import standalone_numbers
+    assert standalone_numbers("ผลกระทบ -5842.5 บาท สูตร RCP-001 วันที่ 2026-10-16 lot LOT-000009") == {5842.5}
+    out = fixed_case2()
+    out["ai_reasoning"] = "ทางนี้มีผลกระทบกำไร -999 บาท"  # invented negative number
+    assert any("999" in e for e in validate_output(out, F, SPECS))
+
+
+def test_validator_flags_reference_value():
+    # Real Nova output: compared the chosen action with the reference value
+    f = build_facts(real_alternatives_decision())
+    specs = required_steps(f)
+    out = fallback_answer(f, specs)
+    out["ai_reasoning"] = "ทางที่เลือกดีกว่าต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด -5842.5 บาท"
+    assert any("ค่าอ้างอิง" in e for e in validate_output(out, f, specs))
+
+
 def test_validator_requires_safety_gates():
     for key, step_index in (("2", 1), ("3", 2), ("4", 1)):  # kitchen readiness, donate pickup, discard approval
         f = build_facts(BY_ID[key])
@@ -309,20 +374,46 @@ def test_retry_all_fail_then_template():
 
 # ---------- Run: batching, POST, report ----------
 
-class FakeSource:
-    """Rejects the kitchen batch with 409, accepts everything else."""
+ALL_LOTS = sorted(d.lot_id for d in DECISIONS)  # LOT-900001 .. LOT-900005
+KITCHEN_LOT = BY_ID["2"].lot_id
 
-    def __init__(self):
+
+class FakeSource:
+    """Fake API. By default rejects the kitchen batch with 409 and PATCHes every lot it is given."""
+
+    def __init__(self, decisions=None, kitchen_full=True, patch=None):
+        self.decisions = decisions or DECISIONS
+        self.kitchen_full = kitchen_full
+        self.patch = patch  # None = success, dict = response, Exception = raised
         self.posted: list[list[TaskCreate]] = []
+        self.patched: list[tuple[list[str], str]] = []
 
     def pending_decisions(self, run_id=None):
-        return "run-1", DECISIONS
+        return "run-1", self.decisions
 
     def post_tasks(self, tasks):
-        if any(t.decision_id == BY_ID["2"].decision_id for t in tasks):
+        if self.kitchen_full and any(t.decision_id == BY_ID["2"].decision_id for t in tasks):
             raise ApiError(409, "Kitchen 'DEPT-BAKERY' does not have 0.75 hours available")
         self.posted.append(tasks)
         return {"created": len(tasks), "tasks": [{"assigned_staff_id": "STF-001"}] * len(tasks)}
+
+    def set_lots_ai_status(self, lot_ids, ai_status):
+        self.patched.append((lot_ids, ai_status))
+        if isinstance(self.patch, Exception):
+            raise self.patch
+        if self.patch is not None:
+            return self.patch
+        return {"message": "ok", "updated": [{"lot_id": i, "ai_status": ai_status} for i in lot_ids],
+                "not_found": []}
+
+
+def extra_decision(n: int, lot_id: str) -> OptimizationDecision:
+    """A second MARKDOWN decision for an existing lot (goes in the GENERAL batch)."""
+    d = BY_ID["1"].model_copy(deep=True)
+    d.decision_id = f"00000000-0000-0000-0000-{n:012d}"
+    d.lot_id = lot_id
+    d.lot = {**d.lot, "lot_id": lot_id}
+    return d
 
 
 def test_batch_key_splits_kitchen_by_department_and_day():
@@ -336,9 +427,69 @@ def test_run_posts_batches_and_writes_report():
     results = {r["batch"]: r for r in report["post_results"]}
     assert results["GENERAL"]["status"] == "CREATED" and results["GENERAL"]["count"] == 4
     assert results["KITCHEN:DEPT-BAKERY@2026-10-16"]["status"] == "FAILED_409"
-    assert report["summary"] == {"decisions": 5, "tasks": 5, "llm_ok": 0,
-                                 "template_fallback": 5, "llm_calls": 0}
+    assert report["summary"] == {"decisions": 5, "tasks": 5, "llm_ok": 0, "template_fallback": 5,
+                                 "llm_calls": 0, "lots_checked": 4, "lots_pending": 1}
     assert os.path.exists(report["report_path"])
+
+
+# ---------- Step 8: lots -> CHECKED ----------
+
+def test_lots_all_batches_ok_one_patch_unique_lots():
+    decisions = [*DECISIONS, extra_decision(6, BY_ID["1"].lot_id)]  # LOT-900001 has 2 decisions
+    source = FakeSource(decisions, kitchen_full=False)
+    lots = run(source, NullRetriever(), None, dry_run=False)["lot_status"]
+    assert source.patched == [(ALL_LOTS, "CHECKED")]  # one call, each lot once, sorted
+    assert lots["status"] == "UPDATED" and lots["updated"] == ALL_LOTS and lots["pending_lots"] == []
+
+
+def test_lots_failed_kitchen_batch_stays_processing():
+    # The kitchen lot also has a MARKDOWN decision that succeeds: still not CHECKED
+    decisions = [*DECISIONS, extra_decision(6, KITCHEN_LOT)]
+    source = FakeSource(decisions, kitchen_full=True)
+    lots = run(source, NullRetriever(), None, dry_run=False)["lot_status"]
+    assert KITCHEN_LOT not in source.patched[0][0]
+    assert source.patched[0][0] == [lot for lot in ALL_LOTS if lot != KITCHEN_LOT]
+    assert lots["pending_lots"] == [{"lot_id": KITCHEN_LOT, "reasons": ["FAILED_409"]}]
+
+
+def test_lots_dry_run_does_not_patch():
+    source = FakeSource(kitchen_full=False)
+    lots = run(source, NullRetriever(), None, dry_run=True)["lot_status"]
+    assert source.patched == []
+    assert lots["status"] == "DRY_RUN" and lots["to_check"] == ALL_LOTS  # preview of what would be CHECKED
+
+
+def test_lots_limit_leaves_unprocessed_lots_processing():
+    source = FakeSource(kitchen_full=False)
+    lots = run(source, NullRetriever(), None, dry_run=False, limit=2)["lot_status"]
+    assert source.patched[0][0] == ALL_LOTS[:2]
+    assert {p["lot_id"] for p in lots["pending_lots"]} == set(ALL_LOTS[2:])
+    assert all(p["reasons"] == ["NOT_PROCESSED"] for p in lots["pending_lots"])
+
+
+def test_lots_not_found_recorded():
+    response = {"message": "ok", "updated": [{"lot_id": lot, "ai_status": "CHECKED"} for lot in ALL_LOTS[1:]],
+                "not_found": [ALL_LOTS[0]]}
+    report = run(FakeSource(kitchen_full=False, patch=response), NullRetriever(), None, dry_run=False)
+    assert report["lot_status"]["not_found"] == [ALL_LOTS[0]]
+    assert report["summary"]["lots_checked"] == 4
+
+
+def test_lots_patch_error_does_not_fail_run():
+    for error, status in ((ApiError(404, "None of the lot_ids were found"), "FAILED_404"),
+                          (RuntimeError("connection reset"), "FAILED")):
+        source = FakeSource(kitchen_full=False, patch=error)
+        report = run(source, NullRetriever(), None, dry_run=False)
+        lots = report["lot_status"]
+        assert lots["status"] == status and lots["error"], lots
+        assert {r["status"] for r in report["post_results"]} == {"CREATED"}  # tasks still created
+        assert os.path.exists(report["report_path"])
+
+
+def test_lots_no_patch_when_nothing_succeeded():
+    source = FakeSource([BY_ID["2"]], kitchen_full=True)  # only the kitchen decision, and it fails
+    lots = run(source, NullRetriever(), None, dry_run=False)["lot_status"]
+    assert source.patched == [] and lots["status"] == "SKIPPED"
 
 
 def test_run_dry_run_posts_nothing():
