@@ -372,7 +372,7 @@ class DecisionWithContext(_Row):
     lot: Optional[DecisionLot] = Field(None, description="สภาพ lot ปัจจุบัน + ตำแหน่งชั้นวาง")
     product: Optional[DecisionProduct] = Field(None, description="ชื่อและประเภทสินค้า")
     recipe: Optional[DecisionRecipe] = Field(None, description="สูตรที่จะทำ (เฉพาะ KITCHEN_REPURPOSE)")
-    partner: Optional[DecisionPartner] = Field(None, description="partner ที่รับบริจาค (เฉพาะ DONATE)")
+    partner: Optional[DecisionPartner] = Field(None, description="partner ที่มารับของ (งานที่มี target_partner_id)")
 
 
 class DecisionListResponse(BaseModel):
@@ -431,7 +431,7 @@ class TaskListItem(TaskRow):
 class TaskDetail(TaskListItem):
     assessment: Optional[DecisionAssessment] = Field(None, description="ผลประเมินความเสี่ยงที่เป็นที่มาของ task")
     recipe: Optional[DecisionRecipe] = Field(None, description="สูตรที่จะทำ (เฉพาะ KITCHEN_REPURPOSE)")
-    partner: Optional[DecisionPartner] = Field(None, description="partner ที่รับบริจาค (เฉพาะ DONATE)")
+    partner: Optional[DecisionPartner] = Field(None, description="partner ที่มารับของ (งานที่มี target_partner_id)")
 
 
 # ---------- Task actions ----------

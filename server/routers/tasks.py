@@ -94,7 +94,7 @@ def get_tasks(
     summary="รายละเอียด task",
     description="""
 task ทั้งแถว พร้อม `product`, `lot` (ตำแหน่งชั้นวาง, ราคาปัจจุบัน), `assigned_staff`,
-`assessment` (ระดับความเสี่ยง, คาดว่าเหลือเท่าไหร่), `recipe` (เฉพาะงานครัว) และ `partner` (เฉพาะงานบริจาค)
+`assessment` (ระดับความเสี่ยง, คาดว่าเหลือเท่าไหร่), `recipe` (เฉพาะงานครัว) และ `partner` (งานที่ส่งให้ partner: บริจาค / อาหารสัตว์ / ปุ๋ยหมัก / ก๊าซชีวภาพ / ฝังกลบ)
 """,
     responses={404: {"description": "ไม่พบ `task_id`"}},
 )
@@ -152,7 +152,7 @@ def reject(task_id: UUID, payload: TaskReject):
 | --- | --- |
 | `MARKDOWN` | ตัด lot เดิมตามจำนวนที่ติดป้ายลด แล้ว **แยกเป็น lot ใหม่** ราคา `new_recommended_price` (วันหมดอายุ/ตำแหน่งเดิม, `ai_status = CHECKED`) |
 | `KITCHEN_REPURPOSE` | ตัด lot ของ task ตามจำนวนจริง + **ตัดวัตถุดิบอื่นของสูตร** แล้ว **สร้าง lot ผลผลิต** |
-| `DONATE` / `DISCARD` | ตัด lot ของ task ตามจำนวนจริง |
+| `DONATE` / `ANIMAL_FEED` / `COMPOST` / `ANAEROBIC_DIGESTION` / `LANDFILL` / `DISCARD` | ตัด lot ของ task ตามจำนวนจริง |
 
 ### งานครัว
 - วัตถุดิบอื่น = `required_quantity × batch_count ÷ ขนาดบรรจุ` **ปัดขึ้นเป็นหน่วยเต็ม**

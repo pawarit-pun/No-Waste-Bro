@@ -21,6 +21,21 @@ Parameters:
     Type: String
     Default: "*"
     Description: Browser origins allowed to call the API, comma-separated
+  WorkerImageUri:
+    Type: String
+    Description: ECR image of the AI pipeline worker, printed by AI/pipeline/build_worker.sh
+  WorkerApiBaseUrl:
+    Type: String
+    Default: https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1
+    Description: API the worker calls (= Outputs.ApiBaseUrl of this stack; it stays the same across sam deploy)
+  BedrockRegion:
+    Type: String
+    Default: us-east-1
+    Description: Region of the Bedrock models and Knowledge Base used by the LLM Task Agent
+  BedrockKnowledgeBaseId:
+    Type: String
+    Default: N0NJ2UIEIU
+    Description: Bedrock Knowledge Base with the store SOPs
 
 Resources:
   ApiFunction:
@@ -40,6 +55,10 @@ Resources:
           SUPABASE_SERVICE_ROLE_KEY: !Ref SupabaseServiceRoleKey
           DEMO_DATE: !Ref DemoDate
           CORS_ORIGINS: !Ref CorsOrigins
+          PIPELINE_FUNCTION_NAME: !Ref PipelineWorkerFunction
+      Policies:
+        - LambdaInvokePolicy:          # POST /ai/pipeline-runs starts the worker (async)
+            FunctionName: !Ref PipelineWorkerFunction
       Events:
         AllRoutes:                    # every method and path goes to FastAPI, which picks the route
           Type: HttpApi
@@ -52,6 +71,46 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${ApiFunction}
+      RetentionInDays: 14
+
+  # AI pipeline worker: Risk Scanner -> Optimizer -> LLM Task Agent (AI/pipeline/)
+  # Container image: the AI libraries (LightGBM, pandas, scipy) are too big for a zip Lambda
+  PipelineWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: No-Waste-Bro AI pipeline worker (invoked async by POST /ai/pipeline-runs)
+      PackageType: Image
+      ImageUri: !Ref WorkerImageUri
+      Architectures:
+        - arm64
+      MemorySize: 3008
+      Timeout: 900                    # Lambda maximum (15 minutes)
+      EphemeralStorage:
+        Size: 1024
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0       # a retry would scan / post twice; start a new run instead
+      Environment:
+        Variables:
+          API_BASE_URL: !Ref WorkerApiBaseUrl   # not !Sub ${ServerlessHttpApi}: that would be a circular dependency
+          DEMO_DATE: !Ref DemoDate
+          BEDROCK_REGION: !Ref BedrockRegion
+          BEDROCK_KB_ID: !Ref BedrockKnowledgeBaseId
+          WORK_DIR: /tmp/pipeline
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:aws:bedrock:${BedrockRegion}::foundation-model/amazon.nova-lite-v1:0
+                - !Sub arn:aws:bedrock:${BedrockRegion}::foundation-model/qwen.qwen3-next-80b-a3b
+            - Effect: Allow
+              Action: bedrock:Retrieve
+              Resource: !Sub arn:aws:bedrock:${BedrockRegion}:${AWS::AccountId}:knowledge-base/${BedrockKnowledgeBaseId}
+
+  PipelineWorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PipelineWorkerFunction}
       RetentionInDays: 14
 
 Outputs:
@@ -67,3 +126,6 @@ Outputs:
   FunctionName:
     Description: Lambda function name
     Value: !Ref ApiFunction
+  PipelineWorkerName:
+    Description: AI pipeline worker Lambda (logs in CloudWatch under /aws/lambda/<name>)
+    Value: !Ref PipelineWorkerFunction

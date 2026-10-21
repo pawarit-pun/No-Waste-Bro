@@ -57,6 +57,11 @@ staff ทำงานตามลำดับ: `POST /tasks/{id}/accept` → `PO
 
 TAGS_METADATA = [
     {
+        "name": "AI Pipeline",
+        "description": "สั่งรัน AI ทั้ง 3 ขั้น (Risk Scanner → Optimizer → LLM Task Agent) บน worker แบบไม่รอผล "
+                       "แล้วติดตามสถานะของแต่ละรอบ",
+    },
+    {
         "name": "AI",
         "description": "ข้อมูล input สำหรับ AI Agent: `scan-inputs` สำหรับ Risk Scanner + Forecast "
                        "และ `optimize-inputs` สำหรับ Optimizer ทั้งสอง route อ่านข้อมูลอย่างเดียว",

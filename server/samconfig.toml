@@ -9,6 +9,8 @@ region = "ap-southeast-1"
 [default.deploy.parameters]
 capabilities = "CAPABILITY_IAM"
 resolve_s3 = true                 # SAM creates and reuses an S3 bucket for the code upload
+# ECR repository of the AI pipeline worker image (AI/pipeline/build_worker.sh pushes it; the tag comes from WorkerImageUri)
+image_repositories = ["PipelineWorkerFunction=566254752430.dkr.ecr.ap-southeast-1.amazonaws.com/no-waste-bro-ai-worker"]
 confirm_changeset = false
 fail_on_empty_changeset = false   # redeploying with no changes is not an error
 

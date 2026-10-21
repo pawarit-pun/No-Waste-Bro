@@ -118,18 +118,21 @@ client → API Gateway (HTTP API) → Lambda [ Mangum → FastAPI → routers / 
 
 - AWS CLI v2 with credentials (`aws configure` or `aws configure sso`)
 - [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
-- Docker is **not** needed
+- Docker: only for building the AI pipeline worker image (`AI/pipeline/build_worker.sh`), not for the API itself
 
 ### Build and deploy
 
 ```bash
 cd server
-./scripts/build_lambda.sh
-
 # Reads the service role key from .env so it is never typed or saved in samconfig.toml
-sam deploy --parameter-overrides \
-  SupabaseServiceRoleKey="$(grep '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2-)"
+# WorkerImageUri = image of the AI pipeline worker, written by AI/pipeline/build_worker.sh (run it once first)
+# && stops at the first failing step, so a failed build is never deployed
+./scripts/build_lambda.sh && sam deploy --parameter-overrides \
+  SupabaseServiceRoleKey="$(grep '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2-)" \
+  WorkerImageUri="$(cat ../AI/pipeline/.last_image_uri)"
 ```
+
+`samconfig.toml` sets `image_repositories` (the ECR repository of `PipelineWorkerFunction`). SAM requires it for any container-image function, even though the image itself comes from `WorkerImageUri`. If the repository or account changes, update that line.
 
 Optional parameters (add them to `--parameter-overrides`; any parameter left out goes back to its default on that deploy):
 
@@ -139,6 +142,9 @@ Optional parameters (add them to `--parameter-overrides`; any parameter left out
 | `SupabaseServiceRoleKey` | (required) | `SUPABASE_SERVICE_ROLE_KEY` |
 | `DemoDate` | empty (today in Bangkok) | `DEMO_DATE` |
 | `CorsOrigins` | `*` | `CORS_ORIGINS` |
+| `WorkerImageUri` | (required) | image of `PipelineWorkerFunction` (see [AI Pipeline](#ai-pipeline-one-call)) |
+| `WorkerApiBaseUrl` | the current AWS API URL | `API_BASE_URL` of the worker |
+| `BedrockRegion` / `BedrockKnowledgeBaseId` | `us-east-1` / `N0NJ2UIEIU` | worker's Bedrock settings |
 
 Example for a demo day: `sam deploy --parameter-overrides SupabaseServiceRoleKey="..." DemoDate=2026-10-20`
 
@@ -162,6 +168,27 @@ Notes:
 - `build/` contains only `main.py`, `configs/`, `core/`, `db/`, `routers/`, `schemas/`, `services/` and the libraries. `.env`, `.venv/` and `scripts/` are never packaged.
 - The first request after the function has been idle is slower (cold start, about 1–3 s). Call the API once before a live demo.
 - API Gateway cuts requests at 30 seconds, so long AI / LLM work should run outside these routes.
+
+## AI Pipeline (one call)
+
+`POST /api/v1/ai/pipeline-runs` runs the whole AI flow in order. The API cannot wait for it (API Gateway stops at 30 s and the three steps take minutes), so it starts a separate Lambda, `PipelineWorkerFunction` (container image built from `AI/pipeline/`), and answers at once.
+
+```
+POST /ai/pipeline-runs ─► row in pipeline_runs (QUEUED) ─► invoke worker (async) ─► 202
+worker: SCAN (risk_forecaster/run_scan.py) ─► OPTIMIZE (food_waste_optimizer/run_optimize.py) ─► TASKS (llm-task-agent/main.py)
+        each step PATCHes /ai/pipeline-runs/{id}: RUNNING → SUCCEEDED / FAILED
+```
+
+| Field | Meaning |
+| --- | --- |
+| `status` | `QUEUED` → `RUNNING` → `SUCCEEDED` / `FAILED` |
+| `current_step` | `SCAN` / `OPTIMIZE` / `TASKS` |
+| `run_id` | Scan run, shared by assessments, decisions and tasks |
+| `at_risk_lots` / `decisions_created` / `tasks_created` / `failed_batches` | Result of each step |
+| `message` | Why a run ended early (no IDLE lots, no HIGH / CRITICAL lots, 0 decisions) |
+| `error` / `steps` | What failed, with the last lines of each step's output |
+
+Rules: one run at a time (`409` otherwise); a run stuck in `QUEUED` / `RUNNING` for 20 minutes is marked `FAILED` on the next start; the worker never retries automatically (a retry would scan and post twice). Running locally with `fastapi dev`, `POST /ai/pipeline-runs` answers `503`; use `python AI/pipeline/worker.py` instead. Build and debug steps: `AI/pipeline/README.md`.
 
 ## API Endpoints
 
@@ -193,6 +220,15 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | --- | --- | --- |
 | `GET` | `/api/v1/kitchen-capacity?days_ahead=1` | Kitchen capacity from today to +`days_ahead` days (0–30) |
 | `POST` | `/api/v1/kitchen-bookings` | Book kitchen hours |
+
+### AI Pipeline
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/ai/pipeline-runs` | Start Risk Scanner → Optimizer → LLM Task Agent on the worker. Returns **202** right away with the run (`QUEUED`). Body `{"stop_after": "SCAN" \| "OPTIMIZE" \| "TASKS"}` (default `TASKS`) |
+| `GET` | `/api/v1/ai/pipeline-runs?limit=10` | Latest runs |
+| `GET` | `/api/v1/ai/pipeline-runs/{pipeline_run_id}` | Status of one run (also on Supabase Realtime, table `pipeline_runs`) |
+| `PATCH` | `/api/v1/ai/pipeline-runs/{pipeline_run_id}` | Internal: the worker reports its progress |
 
 ### AI
 
@@ -263,18 +299,22 @@ A decision's `status` is computed by the `optimization_decisions_status` view: `
 | --- | --- | --- |
 | `MARKDOWN` | `discount_pct` (between 0 and 100, exclusive) | `batch_count` |
 | `KITCHEN_REPURPOSE` | `target_recipe_id`, `batch_count`, `due_by` | `discount_pct`, `new_recommended_price` |
-| `DONATE` | `target_partner_id` | `discount_pct`, `new_recommended_price`, `batch_count` |
-| `DISCARD` | – | `discount_pct`, `new_recommended_price`, `batch_count` |
+| `DONATE` | `target_partner_id` (type DONATION / FOOD_BANK / CHARITY / COMMUNITY / TEMPLE) | `discount_pct`, `new_recommended_price`, `batch_count` |
+| `ANIMAL_FEED` | `target_partner_id` (type ANIMAL_FEED) | `discount_pct`, `new_recommended_price`, `batch_count` |
+| `COMPOST` | `target_partner_id` (type COMPOSTING) | `discount_pct`, `new_recommended_price`, `batch_count` |
+| `ANAEROBIC_DIGESTION` | `target_partner_id` (type ANAEROBIC_DIGESTION) | `discount_pct`, `new_recommended_price`, `batch_count` |
+| `LANDFILL` | `target_partner_id` (type LANDFILL) | `discount_pct`, `new_recommended_price`, `batch_count` |
+| `DISCARD` (thrown away in store, no partner) | – | `discount_pct`, `new_recommended_price`, `batch_count` |
 
 All decisions require `assessment_id` and `action_quantity` (> 0). The server fills in `run_id` and `lot_id` from the assessment.
 
 **Checked against real data**
 
-- The product must allow the action (`allow_markdown`, `allow_kitchen_repurposing`, `allow_donation`).
+- The product must allow the action (`allow_markdown`, `allow_kitchen_repurposing`, `allow_donation`, `allow_animal_feed`, `allow_composting`, `allow_anaerobic_digestion`, `allow_landfill`).
 - The total `action_quantity` per lot in one request cannot exceed the lot's `current_quantity`.
 - `MARKDOWN`: if `new_recommended_price` is omitted, the server sets it to `current_selling_price × (1 − discount_pct / 100)`. The price cannot be below the product's `min_allowed_price`.
 - `KITCHEN_REPURPOSE`: the recipe must be active, and the lot's product must be one of its ingredients.
-- `DONATE`: the partner must be active, accept the product's category, and the lot must have at least `min_days_before_expiry` days left.
+- `DONATE`, `ANIMAL_FEED`, `COMPOST`, `ANAEROBIC_DIGESTION`, `LANDFILL`: the partner must be active, have the partner type that matches the action, accept the product's category, and the lot must have at least `min_days_before_expiry` days left (skipped when it is null).
 
 ## Task Rules
 
@@ -318,7 +358,7 @@ Every action sends `staff_id` in the body (there is no login), and only the assi
 | --- | --- |
 | `MARKDOWN` | The task lot loses `actual_quantity_handled` units, which become a **new lot** at `new_recommended_price` (same product, dates, cost, and location; `ai_status = CHECKED`) |
 | `KITCHEN_REPURPOSE` | The task lot loses `actual_quantity_handled` units; **every other recipe ingredient** is deducted; a **new output lot** is created |
-| `DONATE` / `DISCARD` | The task lot loses `actual_quantity_handled` units |
+| `DONATE` / `ANIMAL_FEED` / `COMPOST` / `ANAEROBIC_DIGESTION` / `LANDFILL` / `DISCARD` | The task lot loses `actual_quantity_handled` units |
 
 Kitchen details:
 
@@ -360,7 +400,7 @@ Use the event only as a signal; the API applies the queue's filtering and orderi
 > **Warning:** these requests write real data to Supabase, including risk assessments, decisions, tasks, lot status, and **booked kitchen hours**. Release any test bookings afterwards with the `release_kitchen_hours` RPC.
 
 ```bash
-B=http://127.0.0.1:8000/api/v1
+B=https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1   # local server: http://127.0.0.1:8000/api/v1
 
 # 1) Save scan results → keep assessment_id
 curl -X POST $B/risk-assessments -H "Content-Type: application/json" -d '{
@@ -522,7 +562,6 @@ Notes:
 
 ## Known Limitations
 
-- `DONATE` decisions cannot be created until the `donation_partners` table has data.
 - Lots are scanned only once by design (prototype): nothing resets `ai_status` back to `IDLE`.
 - When a kitchen task is rejected, released hours are recomputed per task and rounded to 0.01 h, so a booking that summed several tasks can leave up to 0.01 h booked per task.
 - The `anon` read policy on `ai_recommended_tasks` lets anyone with the anon key read tasks. Acceptable for a prototype without login.

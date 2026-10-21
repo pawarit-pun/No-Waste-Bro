@@ -9,7 +9,7 @@ from core.dates import today_bkk
 from db.helpers import fetch_by_ids
 from db.supabase import supabase
 from schemas.decision import DecisionCreate
-from schemas.enums import ActionType, DecisionStatus
+from schemas.enums import PARTNER_ACTIONS, ActionType, DecisionStatus
 
 STATUS_VIEW = "optimization_decisions_status"
 
@@ -26,11 +26,12 @@ def create_decisions(decisions: list[DecisionCreate], optimizer_version: Optiona
                         "lot_id, product_id, current_quantity, current_selling_price, expiration_date")
     products = fetch_by_ids("products", "product_id", {l["product_id"] for l in lots.values()},
                             "product_id, category, min_allowed_price, "
-                            "allow_markdown, allow_kitchen_repurposing, allow_donation")
+                            "allow_markdown, allow_kitchen_repurposing, allow_donation, allow_animal_feed, "
+                            "allow_composting, allow_anaerobic_digestion, allow_landfill")
     recipes = fetch_by_ids("recipes", "recipe_id", {d.target_recipe_id for d in decisions},
                            "recipe_id, is_active, ingredients:recipe_ingredients(ingredient_product_id)")
     partners = fetch_by_ids("donation_partners", "partner_id", {d.target_partner_id for d in decisions},
-                            "partner_id, is_active, accepted_categories, min_days_before_expiry")
+                            "partner_id, partner_type, is_active, accepted_categories, min_days_before_expiry")
     today = today_bkk()
 
     rows = []
@@ -66,12 +67,16 @@ def create_decisions(decisions: list[DecisionCreate], optimizer_version: Optiona
             if product["product_id"] not in {x["ingredient_product_id"] for x in recipe["ingredients"]}:
                 _fail(i, f"product '{product['product_id']}' is not an ingredient of recipe '{d.target_recipe_id}'")
 
-        elif d.action_type == ActionType.DONATE:
-            if not product["allow_donation"]:
-                _fail(i, f"product '{product['product_id']}' does not allow donation")
+        elif d.action_type in PARTNER_ACTIONS:
+            partner_types, flag = PARTNER_ACTIONS[d.action_type]
+            if not product.get(flag):
+                _fail(i, f"product '{product['product_id']}' does not allow {d.action_type.value} ({flag} is not true)")
             partner = partners.get(d.target_partner_id)
             if partner is None or not partner["is_active"]:
-                _fail(i, f"donation partner '{d.target_partner_id}' not found or inactive")
+                _fail(i, f"partner '{d.target_partner_id}' not found or inactive")
+            if partner["partner_type"] not in partner_types:
+                _fail(i, f"partner '{d.target_partner_id}' is {partner['partner_type']}, "
+                         f"{d.action_type.value} needs {' / '.join(sorted(partner_types))}")
             if product["category"] not in partner["accepted_categories"]:
                 _fail(i, f"partner '{d.target_partner_id}' does not accept category {product['category']}")
             days_left = (date.fromisoformat(lot["expiration_date"]) - today).days

@@ -4,7 +4,7 @@ from mangum import Mangum
 
 from configs.config import db_env
 from core.openapi import APP_DESCRIPTION, APP_TITLE, APP_VERSION, TAGS_METADATA
-from routers import (ai, inventory_lots, kitchen, optimization_decisions, optimizer, products,
+from routers import (ai, inventory_lots, kitchen, optimization_decisions, optimizer, pipeline, products,
                     risk_assessments, staff, tasks)
 
 API_PREFIX = "/api/v1"
@@ -23,7 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (products, inventory_lots, kitchen, ai, optimizer, risk_assessments,
+for module in (products, inventory_lots, kitchen, ai, pipeline, optimizer, risk_assessments,
             optimization_decisions, tasks, staff):
     app.include_router(module.router, prefix=API_PREFIX)
 
