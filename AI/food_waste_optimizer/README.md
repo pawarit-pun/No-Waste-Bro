@@ -20,7 +20,7 @@ run_full_pipeline(dry_run=True)                       # dry_run=False = PATCH PR
 ```
 
 ทดสอบ offline (ข้อมูลจากภาพ Supabase): `python -m ai_engine.demo.run_offline --date 2026-10-16 --time 08:00`
-เทสต์: `python -m unittest ai_engine.tests.test_optimizer -v` (27 เทสต์)
+เทสต์: `python -m unittest ai_engine.tests.test_optimizer -v` (40 เทสต์)
 
 > ⚠ "Try it out" / `dry_run=False` เขียนข้อมูลจริงลง Supabase รวมถึงจองชั่วโมงครัว (POST /tasks) ทดสอบ staging ก่อน
 
@@ -45,28 +45,45 @@ run_full_pipeline(dry_run=True)                       # dry_run=False = PATCH PR
 
 - **กำไรต่อทางเลือกนับต้นทุนสินค้า (COGS = `unit_cost`) ทุกทาง** ทุกหน่วยนับครั้งเดียว เทียบกันตรง ๆ ได้
   `DISCARD = −จำนวน × unit_cost` เหมือนตัวอย่างใน Swagger
-- **1 lot มีราคาเดียว** -> เลือกระดับส่วนลดได้ 1 ระดับ (0 = ราคาปกติ, 20-80%) จำนวนที่ขายได้ ≤ demand ของระดับนั้น
-  (ปรับด้วย `demand_kappa`) ระดับที่ราคา < `min_allowed_price` หรือไม่ได้ขายเพิ่มจากระดับที่ลดน้อยกว่า ถูกตัด
-  *สินค้าทุกตัวมี `min_allowed_price` = 50% ของราคาปกติ ระดับ 60-80% จึงถูกตัดเสมอ*
+- **1 lot มีราคาเดียว** -> เลือกระดับส่วนลดได้ 1 ระดับ (0 = ราคาปกติ, 20-80%) ระดับที่ราคา < `min_allowed_price`
+  หรือยอดขายที่คาดไม่เพิ่มจากระดับที่ลดน้อยกว่า ถูกตัด *สินค้าทุกตัวมี `min_allowed_price` = 50% ของราคาปกติ ระดับ 60-80% จึงถูกตัดเสมอ*
+- **ยอดขายแบบความน่าจะเป็น (newsvendor)** แทน `demand_kappa` เดิม: ใช้ quantile ของ forecaster ตรง ๆ
+  (`low_qty` = P10, `expected_qty` = P50, `high_qty` = P90) P(D ≥ k) ลากเส้นตรงผ่าน (0,1) (P10,0.9) (P50,0.5) (P90,0.1)
+  -> หน่วยที่วางบนชั้นในแต่ละช่วงขายออกด้วยโอกาสเฉลี่ย ≈ 0.95 / 0.7 / 0.3 / 0.05 (`demand.survival_segments`)
+  อ้างอิงหลัก critical fractile ของ newsvendor (Arrow, Harris & Marschak 1951)
+- **วางขายก่อน กำจัดของที่เหลือทีหลัง (END_OF_LIFE)**: ส่วนที่คาดว่าขายไม่หมดไปรอบรับรอบแรกหลังหมดเวลาขาย
+  (ร้านปิดของวันหมดอายุ) solver เลือกเองว่าวางขายต่อคุ้มกว่าดึงออกตอนนี้ไหม
+  decision ของ END_OF_LIFE มี `due_by` = เวลารับ, `action_quantity` = จำนวนที่คาดว่าเหลือ (ปัดขึ้น) staff กำจัดตามที่เหลือจริง
+  เงินในแผนเป็นค่าคาดหมาย ส่วนจำนวนหน่วยปัดเป็นจำนวนเต็มให้รวมเท่ากับ lot (H1)
 - **Partner**: Total Cost = `fixed_cost_per_trip` + `travel_cost_per_trip` (ต่อเที่ยว แบ่งตาม kg ระหว่าง lot ที่ไปเที่ยวเดียวกัน)
   + kg × `handling_fee_per_kg`; **DONATION คิดแค่ fixed**; ANIMAL_FEED มีรายได้ kg × `buyback_price_per_kg` (0.92)
-  เที่ยวหนึ่งต้อง ≥ `min_kg_per_pickup` (0 = ไม่มีเกณฑ์) และ ≤ ความจุที่เหลือ; weight = น้ำหนักสุทธิจริงจาก `net_content_*`
+  1 เที่ยว = (partner, วันที่รับ) ต้อง ≥ `min_kg_per_pickup` (0 = ไม่มีเกณฑ์) และ ≤ ความจุ; weight = น้ำหนักสุทธิจริงจาก `net_content_*`
+  ของที่ดึงออกตอนนี้กับของ END_OF_LIFE ที่ตกวันเดียวกันใช้เที่ยวเดียวกัน (เวลารับ = ช้าสุดของวันนั้น แล้วตรวจกฎซ้ำ)
+  `trip_cost_mode="scheduled"` = scenario ที่ partner วิ่งรอบประจำอยู่แล้ว (คิดแค่ต่อ kg) · `deferred_trip_cost_share`
+  = สัดส่วนค่าเที่ยวของ "วันถัดไป" ที่รอบนี้ต้องแบก
 - **วัน/เวลารับ**: weekday ต้องอยู่ใน `pickup_days` (1=จ…7=อา) และอยู่ใน `pickup_time_start–end` ถ้าวันนี้หมดช่วงแล้วเลื่อนไปวันถัดไป
   `min_days_before_expiry` ตรวจ ณ **วันรับ** (NULL/0 = ไม่มีเกณฑ์ รับของหมดอายุได้)
 - **ครัว**: Total Cost = Cost_Primary (units × `unit_cost` ของ lot) + `utility_cost` (รวมค่าไฟ+น้ำ+วัตถุดิบรองแล้ว)
+  เวลา: เริ่ม = ตอนนี้ + `kitchen_lead_minutes` (วันอื่น = เปิดร้าน), เมนูเริ่มขายเมื่อ batch แรกเสร็จ,
+  `due_by` = เริ่ม + เวลาทำ × batch (ไม่ใช่ 17:00 ตายตัวแล้ว) ต้องไม่เกินเลิกกะ `kitchen_due_time` และเวลาหมดอายุของ lot หลัก
+  ยอดขายเมนูใช้ P10/P50/P90 (`low_qty` / `menu_qty` / `high_qty`) แบบเดียวกับหน้าร้าน เมนูที่ทำแล้วขายไม่ออกไม่มีรายได้
   ตรวจ: สูตร active, แผนกตรงกับสูตร, `kitchen_capacity` (FULL = 0), ทำเสร็จก่อนหมดอายุ (due_by ต้องไม่เกินเวลาหมดอายุของ lot),
   วัตถุดิบหลักมาจาก lot เสี่ยง, **วัตถุดิบรองของทุกงานรวมกันต้องไม่เกิน `ingredient_stock`** (นับแยกตามวันหมดอายุ)
 - ผลลัพธ์ต่อ run: สัดส่วน % ต่อ lot และรวม, kg, รายรับ/ค่าใช้จ่าย/กำไรสุทธิ, เปรียบเทียบกับ "ไม่ใช้ Optimizer"
 
 ## ค่าที่ผมตั้งเองและยังต้องให้ยืนยัน (ASSUMPTION — แก้ใน `OptimizerConfig`)
 
-1. `lead_time_minutes=60` เตรียมของก่อน partner มารับ · `kitchen_lead_minutes=30` · `kitchen_due_time=17:00`
-2. lot หมดอายุสิ้นวันของ `expiration_date` (23:59:59)
-3. `demand_kappa=0.5` (ใช้ demand แบบระวัง) · demand ราย % ส่วนลดใช้ค่าความยืดหยุ่นราคาตามหมวดจาก forecaster เดิม
+1. `lead_time_minutes=60` เตรียมของก่อน partner มารับ · `kitchen_lead_minutes=30` · `kitchen_due_time=17:00` (เลิกกะครัว)
+2. lot หมดอายุสิ้นวันของ `expiration_date` (23:59:59) · หมดเวลาขาย = ร้านปิด (22:00) ของวันหมดอายุ
+3. ยอดขายกระจายเท่ากันทุกชั่วโมงที่ร้านเปิด · CDF ของ demand เป็นเส้นตรงระหว่าง P10/P50/P90 และหางถึง P90 + (P90 − P50)
 4. ความหนาแน่น ML/L = 1 kg/L (น้ำหนักจริงรวมบรรจุภัณฑ์ไม่มีใน DB)
-5. ผลิตเมนูได้ไม่เกิน `ความต้องการต่อวัน × (shelf_life_days + 1)`
-6. วัตถุดิบหลัก (primary) ต้องมาจาก lot เสี่ยงเท่านั้น (ซื้อ/ใช้สต็อกปกติแทนไม่ได้)
-7. partner ที่ไม่ใช่ DONATION ส่งเป็น `DISCARD` + `target_partner_id` + `due_by` (เวลารับ) จนกว่าจะเพิ่ม enum (SQL ข้อ 1)
+5. วัตถุดิบหลัก (primary) ต้องมาจาก lot เสี่ยงเท่านั้น (ซื้อ/ใช้สต็อกปกติแทนไม่ได้)
+6. ของที่ขายไม่หมดเก็บในห้องพักขยะรอรอบรับถัดไป (`eol_lead_minutes=0`, รอได้ไม่เกิน `max_pickup_wait_days=7`)
+7. ของที่ขายไม่หมดแต่ไม่มี partner end-of-life รับ: ค่าเสียหายในเป้าหมาย = `eol_no_route_penalty_factor` (1.0) × unit_cost
+8. `trip_cost_mode="dedicated"` (ค่าเริ่มต้น ตรงกับข้อมูล) / `"scheduled"` (ยังไม่มีข้อมูลสัญญารองรับ)
+9. `deferred_trip_cost_share=0.0` (rolling horizon) เที่ยววันถัดไปคิดเฉพาะต่อ kg เพราะรอบหน้าตัดสินใจใหม่และน่าจะใช้เที่ยวนั้น
+   ร่วมกับ lot อื่น ตั้ง 1.0 = คิดเต็มเหมือนเที่ยวมาเฉพาะของรอบนี้ (ระวังกว่า แต่ทิ้งของที่ยังขายได้ล่วงหน้า)
+10. partner ที่ไม่ใช่ DONATION ส่งเป็น action ของตัวเอง (`action_mode="extended"`) ถ้า server รุ่นเก่าใช้ `"current"`
 
 ## ปัญหาที่พบ (รายละเอียด + SQL ใน `sql/001_schema_fixes.sql`)
 

@@ -1,0 +1,8 @@
+# context ของ pipeline/Dockerfile = โฟลเดอร์ AI
+**/.venv*
+**/__pycache__
+**/output
+**/.env
+**/*.pkl
+**/tests
+pipeline/output

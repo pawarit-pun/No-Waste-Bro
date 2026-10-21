@@ -7,7 +7,7 @@ class OptimizationDecision(BaseModel):
     """One item of GET /optimization-decisions (decision + context)."""
 
     decision_id: str
-    action_type: str  # MARKDOWN | KITCHEN_REPURPOSE | DONATE | DISCARD
+    action_type: str  # MARKDOWN | KITCHEN_REPURPOSE | DONATE | ANIMAL_FEED | COMPOST | ANAEROBIC_DIGESTION | LANDFILL | DISCARD
 
     # Identifiers
     run_id: Optional[str] = None

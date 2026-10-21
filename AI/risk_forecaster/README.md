@@ -69,8 +69,8 @@ pip install -r requirements.txt
 | 10 | `AI/risk_forecaster` | `python run_scan.py --source api --dry-run` แล้ว `python run_scan.py --source api` | รอบจริง: อ่านจาก server, POST ผลลง Supabase | demo / ใช้งาน |
 | 11 | Supabase SQL Editor | `select demo_reset();` | ล้างผลสแกน / งาน / decision คืนล็อต demo เป็นค่าตั้งต้น | ก่อน demo รอบใหม่ |
 
-โหมด `api` อ่าน URL จาก `API_BASE_URL` (ค่าเริ่มต้น `http://127.0.0.1:8000/api/v1`)
-เช่น `set API_BASE_URL=https://xxxx.execute-api.ap-southeast-1.amazonaws.com/api/v1`
+โหมด `api` อ่าน URL จาก `API_BASE_URL` (ค่าเริ่มต้น `https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1` = server บน AWS)
+ใช้ server ในเครื่องแทน: `set API_BASE_URL=http://127.0.0.1:8000/api/v1`
 
 ผลแต่ละรอบอยู่ใน `output/<วันที่>_<เวลา>_<โหมด>/`: `scan_inputs.json`, `risk_assessments_request.json`,
 `risk_assessments_response.json` (โหมด api), `summary.csv`

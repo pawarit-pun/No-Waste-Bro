@@ -8,6 +8,8 @@ QUERY_BY_ACTION = {
     "DONATE": "ขั้นตอนบริจาคอาหาร ตรวจสินค้าและยืนยันการรับมอบกับผู้รับบริจาค",
     "DISCARD": "ขั้นตอนแยกทิ้งสินค้า การอนุมัติ เส้นทางกำจัด และการบันทึกปริมาณจริง",
 }
+# Partner disposal actions use the DISCARD SOPs (KB documents are tagged MARKDOWN / KITCHEN_REPURPOSE / DONATE / DISCARD / ALL)
+KB_ACTION = {"ANIMAL_FEED": "DISCARD", "COMPOST": "DISCARD", "ANAEROBIC_DIGESTION": "DISCARD", "LANDFILL": "DISCARD"}
 DEFAULT_QUERY = "ขั้นตอนการทำงานและเงื่อนไขหยุด"
 MAX_CHUNK_CHARS = 1200
 
@@ -26,7 +28,8 @@ class KBRetriever:
         if key in self._cache:
             return self._cache[key]
 
-        query = QUERY_BY_ACTION.get(action, DEFAULT_QUERY)
+        kb_action = KB_ACTION.get(action, action)
+        query = QUERY_BY_ACTION.get(kb_action, DEFAULT_QUERY)
         if category:
             query += f" สินค้าหมวด {category}"
 
@@ -37,7 +40,7 @@ class KBRetriever:
             retrievalConfiguration={"vectorSearchConfiguration": {
                 "numberOfResults": settings.KB_RESULTS,
                 "filter": {"orAll": [
-                    {"equals": {"key": "action_type", "value": action}},
+                    {"equals": {"key": "action_type", "value": kb_action}},
                     {"equals": {"key": "action_type", "value": "ALL"}},
                 ]},
             }},

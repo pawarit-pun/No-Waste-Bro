@@ -8,13 +8,13 @@ DATA_DIR = AI_DIR / "data"
 MOCK_DIR = DATA_DIR / "mock_v3"                       # CSV ที่ใช้ทั้งเทรนและโหมด local
 REFERENCE_DIR = DATA_DIR / "reference"                # products.json / recipes.json (ข้อมูลที่ scan-inputs ไม่ส่งมา)
 MODEL_DIR = AI_DIR / "models"
-OUTPUT_DIR = AI_DIR / "output"
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR") or AI_DIR / "output")   # env: ใช้บน Lambda (เขียนได้แค่ /tmp)
 
 MODEL_VERSION = "forecaster_v3"
 RISK_MODEL_VERSION = "risk-v3"
 
 # API (โหมด api) ใส่ใน env ของเครื่องที่รัน
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1")
 HISTORY_DAYS = 56                                     # ส่งให้ GET /ai/scan-inputs?history_days= (lag 56 วัน)
 
 # ร้านเปิด 08:00-22:00 (นิยามของ product_daily: opening 08:00, closing 22:00)

@@ -12,7 +12,7 @@ PART 4  Kitchen      U*  (ประกอบใน context.py) ใช้ helper 
   A0_UNKNOWN_PRODUCT   ไม่พบสินค้าใน products
   A1_STALE_*           จำนวน / วันหมดอายุ / ราคา เปลี่ยนไปหลัง Risk Scanner สแกน (เตือน ใช้ค่าปัจจุบัน)
   K0 หมดอายุแล้ว  K1 สินค้าห้ามลดราคา  K2 ราคาหลังลด < min_allowed_price  K3 ระดับไม่อยู่ในนโยบาย / forecaster ไม่ได้พยากรณ์
-  K4 ราคาใน shelf ไม่ตรงราคาปัจจุบัน (คำนวณใหม่)  K5 ไม่เหลือเวลาขายวันนี้  K6 ลดมากขึ้นแต่ขายไม่เพิ่ม (ไม่คุ้ม)
+  K4 ราคาใน shelf ไม่ตรงราคาปัจจุบัน (คำนวณใหม่)  K5 ไม่เหลือเวลาขาย / คาดว่าขายไม่ได้  K6 ลดมากขึ้นแต่ยอดขายที่คาดไม่เพิ่ม
   P1 flag allow_* ของสินค้า  P2 partner ไม่รับหมวดนี้  P3 ไม่ active / ไม่มีรอบรับใน max_pickup_wait_days
   P4 อายุคงเหลือ ณ วันรับ < min_days_before_expiry  P5 ของหมดอายุ (ห้ามบริจาคให้คนกิน)  P6 ความจุ partner ไม่พอ 1 หน่วย
   P7 รวมทุก lot ที่เข้าเกณฑ์ยังไม่ถึง min_kg_per_pickup  P8 ไม่มีน้ำหนักสินค้า
@@ -25,7 +25,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 from ai_engine.optimizer.config import BKK
-from ai_engine.optimizer.demand import conservative
+from ai_engine.optimizer.demand import expected_sold, survival_segments
 from ai_engine.optimizer.models import FLAG_BY_TYPE
 
 EPS = 1e-9
@@ -84,13 +84,20 @@ def stale_notes(lot, reference_date: date) -> list:
 
 
 # ---------------------------------------------------------------- PART 2: Markdown
+def sell_end(lot, cfg) -> datetime:
+    """เวลาที่หมดโอกาสขาย = ร้านปิดของวันหมดอายุ (ไม่เกินเวลาหมดอายุ) ของที่เหลือหลังจากนี้ไปทางกำจัด end-of-life"""
+    close = datetime.combine(lot.expiration_date, cfg.store_close, tzinfo=BKK)
+    return min(close, expiry_dt(lot.expiration_date, cfg))
+
+
 def markdown_tiers(lot, product, rows: list, now: datetime, cfg) -> tuple[list, dict, list]:
     """แปลงแถว demand (demand.lot_curve) เป็นระดับราคาที่เลือกได้ -> (tiers, excluded, notes)
     1 lot มีราคาเดียว: tier 0 = ขายราคาปัจจุบัน, tier d > 0 = ลด d%
-    cap = ยอดที่คาดว่าขายได้ที่ราคานั้นแบบระวัง (demand_kappa) ใช้เป็นเพดาน"""
+    segments = [(ความกว้าง, โอกาสขายออก)] จาก quantile P10/P50/P90 (demand.survival_segments) ตัดไม่เกินจำนวนใน lot
+    expected_sold = ยอดที่คาดว่าขายได้ถ้าวางทั้ง lot บนชั้นที่ราคานั้น"""
     if is_expired(lot, now, cfg):
         return [], {"MARKDOWN:ALL": ["K0_EXPIRED"]}, []
-    tiers, excluded, notes, best_cap = [], {}, [], -1
+    tiers, excluded, notes, best = [], {}, [], 0.0
     for row in sorted(rows, key=lambda r: r["discount_pct"]):
         d = clean_pct(row["discount_pct"])
         key, reasons = f"MARKDOWN:{d}", []
@@ -103,19 +110,20 @@ def markdown_tiers(lot, product, rows: list, now: datetime, cfg) -> tuple[list, 
             reasons.append("K3_LEVEL_NOT_IN_POLICY")
         if d > 0 and product.min_price is not None and price < product.min_price - EPS:
             reasons.append("K2_BELOW_MIN_PRICE")
-        cap = int(math.floor(min(lot.quantity, conservative(row["expected"], row["low"], cfg.demand_kappa)) + EPS))
-        if cap <= 0:
+        segments = survival_segments(row["expected"], row["low"], row["high"], limit=float(lot.quantity))
+        sold = expected_sold(segments, lot.quantity)
+        if sold < 0.05:
             reasons.append("K5_NO_SALES_EXPECTED")
         if reasons:
             excluded[key] = reasons
             continue
-        if cap <= best_cap:
-            excluded[key] = [f"K6_NO_EXTRA_SALES cap {cap} <= {best_cap}"]
+        if tiers and sold <= best + 0.05:
+            excluded[key] = [f"K6_NO_EXTRA_SALES expected {sold:.2f} <= {best:.2f}"]
             continue
-        best_cap = cap
+        best = sold
         lost_cost = row["lost_sales"] * product.margin * cfg.lost_sales_margin_factor if d > 0 else 0.0
-        tiers.append({"discount_pct": d, "price": price, "cap": cap, "expected": round(row["expected"], 2),
-                      "low": round(row["low"], 2), "high": round(row["high"], 2),
+        tiers.append({"discount_pct": d, "price": price, "segments": segments, "expected_sold": round(sold, 3),
+                      "expected": round(row["expected"], 2), "low": round(row["low"], 2), "high": round(row["high"], 2),
                       "lost_sales_cost": round(lost_cost, 2)})
     for d in cfg.allowed_discounts:
         if f"MARKDOWN:{d}" not in excluded and all(t["discount_pct"] != d for t in tiers):
@@ -125,11 +133,22 @@ def markdown_tiers(lot, product, rows: list, now: datetime, cfg) -> tuple[list, 
 
 # ---------------------------------------------------------------- PART 3: Partner
 def next_pickup(partner, now: datetime, cfg) -> Optional[datetime]:
-    """รอบรับของเร็วสุด: วันต้องอยู่ใน pickup_days (1 = จันทร์ .. 7 = อาทิตย์) และเวลาอยู่ใน pickup_time_start-end
-    ต้องเตรียมของ lead_time_minutes ก่อน ถ้าวันนี้เลยช่วงแล้วเลื่อนไปวันรับถัดไป"""
+    """รอบรับของเร็วสุดสำหรับของที่ดึงออกตอนนี้: ต้องเตรียมของ lead_time_minutes ก่อน"""
+    return first_slot(partner, now + timedelta(minutes=cfg.lead_time_minutes), cfg)
+
+
+def eol_pickup(partner, lot, now: datetime, cfg) -> Optional[datetime]:
+    """รอบรับของที่ขายไม่หมด: รอบแรกที่เริ่มได้หลังหมดเวลาขาย (sell_end + eol_lead_minutes) และไม่ก่อนรอบเตรียมของตอนนี้"""
+    ready = max(sell_end(lot, cfg) + timedelta(minutes=cfg.eol_lead_minutes),
+                now + timedelta(minutes=cfg.lead_time_minutes))
+    return first_slot(partner, ready, cfg)
+
+
+def first_slot(partner, ready: datetime, cfg) -> Optional[datetime]:
+    """รอบรับแรกที่ >= ready: วันต้องอยู่ใน pickup_days (1 = จันทร์ .. 7 = อาทิตย์) และเวลาอยู่ใน pickup_time_start-end
+    ถ้าวันนั้นเลยช่วงแล้วเลื่อนไปวันรับถัดไป (ไม่เกิน max_pickup_wait_days)"""
     if partner.t_start is None or partner.t_end is None or not partner.pickup_days:
         return None
-    ready = now + timedelta(minutes=cfg.lead_time_minutes)
     for offset in range(cfg.max_pickup_wait_days + 1):
         day = ready.date() + timedelta(days=offset)
         if day.isoweekday() not in partner.pickup_days:
@@ -142,10 +161,19 @@ def next_pickup(partner, now: datetime, cfg) -> Optional[datetime]:
     return None
 
 
-def partner_trip_cost(partner) -> float:
+def partner_trip_cost(partner, cfg=None) -> float:
     """ต้นทุนต่อเที่ยว: Fixed Cost + Distance & Variable Cost (travel_cost_per_trip)
-    DONATION ไม่มีค่าเดินทาง คิดแค่ fixed_cost_per_trip"""
+    DONATION ไม่มีค่าเดินทาง คิดแค่ fixed_cost_per_trip; trip_cost_mode = "scheduled" -> 0 (รถวิ่งรอบประจำอยู่แล้ว)"""
+    if cfg is not None and cfg.trip_cost_mode == "scheduled":
+        return 0.0
     return partner.fixed if partner.partner_type == "DONATION" else partner.fixed + partner.travel
+
+
+def partner_min_kg(partner, cfg=None) -> float:
+    """ขั้นต่ำต่อเที่ยว (scheduled: ของรอบนี้รวมกับขยะอื่นของร้านในเที่ยวประจำ ไม่บังคับขั้นต่ำ)"""
+    if cfg is not None and cfg.trip_cost_mode == "scheduled":
+        return 0.0
+    return partner.min_kg
 
 
 def partner_handling_per_kg(partner) -> float:
@@ -184,6 +212,14 @@ def partner_reasons(lot, product, partner, pickup: Optional[datetime], cap_kg: f
 def kitchen_due(day: date, cfg) -> datetime:
     """เวลาที่งานครัวของวันนั้นต้องเสร็จ = due_by (วันที่ของ due_by = วันที่ server จองชั่วโมงครัว)"""
     return datetime.combine(day, cfg.kitchen_due_time, tzinfo=BKK)
+
+
+def kitchen_start(day: date, now: datetime, cfg) -> datetime:
+    """เวลาที่ครัวเริ่มงานได้: วันนี้ = ตอนนี้ + kitchen_lead_minutes (ไม่ก่อนร้านเปิด), วันอื่น = store_open"""
+    opening = datetime.combine(day, cfg.store_open, tzinfo=BKK)
+    if day == now.date():
+        return max(opening, now + timedelta(minutes=cfg.kitchen_lead_minutes))
+    return opening
 
 
 def kitchen_hours_budget(remaining_hrs: float, status: Optional[str], day: date, now: datetime, cfg) -> float:

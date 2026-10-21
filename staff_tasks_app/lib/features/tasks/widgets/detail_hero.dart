@@ -20,6 +20,14 @@ class DetailHero extends StatelessWidget {
             '${task.actionQuantity}',
             '${quantityLabel(task.actionQuantity, _unit).split(' ').last} to donate'
           ),
+        ActionType.animalFeed ||
+        ActionType.compost ||
+        ActionType.anaerobicDigestion ||
+        ActionType.landfill =>
+          (
+            '${task.actionQuantity}',
+            '${quantityLabel(task.actionQuantity, _unit).split(' ').last} for pickup'
+          ),
         ActionType.discard => (
             '${task.actionQuantity}',
             '${quantityLabel(task.actionQuantity, _unit).split(' ').last} to discard'

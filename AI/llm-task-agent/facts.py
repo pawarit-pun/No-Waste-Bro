@@ -12,8 +12,15 @@ ACTION_TH = {
     "MARKDOWN": "ลดราคา",
     "KITCHEN_REPURPOSE": "ส่งเข้าครัว",
     "DONATE": "บริจาค",
+    "ANIMAL_FEED": "ส่งทำอาหารสัตว์",
+    "COMPOST": "ส่งทำปุ๋ยหมัก",
+    "ANAEROBIC_DIGESTION": "ส่งโรงก๊าซชีวภาพ",
+    "LANDFILL": "ส่งฝังกลบ",
     "DISCARD": "แยกทิ้ง",
 }
+# Partner disposal actions (server: action type must match the partner type); DISCARD = self discard in store
+DISPOSAL_ACTIONS = ("ANIMAL_FEED", "COMPOST", "ANAEROBIC_DIGESTION", "LANDFILL")
+PARTNER_ACTIONS = ("DONATE", *DISPOSAL_ACTIONS)
 # Alternatives may use action types or disposal methods
 OPTION_TH = {
     **ACTION_TH,
@@ -183,7 +190,7 @@ class Facts:
             )
             if self.expected_output:
                 lines.append(f"- ผลผลิตที่คาด: {self.expected_output} ชิ้น (ค่าประมาณ ไม่ใช่เป้าบังคับ)")
-        if self.action in ("DONATE", "DISCARD"):
+        if self.action in (*PARTNER_ACTIONS, "DISCARD"):
             if self.has_partner:
                 lines.append(f"- ผู้รับ: {self.partner_label}, ประเภท: {self.partner_type or NO_DATA}")
             else:

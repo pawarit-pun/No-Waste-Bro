@@ -17,7 +17,12 @@ class ActionSection extends StatelessWidget {
     return switch (task.actionType) {
       ActionType.markdown => _markdown(),
       ActionType.kitchenRepurpose => _kitchen(),
-      ActionType.donate => _donate(),
+      ActionType.donate => _partnerSection('Donation', 'Donate'),
+      ActionType.animalFeed ||
+      ActionType.compost ||
+      ActionType.anaerobicDigestion ||
+      ActionType.landfill =>
+        _partnerSection('Pickup', 'Hand over'),
       ActionType.discard => _discard(),
     };
   }
@@ -103,33 +108,42 @@ class ActionSection extends StatelessWidget {
     );
   }
 
-  Widget _donate() {
+  /// ชื่อ partner, ช่วงเวลารับของ, ผู้ติดต่อ (ว่าง = ไม่มี partner)
+  List<Widget> _partnerRows() {
     final partner = task.partner;
-    String? time(String key) => (partner?[key] as String?)?.substring(0, 5);
+    if (partner == null) return const [];
+    String? time(String key) => (partner[key] as String?)?.substring(0, 5);
     final start = time('pickup_time_start');
     final end = time('pickup_time_end');
-    final contact = [partner?['contact_name'], partner?['contact_phone']]
+    final contact = [partner['contact_name'], partner['contact_phone']]
         .whereType<String>()
         .join(' · ');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionTitle('Donation'),
-        const SizedBox(height: 8),
-        if (partner != null) DetailRow(label: 'Partner', value: partner['name'] as String),
-        DetailRow(label: 'Donate', value: quantityLabel(task.actionQuantity, _unit)),
-        if (start != null && end != null) DetailRow(label: 'Pickup window', value: '$start–$end'),
-        if (contact.isNotEmpty) DetailRow(label: 'Contact', value: contact),
-      ],
-    );
+    return [
+      DetailRow(label: 'Partner', value: partner['name'] as String),
+      if (start != null && end != null) DetailRow(label: 'Pickup window', value: '$start–$end'),
+      if (contact.isNotEmpty) DetailRow(label: 'Contact', value: contact),
+    ];
   }
 
+  /// บริจาค / ส่ง partner ไปกำจัด
+  Widget _partnerSection(String title, String quantityLabelText) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionTitle(title),
+          const SizedBox(height: 8),
+          DetailRow(label: quantityLabelText, value: quantityLabel(task.actionQuantity, _unit)),
+          ..._partnerRows(),
+        ],
+      );
+
+  /// ทิ้งเองในร้าน (ถ้าข้อมูลเก่ามี partner ก็แสดงด้วย)
   Widget _discard() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionTitle('Discard'),
           const SizedBox(height: 8),
           DetailRow(label: 'Discard', value: quantityLabel(task.actionQuantity, _unit)),
+          ..._partnerRows(),
         ],
       );
 }

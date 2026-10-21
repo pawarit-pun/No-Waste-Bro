@@ -1,0 +1,16 @@
+# Libraries ของทั้ง 3 ส่วนใน image เดียว (แต่ละขั้นรันเป็น process แยก ชื่อ module จึงไม่ชนกัน)
+# boto3 มีใน base image ของ Lambda อยู่แล้ว
+# Risk Scanner + Forecaster (risk_forecaster/requirements.txt)
+numpy==2.1.3
+pandas==2.2.3
+scikit-learn==1.5.2
+lightgbm==4.5.0
+requests==2.32.3
+# Optimizer (food_waste_optimizer/requirements.txt)
+scipy==1.14.1
+# LLM Task Agent (llm-task-agent/requirements.txt)
+httpx==0.27.2
+pydantic==2.9.2
+python-dotenv==1.0.1
+# zoneinfo (Asia/Bangkok) ในกรณีที่ image ไม่มีฐานข้อมูล time zone ของระบบ
+tzdata==2024.2

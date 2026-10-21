@@ -31,8 +31,7 @@ class OptimizerConfig:
     # นโยบายร้าน: ลดได้ 20-80% ระดับที่ใช้จริง = ระดับที่ forecaster ส่ง shelf มา (ตอนนี้ 0 / 20 / 30 / 50)
     # ระดับที่ forecaster ไม่ได้พยากรณ์จะไม่ถูกใช้ (ไม่เดายอดขายเอง)
     allowed_discounts: tuple = (20, 30, 40, 50, 60, 70, 80)
-    # ใช้ยอดขายแบบระวัง = expected - kappa x (expected - low_qty) กันพยากรณ์เกินจริง (0 = เชื่อ expected เต็ม, 1 = ใช้ low_qty)
-    demand_kappa: float = 0.5
+    # ยอดขายใช้ quantile P10/P50/P90 ของ forecaster (demand.survival_segments) แทน demand_kappa เดิม
     # lost_sales_other_lots x (regular_price - base_cost) x factor = กำไรที่ล็อตอื่นของสินค้าเดียวกันเสียไปเมื่อลดราคาล็อตนี้
     lost_sales_margin_factor: float = 1.0
 
@@ -45,18 +44,39 @@ class OptimizerConfig:
     expiry_cutoff: time = time(23, 59, 59)  # lot หมดอายุสิ้นวัน expiration_date (ประกาศ สธ. 367)
     lead_time_minutes: int = 60             # ASSUMPTION: เวลาเตรียม/แพ็คของก่อน partner มารับ
     max_pickup_wait_days: int = 7
-    kitchen_lead_minutes: int = 30          # ASSUMPTION: ครัวเริ่มงานได้หลังตอนนี้ + 30 นาที
-    kitchen_due_time: time = time(17, 0)    # ASSUMPTION: งานครัวต้องเสร็จก่อน 17:00 (= due_by ตัวอย่างใน Swagger)
+    # ASSUMPTION: ของที่ขายไม่หมดถูกเก็บเข้าห้องพักขยะตอนหมดเวลาขาย (ร้านปิดของวันหมดอายุ) แล้วรอรอบรับถัดไป
+    #             รอบรับ end-of-life ต้องเริ่มหลังเวลานั้น + eol_lead_minutes
+    eol_lead_minutes: int = 0
+    kitchen_lead_minutes: int = 30          # ASSUMPTION: ครัวเริ่มงานได้หลังตอนนี้ + 30 นาที (วันอื่นเริ่มตอน store_open)
+    # ASSUMPTION: เวลาเลิกกะครัว งานต้องเสร็จก่อนเวลานี้ (ไม่ใช่เวลาเริ่มขายแล้ว: เมนูเริ่มขายเมื่อ batch แรกเสร็จ
+    #             due_by = เวลาเริ่ม + เวลาทำ x batch)
+    kitchen_due_time: time = time(17, 0)
+
+    # ---------------- ค่าเที่ยว partner
+    # "dedicated" = partner มาเฉพาะของรอบนี้ คิด fixed_cost_per_trip + travel_cost_per_trip เต็ม และบังคับ min_kg_per_pickup
+    # "scheduled" = ASSUMPTION: partner วิ่งรอบประจำมารับขยะอื่นของร้านอยู่แล้ว ค่าเที่ยว/ขั้นต่ำเป็นของสัญญาเดิม
+    #               คิดเฉพาะ handling_fee_per_kg (ใช้ทำ scenario เปรียบเทียบ ยังไม่มีข้อมูลสัญญาจริงรองรับ)
+    trip_cost_mode: str = "dedicated"
+    # เที่ยวของวันถัดไป (ไม่ใช่วันรับรอบแรกของ partner) เช่น เก็บของที่หมดอายุพรุ่งนี้ไว้ขายต่อแล้วกำจัดพรุ่งนี้
+    # คิดค่าเที่ยว x share: 1.0 = รอบนี้จ่ายเต็มเหมือนเที่ยวมาเฉพาะของรอบนี้
+    # ASSUMPTION (ค่าเริ่มต้น 0, ยืนยันโดยทีม 21 ต.ค.): rolling horizon - Optimizer รันใหม่ทุกวัน เที่ยววันถัดไปจะถูกตัดสินใจ
+    #   ในรอบนั้นและน่าจะใช้ร่วมกับ lot อื่น รอบนี้จึงคิดเฉพาะค่าต่อ kg (ไม่บังคับขั้นต่ำ) ของเที่ยววันถัดไป
+    deferred_trip_cost_share: float = 0.0
 
     # ---------------- Solver
     unresolved_penalty_per_unit: float = 10_000.0   # หน่วยที่ไม่มีทางไปเลย ถูกปรับหนักเพื่อบังคับให้หาทางก่อน
+    # ASSUMPTION: ของที่วางขายแล้วขายไม่หมดแต่ไม่มี partner end-of-life รับ (เช่น รับได้แค่ธนาคารอาหารที่ต้องการอายุเหลือ)
+    #             ต้องทิ้งเองในร้าน คิดค่าเสียหายเพิ่ม = factor x unit_cost ต่อหน่วยที่คาดว่าเหลือ (ใช้ในเป้าหมายเท่านั้น
+    #             ไม่นับในกำไรที่รายงาน) ให้ solver ชั่งกับการบริจาค/ส่ง partner ตอนนี้
+    eol_no_route_penalty_factor: float = 1.0
     solver_time_limit_s: float = 30.0
     solver_mip_gap: float = 1e-4
 
     # ---------------- การส่ง decision
-    # "current"  = action_type ที่ DB มีตอนนี้ (MARKDOWN / KITCHEN_REPURPOSE / DONATE / DISCARD)
-    # "extended" = หลังรัน sql/001_schema_fixes.sql ข้อ 1 และแก้ server ให้รับ ANIMAL_FEED / COMPOST / ...
-    action_mode: str = "current"
+    # "extended" = ส่ง partner แต่ละประเภทเป็น action ของตัวเอง (ANIMAL_FEED / COMPOST / ANAEROBIC_DIGESTION / LANDFILL)
+    #              DB และ server รับ 8 ค่าแล้ว (DISCARD = ทิ้งเองในร้าน ไม่มี partner)
+    # "current"  = แบบเดิม: partner กำจัดส่งเป็น DISCARD + target_partner_id (ใช้กับ server รุ่นเก่าที่รับแค่ 4 ค่า)
+    action_mode: str = "extended"
     partner_due_by: bool = True             # ส่งเวลารับของของ partner ใน due_by
     missing_flag_policy: str = "deny"       # ไม่มี allow_animal_feed ฯลฯ ในข้อมูล -> ถือว่าไม่อนุญาต
     process_ai_statuses: tuple = ("PROCESSING",)   # lot ที่ Risk Scanner ส่งต่อแล้วยังไม่มี task (CHECKED / IDLE ข้าม)

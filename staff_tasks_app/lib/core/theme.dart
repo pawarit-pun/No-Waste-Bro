@@ -62,6 +62,30 @@ class ActionStyle {
             iconBackground: Color(0xFFDCEFDC),
             badgeBackground: Color(0xFFCDE8CF),
           ),
+        ActionType.animalFeed => const ActionStyle(
+            icon: Icons.pets,
+            tint: Color(0xFF8A5A14),
+            iconBackground: Color(0xFFF5E3C8),
+            badgeBackground: Color(0xFFF0D7B2),
+          ),
+        ActionType.compost => const ActionStyle(
+            icon: Icons.compost,
+            tint: Color(0xFF5B6B1E),
+            iconBackground: Color(0xFFE6EBCB),
+            badgeBackground: Color(0xFFDCE3B5),
+          ),
+        ActionType.anaerobicDigestion => const ActionStyle(
+            icon: Icons.bolt,
+            tint: Color(0xFF0E7C7B),
+            iconBackground: Color(0xFFD3EEEC),
+            badgeBackground: Color(0xFFC0E6E3),
+          ),
+        ActionType.landfill => const ActionStyle(
+            icon: Icons.landscape_outlined,
+            tint: Color(0xFF3A3A3C),
+            iconBackground: Color(0xFFDADADF),
+            badgeBackground: Color(0xFFD1D1D6),
+          ),
         ActionType.discard => const ActionStyle(
             icon: Icons.delete_outline,
             tint: Color(0xFF48484A),

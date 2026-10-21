@@ -26,6 +26,10 @@ Supabase still holds v1 until these files are loaded. Until then, `GET /ai/scan-
 | Per-lot log | none | `lot_daily.csv`, `lot_outcomes.csv` | |
 | Demo lots | 13 | 13 (same ids), levels from the real pipeline: CRITICAL 7, HIGH 1, LOW 5 | |
 
+**v4 (after `bash server/scripts/reset_mock_lots.sh`):** 27 demo lots (LOT-000001..013 unchanged + 014..027:
+several lots per product, real delivery days and case packs, one over-delivery). Same generator and seed for history.
+Scanner check: CRITICAL 4 / HIGH 9 / MEDIUM 5 / LOW 9, 13 lots to the Optimizer. Details: `server/scripts/forecast_data/README.md`.
+
 ## Checks
 
 ```bat

@@ -109,3 +109,6 @@ python main.py --source api --post
 - `GET /optimization-decisions` ส่ง `partner` มาเฉพาะ DONATE งาน DISCARD ที่มี partner จึงเห็นแค่รหัส ไม่เห็นชื่อ
 - `POST /tasks` สร้างทั้ง batch หรือไม่สร้างเลย ถ้า batch ล้ม (เช่น ครัวเต็ม 409) decision จะยังเป็น PENDING ให้ผู้จัดการดู และ lot นั้นยังเป็น PROCESSING (อยู่ใน `lot_status.pending_lots` ของ report)
 - `--source api` แบบไม่ใส่ `--post` จะไม่ PATCH lot แต่แสดงว่าจะตั้ง lot ไหนเป็น CHECKED
+- งานกำจัดผ่าน partner (`ANIMAL_FEED` / `COMPOST` / `ANAEROBIC_DIGESTION` / `LANDFILL`) ใช้ขั้นตอนและ SOP ชุดเดียวกับ `DISCARD` ที่มี partner (KB ยังไม่มีเอกสารที่ติด tag 4 ค่านี้)
+- `DISCARD` = ทิ้งเองในร้าน ไม่มี partner
+- `POST /tasks` สร้างทั้ง batch หรือไม่สร้างเลย ถ้า batch ล้ม (เช่น ครัวเต็ม 409) decision จะยังเป็น PENDING ให้ผู้จัดการดู

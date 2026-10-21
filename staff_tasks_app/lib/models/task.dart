@@ -19,10 +19,29 @@ enum ActionType {
   markdown('MARKDOWN'),
   kitchenRepurpose('KITCHEN_REPURPOSE'),
   donate('DONATE'),
+  animalFeed('ANIMAL_FEED'),
+  compost('COMPOST'),
+  anaerobicDigestion('ANAEROBIC_DIGESTION'),
+  landfill('LANDFILL'),
+
+  /// ทิ้งเองในร้าน ไม่มี partner
   discard('DISCARD');
 
   const ActionType(this.value);
   final String value;
+
+  /// ส่งให้ partner มารับไปกำจัด (อาหารสัตว์ / ปุ๋ยหมัก / ก๊าซชีวภาพ / ฝังกลบ)
+  bool get isDisposalPickup => switch (this) {
+        ActionType.animalFeed ||
+        ActionType.compost ||
+        ActionType.anaerobicDigestion ||
+        ActionType.landfill =>
+          true,
+        _ => false,
+      };
+
+  /// มี partner มารับของ (บริจาค + กำจัดผ่าน partner)
+  bool get usesPartner => this == ActionType.donate || isDisposalPickup;
 
   static ActionType parse(String v) =>
       values.firstWhere((a) => a.value == v, orElse: () => discard);

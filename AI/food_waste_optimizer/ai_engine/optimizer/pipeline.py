@@ -43,9 +43,11 @@ def check_scan_date(data: Inputs) -> list:
 
 
 def lots_to_release(plan: dict) -> list:
-    """lot ที่ขายราคาปกติได้หมดตามที่ forecaster คาด (ไม่มี decision และไม่ถูกใช้ในครัว) -> คืน IDLE ให้สแกนใหม่พรุ่งนี้"""
+    """lot ที่ไม่ต้องทำอะไรวันนี้ -> คืน IDLE ให้สแกนใหม่พรุ่งนี้: วางขายราคาปกติ และของที่คาดว่าเหลือ (ถ้ามี) เป็นแผน
+    กำจัดวันถัดไปแบบชั่วคราว (provisional) เท่านั้น ไม่มี decision และไม่ถูกใช้ในครัว"""
     return [lo["lot_id"] for lo in plan["lots"]
-            if lo["portions"] and all(p["method"] == "SELL_REGULAR" for p in lo["portions"])]
+            if lo["portions"] and all(p["method"] == "SELL_REGULAR" or p["details"].get("provisional")
+                                      for p in lo["portions"])]
 
 
 def run_optimizer(inputs, *, products_catalog: Optional[list] = None, now: Optional[datetime] = None,

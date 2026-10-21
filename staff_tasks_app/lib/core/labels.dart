@@ -64,15 +64,16 @@ String actionLabel(Task task) => switch (task.actionType) {
       ActionType.markdown => 'Markdown ${percentLabel(task.discountPct)}'.trim(),
       ActionType.kitchenRepurpose => 'Kitchen repurpose',
       ActionType.donate => 'Donation',
+      ActionType.animalFeed => 'Animal feed pickup',
+      ActionType.compost => 'Compost pickup',
+      ActionType.anaerobicDigestion => 'Biogas pickup',
+      ActionType.landfill => 'Landfill pickup',
       ActionType.discard => 'Discard',
     };
 
-/// งานที่ต้องมีคนมารับของ (บริจาค / ทิ้ง) ใช้คำว่า Pickup นอกนั้นใช้ Due
+/// งานที่ partner มารับของ (บริจาค / อาหารสัตว์ / ปุ๋ยหมัก / ก๊าซชีวภาพ / ฝังกลบ) ใช้คำว่า Pickup นอกนั้นใช้ Due
 String dueLabel(Task task, DateTime dueBy) {
-  final prefix = switch (task.actionType) {
-    ActionType.donate || ActionType.discard => 'Pickup',
-    _ => 'Due',
-  };
+  final prefix = task.actionType.usesPartner ? 'Pickup' : 'Due';
   final due = dueBy.toLocal();
   final now = DateTime.now();
   final today = due.year == now.year && due.month == now.month && due.day == now.day;

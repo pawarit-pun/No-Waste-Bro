@@ -4,7 +4,7 @@ staff_instructions, standard (fallback) text, and priority."""
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from facts import ACTION_TH, Facts
+from facts import ACTION_TH, DISPOSAL_ACTIONS, Facts
 
 STOP_TEXT = "ถ้าพบสินค้าเสียหาย จำนวนไม่ตรง หรือข้อมูลไม่ตรงกับระบบ ให้หยุดและแจ้งหัวหน้า"
 # Safety conditions the LLM tended to drop, so they are required text
@@ -176,6 +176,8 @@ _STEPS_BY_ACTION = {
     "KITCHEN_REPURPOSE": _kitchen_steps,
     "DONATE": _donate_steps,
     "DISCARD": _discard_steps,
+    # Partner disposal: same steps as a discard picked up by a partner (approval, set aside, hand over, record)
+    **{action: _discard_steps for action in DISPOSAL_ACTIONS},
 }
 
 
@@ -209,7 +211,7 @@ def staff_instructions(f: Facts) -> str:
     if f.action == "DONATE":
         partner = f.partner_label or "ผู้รับที่ระบบกำหนด"
         return f"เตรียม{item} ส่งมอบให้ {partner}{due} ยืนยันนัดรับก่อนเตรียมของ"
-    if f.action == "DISCARD":
+    if f.action == "DISCARD" or f.action in DISPOSAL_ACTIONS:
         if f.has_partner:
             return f"แยก{item} รอรถ {f.partner_label} มารับ{due} ต้องได้รับอนุมัติหัวหน้าก่อน"
         return f"แยก{item} ทิ้งตามเส้นทางที่ร้านอนุมัติ{due} ต้องได้รับอนุมัติหัวหน้าก่อน"
@@ -250,7 +252,7 @@ def compute_priority(f: Facts, now: datetime) -> int:
     if hours is not None and hours <= 12:
         return 2
     if days == 1:
-        return 2 if f.action in ("KITCHEN_REPURPOSE", "DONATE", "DISCARD") else 3
+        return 2 if f.action in ("KITCHEN_REPURPOSE", "DONATE", "DISCARD", *DISPOSAL_ACTIONS) else 3
     if days == 2:
         return 4
     return 5

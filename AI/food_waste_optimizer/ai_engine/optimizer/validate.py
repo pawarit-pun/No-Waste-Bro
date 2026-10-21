@@ -2,7 +2,8 @@
 
   H1 จำนวนไม่สมดุล / ติดลบ                    H2 ใช้วิธีที่สินค้าไม่อนุญาต / partner ไม่รับหมวด
   H3 markdown: หลายราคาใน lot เดียว, ต่ำกว่า min_allowed_price, ขายเกินยอดที่คาด, ขายของหมดอายุ
-  H4 partner: วัน-เวลารับไม่ตรงกฎ, อายุคงเหลือ, น้ำหนักต่ำกว่าขั้นต่ำ / เกินความจุต่อรอบ
+  H4 partner: วัน-เวลารับไม่ตรงกฎ, อายุคงเหลือ, น้ำหนักต่ำกว่าขั้นต่ำ / เกินความจุต่อเที่ยว (partner, วัน),
+              ของ end-of-life ต้องรับหลังหมดเวลาขาย
   H5 ครัว: ชั่วโมงเกิน, lot หลักไม่พอ batch, lot หมดอายุก่อนงานเสร็จ, ผลิตเกินความต้องการเมนู
   H6 FEFO: จำลองการตัดสต็อกของ DB (หมดอายุก่อนตัดก่อน) แล้วต้องตรงกับแผน และสต็อกต้องพอ
 """
@@ -12,7 +13,8 @@ import math
 from collections import defaultdict
 from datetime import datetime
 
-from ai_engine.optimizer.rules import EPS, expiry_dt, is_expired, next_pickup, partner_reasons, tier_price
+from ai_engine.optimizer.context import trip_min_kg
+from ai_engine.optimizer.rules import EPS, expiry_dt, is_expired, kitchen_due, partner_reasons, sell_end, tier_price
 
 
 def _v(rule: str, lot_id, detail: str) -> dict:
@@ -21,7 +23,7 @@ def _v(rule: str, lot_id, detail: str) -> dict:
 
 def validate_plan(plan: dict, ctx) -> list:
     inp, cfg, now = ctx.inputs, ctx.cfg, ctx.now
-    out, kg_by_partner = [], defaultdict(float)
+    out, kg_by_trip = [], defaultdict(float)
 
     for lo in plan["lots"]:
         lid = lo["lot_id"]
@@ -37,8 +39,9 @@ def validate_plan(plan: dict, ctx) -> list:
             if m in ("SELL_REGULAR", "MARKDOWN"):
                 if is_expired(lot, now, cfg):
                     out.append(_v("H3_EXPIRED_ON_SHELF", lid, "ขายของหมดอายุ"))
-                if p["units"] > d["demand_cap"]:
-                    out.append(_v("H3_OVER_DEMAND", lid, f"{p['units']} > {d['demand_cap']}"))
+                if p["units"] > d["shelf_units"] or d["expected_sold"] > d["expected_sold_whole_lot"] + 0.01:
+                    out.append(_v("H3_OVER_DEMAND", lid, f"ขาย {p['units']} / คาด {d['expected_sold']} จากชั้น "
+                                                        f"{d['shelf_units']} (ทั้ง lot คาด {d['expected_sold_whole_lot']})"))
                 if m == "MARKDOWN":
                     pct, price = d["discount_pct"], tier_price(lot.price, d["discount_pct"])
                     if not product.allow_markdown:
@@ -55,18 +58,24 @@ def validate_plan(plan: dict, ctx) -> list:
             elif m != "UNRESOLVED":
                 pid = d["partner_id"]
                 pc = ctx.partners[pid]
-                pickup = next_pickup(pc.partner, now, cfg)
+                eol = d.get("timing") == "END_OF_LIFE"
+                base = lc.eol.get(pid) if eol else pc.pickup
+                pickup = ctx.slots.get((pid, base.date())) if base else None
                 if pickup is None or d["pickup_at"] != pickup.isoformat():
                     out.append(_v("H4_PICKUP_SLOT", lid, f"{pid} {d['pickup_at']} vs {pickup}"))
+                    continue
+                if eol and pickup < sell_end(lot, cfg):
+                    out.append(_v("H4_EOL_BEFORE_SELL_END", lid, f"{pid} รับ {pickup} ก่อนหมดเวลาขาย"))
                 for reason in partner_reasons(lot, product, pc.partner, pickup, pc.cap_kg, cfg, now):
                     out.append(_v(("H2_" if reason[:2] in ("P1", "P2") else "H4_") + reason, lid, pid))
-                kg_by_partner[pid] += p["weight_kg"]
-    for pid, kg in kg_by_partner.items():
+                kg_by_trip[(pid, pickup.date())] += p["weight_kg"]
+    for (pid, day), kg in kg_by_trip.items():
         pc = ctx.partners[pid]
         if kg > pc.cap_kg + 1e-3:
-            out.append(_v("H4_PARTNER_CAPACITY", None, f"{pid}: {kg:.2f} > {pc.cap_kg:.2f} kg"))
-        if kg < pc.partner.min_kg - 1e-3:
-            out.append(_v("H4_BELOW_MIN_KG", None, f"{pid}: {kg:.2f} < {pc.partner.min_kg:g} kg"))
+            out.append(_v("H4_PARTNER_CAPACITY", None, f"{pid}@{day}: {kg:.2f} > {pc.cap_kg:.2f} kg"))
+        min_kg = trip_min_kg(ctx, pid, day)
+        if kg < min_kg - 1e-2:
+            out.append(_v("H4_BELOW_MIN_KG", None, f"{pid}@{day}: {kg:.2f} < {min_kg:g} kg"))
 
     out += _validate_kitchen(plan, ctx)
     return out
@@ -88,8 +97,11 @@ def _validate_kitchen(plan: dict, ctx) -> list:
         sold[j.recipe_id][j.day] += pj["expected_sold_units"]
         if k != math.ceil(j.anchor_need * n / j.anchor_content - 1e-9) or k > lot.quantity:
             out.append(_v("H5_ANCHOR_UNITS", lot.lot_id, f"{pj['job_id']}: {k} หน่วย สำหรับ {n} batch"))
-        if expiry_dt(lot.expiration_date, cfg) < datetime.fromisoformat(pj["due_by"]):
+        due_by = datetime.fromisoformat(pj["due_by"])
+        if expiry_dt(lot.expiration_date, cfg) < due_by:
             out.append(_v("H5_NOT_IN_TIME", lot.lot_id, f"{pj['job_id']} เสร็จหลัง lot หมดอายุ"))
+        if due_by > kitchen_due(j.day, cfg) or datetime.fromisoformat(pj["start_at"]) < ctx.now:
+            out.append(_v("H5_OUTSIDE_SHIFT", lot.lot_id, f"{pj['job_id']} เริ่ม {pj['start_at']} เสร็จ {pj['due_by']}"))
         if pj["expected_sold_units"] > pj["output_units"] + 0.011:
             out.append(_v("H5_SOLD_OVER_OUTPUT", lot.lot_id, pj["job_id"]))
         anchor_units[lot.lot_id] += k

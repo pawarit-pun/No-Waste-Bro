@@ -7,21 +7,37 @@
                  ส่งต่อให้ส่วนอื่นใช้ (dashboard / RAG / รายงาน) ผูกกับ decision ด้วย decision_index -> decision_id
 
 กติกา
-  - 1 lot มีราคาเดียว: MARKDOWN ได้ 1 decision ต่อ lot (action_quantity = จำนวนที่คาดว่าขายได้ที่ราคานั้น)
+  - 1 lot มีราคาเดียว: MARKDOWN ได้ 1 decision ต่อ lot (action_quantity = จำนวนที่คาดว่าขายได้ที่ราคานั้น ปัดลง)
   - ขายราคาปกติ (SELL_REGULAR) ไม่ต้องมี decision
+  - ของที่วางขายแล้วคาดว่าเหลือ (END_OF_LIFE) = decision ของ partner นั้น due_by = เวลารับหลังหมดเวลาขาย
+    action_quantity = จำนวนที่คาดว่าเหลือ (ปัดขึ้น) staff กำจัดตามจำนวนที่เหลือจริงตอนนั้น
+    ไม่มี partner รับ -> DISCARD (ทิ้งเองในร้าน) ให้ผู้จัดการดู
+    ถ้าเที่ยวนั้นเป็นวันถัดไปและ deferred_trip_cost_share < 1 = แผนชั่วคราว (provisional) ไม่มี decision รอบนี้
+    lot ถูกคืน IDLE (pipeline.lots_to_release) ให้รอบสแกนวันถัดไปตัดสินใจใหม่ เช่น บริจาคขณะยังเข้าเกณฑ์
   - ครัว: 1 งาน (สูตร, วัน, lot หลัก) = 1 decision (batch_count ของงานนั้น server ใช้จองชั่วโมงครัวตอน POST /tasks)
     lot อื่นที่ DB จะตัดเป็นวัตถุดิบแบบ FEFO ไม่มี decision ของตัวเอง แต่มีใน allocations (covered_by_decision_index)
-  - partner อื่นที่ไม่ใช่ DONATION ใช้ action_type ตาม config.action_mode (ตอนนี้ = DISCARD + target_partner_id)
+  - partner อื่นที่ไม่ใช่ DONATION ใช้ action_type ตาม config.action_mode
+    (extended = ANIMAL_FEED / COMPOST / ANAEROBIC_DIGESTION / LANDFILL, current = DISCARD + target_partner_id)
   - decision_score = สัดส่วนต้นทุนที่กู้คืนได้ (0-1) = 1 + expected_profit_impact / ต้นทุนสินค้า
   - alternatives = ทางเลือกอื่นของหน่วยเดียวกันพร้อมกำไร/ขาดทุน + ทางที่ถูกตัดพร้อมรหัสเหตุผล (ให้ RAG อธิบาย "ทำไมไม่...")
 """
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 
 from ai_engine.optimizer.config import ACTION_BY_METHOD, PARTNER_TYPES
+from ai_engine.optimizer.demand import expected_sold
 
 ACTIONS_NOW = {"MARKDOWN", "KITCHEN_REPURPOSE", "DONATE", "DISCARD"}
+# ตรงกับ PARTNER_ACTIONS ใน server/schemas/enums.py: action -> (partner_type ที่รับได้, key ใน product.disposal)
+PARTNER_ACTIONS = {
+    "DONATE": ({"DONATION", "FOOD_BANK", "CHARITY", "COMMUNITY", "TEMPLE"}, "DONATION"),
+    "ANIMAL_FEED": ({"ANIMAL_FEED"}, "ANIMAL_FEED"),
+    "COMPOST": ({"COMPOSTING"}, "COMPOSTING"),
+    "ANAEROBIC_DIGESTION": ({"ANAEROBIC_DIGESTION"}, "ANAEROBIC_DIGESTION"),
+    "LANDFILL": ({"LANDFILL"}, "LANDFILL"),
+}
 
 
 def _score(profit: float, cogs: float) -> float:
@@ -35,7 +51,7 @@ def _alternatives(ctx, lc, units: int, chosen: str, amap: dict, price_options=()
     for pid in lc.partner_ok:
         pc = ctx.partners[pid]
         kg = units * lc.weight_kg
-        if chosen == f"PARTNER:{pid}" or kg > pc.cap_kg or kg < pc.partner.min_kg:
+        if chosen == f"PARTNER:{pid}" or kg > pc.cap_kg or kg < pc.min_kg:
             continue
         profit = (pc.partner.buyback - pc.handling) * kg - pc.trip_cost - cogs
         if best is None or profit > best[0]:
@@ -49,14 +65,15 @@ def _alternatives(ctx, lc, units: int, chosen: str, amap: dict, price_options=()
         for t in lc.tiers:
             if t["discount_pct"] == 0 or chosen == f"MARKDOWN:{t['discount_pct']}":
                 continue
-            profit = min(units, t["cap"]) * t["price"] - t["lost_sales_cost"] - cogs
+            sold = expected_sold(t["segments"], units)
+            profit = sold * t["price"] - t["lost_sales_cost"] - cogs
             if best_md is None or profit > best_md[0]:
                 best_md = (profit, t)
         if best_md:
             t = best_md[1]
             alts.append({"action_type": "MARKDOWN", "discount_pct": t["discount_pct"],
                          "new_recommended_price": t["price"], "expected_profit_impact": round(best_md[0], 2),
-                         "note": f"ขายได้ไม่เกิน {t['cap']} หน่วยตามที่ forecaster คาด ที่เหลือทิ้ง"})
+                         "note": f"คาดว่าขายได้ {sold:.1f} จาก {units} หน่วย (P10/P50/P90 ของ forecaster) ที่เหลือทิ้ง"})
     alts.sort(key=lambda a: -a["expected_profit_impact"])
     alts = alts[:3]
     picked = next((o for o in price_options if o["chosen"]), None)
@@ -95,7 +112,11 @@ def build_decisions(plan: dict, ctx) -> dict:
         lc = ctx.lots[lo["lot_id"]]
         for p in sorted(lo["portions"], key=lambda p: order.get(p["method"], 9)):
             m, det, idx, covered, action = p["method"], p["details"], None, None, None
-            if m == "MARKDOWN":
+            if p["units"] <= 0 and m != "KITCHEN":
+                pass                                          # portion 0 หน่วย (ปัดเศษ) ไม่มี decision
+            elif det.get("provisional"):
+                pass                                          # กำจัดวันถัดไปแบบชั่วคราว: lot ถูกคืน IDLE ให้สแกน/ตัดสินใจใหม่
+            elif m == "MARKDOWN":
                 action = amap["MARKDOWN"]
                 idx = add(lo, p, action, p["net_profit_thb"], p["cogs_thb"],
                           _alternatives(ctx, lc, p["units"], f"MARKDOWN:{det['discount_pct']}", amap),
@@ -112,6 +133,10 @@ def build_decisions(plan: dict, ctx) -> dict:
                 idx = add(lo, p, action, p["net_profit_thb"], p["cogs_thb"],
                           _alternatives(ctx, lc, p["units"], f"PARTNER:{det['partner_id']}", amap, lo["explain"]["price_options"]),
                           target_partner_id=det["partner_id"], due_by=det["pickup_at"] if cfg.partner_due_by else None)
+                if det.get("timing") == "END_OF_LIFE":
+                    decisions[idx]["alternatives"].insert(0, {
+                        "timing": "END_OF_LIFE", "expected_units": det["expected_units"],
+                        "note": "กำจัดของที่ขายไม่หมดหลังหมดเวลาขาย จำนวนจริง = ที่เหลือบนชั้นตอนนั้น"})
             elif m == "UNRESOLVED":
                 action = amap["UNRESOLVED"]
                 idx = add(lo, p, action, p["net_profit_thb"], p["cogs_thb"],
@@ -175,16 +200,20 @@ def validate_payload(payload: dict, ctx) -> list:
                 bad("KITCHEN_REPURPOSE ต้องมี batch_count และ due_by")
             if not product.allow_kitchen:
                 bad("สินค้าไม่อนุญาตเข้าครัว")
-        if at == "DONATE":
+        if at in PARTNER_ACTIONS:
+            partner_types, flag = PARTNER_ACTIONS[at]
             partner = inp.partners.get(d.get("target_partner_id"))
             if partner is None or not partner.active:
                 bad("partner ไม่พบหรือไม่ active")
             else:
-                if not product.disposal.get("DONATION"):
-                    bad("สินค้าไม่อนุญาตบริจาค")
+                if not product.disposal.get(flag):
+                    bad(f"สินค้าไม่อนุญาต {at}")
+                if partner.partner_type not in partner_types:
+                    bad(f"partner เป็นประเภท {partner.partner_type} ใช้กับ {at} ไม่ได้")
                 if product.category not in partner.categories:
                     bad(f"partner ไม่รับหมวด {product.category}")
-                left = (lot.expiration_date - inp.reference_date).days
+                on = date.fromisoformat(str(d["due_by"])[:10]) if d.get("due_by") else inp.reference_date
+                left = (lot.expiration_date - on).days         # อายุคงเหลือ ณ วันรับ (ตรงกับ rules P4)
                 if partner.min_days and left < partner.min_days:
                     bad(f"lot เหลืออายุ {left} วัน partner ต้องการ >= {partner.min_days}")
     return errs

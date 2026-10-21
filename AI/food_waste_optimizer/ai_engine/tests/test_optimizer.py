@@ -18,9 +18,9 @@ from ai_engine.optimizer import (ApiClient, OptimizerConfig, PlanValidationError
                                  simulated_now)
 from ai_engine.optimizer.config import BKK
 from ai_engine.optimizer.context import build_context
-from ai_engine.optimizer.demand import remaining_fraction
+from ai_engine.optimizer.demand import expected_sold, remaining_fraction, survival_segments
 from ai_engine.optimizer.models import Inputs, to_base
-from ai_engine.optimizer.rules import partner_trip_cost, tier_price
+from ai_engine.optimizer.rules import partner_trip_cost, sell_end, tier_price
 from ai_engine.optimizer.validate import fefo_simulation, validate_plan
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "supabase_2026-10-16.json").read_text(encoding="utf-8"))
@@ -152,8 +152,9 @@ class RealDataPlan(unittest.TestCase):
     def test_salmon_goes_to_kitchen_before_it_expires(self):
         job = self.plan["kitchen_jobs"][0]
         self.assertEqual((job["recipe_id"], job["anchor_lot_id"], job["batches"], job["anchor_units"]),
-                         ("RCP-003", "LOT-000006", 1, 3))             # 900 g / 300 g ต่อแพ็ก = 3 แพ็ก
+                         ("RCP-003", "LOT-000006", 2, 6))             # 900 g / 300 g ต่อแพ็ก = 3 แพ็ก ต่อ batch
         self.assertLessEqual(job["expected_sold_units"], job["menu_demand_cap"] + 0.01)
+        self.assertGreater(job["net_profit_thb"], 0)
 
     def test_beats_baselines(self):
         b = self.plan["baselines"]
@@ -175,10 +176,11 @@ class RealDataPlan(unittest.TestCase):
     def test_kitchen_decision_is_bookable(self):
         k = [d for d in self.payload["decisions"] if d["action_type"] == "KITCHEN_REPURPOSE"]
         self.assertEqual(len(k), 1)
-        self.assertEqual((k[0]["batch_count"], k[0]["due_by"]), (1, "2026-10-16T17:00:00+07:00"))
+        # เริ่ม 09:30 (ตอนนี้ + 30 นาที) + 45 นาที x 2 batch = เสร็จ 11:00 ไม่ใช่ 17:00 ตายตัว
+        self.assertEqual((k[0]["batch_count"], k[0]["due_by"]), (2, "2026-10-16T11:00:00+07:00"))
 
     def test_rag_can_see_why_options_were_rejected(self):
-        d = next(d for d in self.payload["decisions"] if d["assessment_id"].startswith("c1ccb78e"))
+        d = next(d for d in self.payload["decisions"] if d["assessment_id"].startswith("eb742153"))   # สลัดไก่
         options = {a.get("option") for a in d["alternatives"]}
         self.assertIn("DONATION:P-DON-01", options)
         self.assertTrue(any(a.get("scope") == "WHOLE_LOT" for a in d["alternatives"]))
@@ -239,7 +241,8 @@ class TestOnlyScenarios(unittest.TestCase):
         for partner in data["donation_partners"]:
             if partner["partner_id"] == "P-LDF-01":
                 partner["accepted_categories"] = [c for c in partner["accepted_categories"] if c != "DAIRY"]
-        r = run(data, with_baselines=False)
+        # share 1.0: นมขายไม่หมดต้องจ่ายเที่ยวก๊าซชีวภาพในอนาคตเต็ม (ถ้า share 0 นมจะถูกคืน IDLE ให้ตัดสินใจใหม่ - ดู Rolling)
+        r = run(data, with_baselines=False, cfg=OptimizerConfig(deferred_trip_cost_share=1.0))
         self.assertEqual(r["violations"], [])
         self.assertEqual(r["payload_errors"], [])
         lot = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000002")
@@ -264,7 +267,8 @@ class TestOnlyScenarios(unittest.TestCase):
         self.assertTrue(jobs)
         fefo = [x for j in jobs for x in j["inputs"] if x["role"] != "ANCHOR"]
         self.assertTrue(fefo)
-        self.assertEqual({x["lot_id"] for x in fefo}, {"LOT-000009"})   # LOT-000013 หมดอายุแล้ว DB ไม่ตัด
+        self.assertNotIn("LOT-000013", {x["lot_id"] for x in fefo})      # LOT-000013 หมดอายุแล้ว DB ไม่ตัด
+        self.assertLessEqual({x["lot_id"] for x in fefo}, {"LOT-000009", "LOT-000001"})
         ctx = build_context(Inputs.from_json(data, PRODUCTS), at("09:00"))
         self.assertEqual(fefo_simulation(r["plan"], ctx)["short"], [])
         lot9 = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000009")
@@ -281,6 +285,9 @@ class Io(unittest.TestCase):
                 return 200, json.dumps(REAL)
             if method == "GET" and route == "products":
                 return 200, json.dumps(PRODUCTS)
+            if method == "GET" and route == "ai/optimize-runs":
+                return 200, json.dumps({"reference_date": REAL["reference_date"], "suggested_run_id": REAL["run_id"],
+                                        "runs": []})
             if method == "GET" and route == "optimization-decisions":
                 return 200, json.dumps({"run_id": None, "decisions": []})
             writes.append((method, route, json.loads(body)))
@@ -290,9 +297,9 @@ class Io(unittest.TestCase):
             return 200, json.dumps({"updated": [], "not_found": []})
         return ApiClient("http://127.0.0.1:8000/api/v1", transport=transport)
 
-    def test_default_base_is_local_server(self):
+    def test_default_base_is_aws_server(self):
         with mock.patch.dict(os.environ, {}, clear=True):
-            self.assertEqual(ApiClient().base_url, "http://127.0.0.1:8000/api/v1/")
+            self.assertEqual(ApiClient().base_url, "https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1/")
 
     def test_dry_run_never_writes(self):
         writes = []
@@ -305,6 +312,161 @@ class Io(unittest.TestCase):
         r = optimize_and_post(self._client(writes), now=at("09:00"), dry_run=False)
         self.assertEqual([w[:2] for w in writes][0], ("POST", "optimization-decisions"))
         self.assertTrue(all(a.get("decision_id") for a in r["allocations"] if a["decision_index"] is not None))
+
+
+class NewsvendorDemand(unittest.TestCase):
+    """ยอดขายจาก P10/P50/P90 แทน demand_kappa (demand.survival_segments)"""
+
+    def test_segments_follow_quantiles(self):
+        segs = survival_segments(20, 13, 27)                 # P50 = 20, P10 = 13, P90 = 27
+        self.assertEqual([round(w, 6) for w, _ in segs], [13, 7, 7, 7])
+        self.assertEqual([round(p, 3) for _, p in segs], [0.95, 0.7, 0.3, 0.05])
+        self.assertAlmostEqual(expected_sold(segs, 1000), 13 * .95 + 7 * .7 + 7 * .3 + 7 * .05)
+        self.assertLess(expected_sold(segs, 15), 15)          # วางของ 15 ชิ้น ไม่ได้ขายหมดแน่นอน
+
+    def test_no_uncertainty_sells_exactly(self):
+        self.assertEqual(survival_segments(5, 5, 5), [(5.0, 1.0)])
+        self.assertEqual(expected_sold(survival_segments(5, 5, 5), 8), 5.0)
+
+    def test_limit_cuts_width(self):
+        self.assertAlmostEqual(sum(w for w, _ in survival_segments(20, 13, 27, limit=10)), 10)
+
+    def test_shelf_and_end_of_life_add_up(self):
+        r = run(with_baselines=False)
+        lot = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000012")
+        sale = next(p for p in lot["portions"] if p["method"] == "SELL_REGULAR")
+        eol = [p for p in lot["portions"] if p["details"].get("timing") == "END_OF_LIFE"]
+        self.assertTrue(eol)
+        self.assertEqual(sale["units"] + sum(p["units"] for p in eol), sale["details"]["shelf_units"])
+        self.assertAlmostEqual(sale["details"]["expected_sold"] + sum(p["details"]["expected_units"] for p in eol),
+                               sale["details"]["shelf_units"], places=2)
+
+
+class EndOfLifePickup(unittest.TestCase):
+    def setUp(self):
+        self.ctx = build_context(Inputs.from_json(REAL, PRODUCTS), at("09:00"))
+
+    def test_pickup_after_selling_ends(self):
+        lots = self.ctx.lots
+        self.assertEqual(sell_end(lots["LOT-000012"].lot, self.ctx.cfg).isoformat(), "2026-10-16T22:00:00+07:00")
+        self.assertEqual(lots["LOT-000012"].eol["P-LDF-01"].isoformat(), "2026-10-16T22:00:00+07:00")
+        self.assertEqual(lots["LOT-000011"].eol["P-LDF-01"].isoformat(), "2026-10-17T22:00:00+07:00")   # หมดอายุพรุ่งนี้
+        self.assertEqual(lots["LOT-000013"].eol, {})                     # หมดอายุแล้ว ไม่มีของวางขาย
+
+    def test_same_day_trips_are_merged(self):
+        self.assertEqual(self.ctx.slots[("P-LDF-01", date(2026, 10, 16))].isoformat(), "2026-10-16T22:00:00+07:00")
+        r = run(with_baselines=False)
+        self.assertEqual(len({t["trip_id"] for t in r["plan"]["trips"]}), len(r["plan"]["trips"]))
+        for t in r["plan"]["trips"]:
+            self.assertEqual(t["trip_id"], f"{t['partner_id']}@{t['pickup_at'][:10]}")
+
+    def test_validator_rejects_eol_before_selling_ends(self):
+        r = run(with_baselines=False)
+        plan = copy.deepcopy(r["plan"])
+        lot = next(l for l in plan["lots"] if l["lot_id"] == "LOT-000012")
+        p = next(p for p in lot["portions"] if p["details"].get("timing") == "END_OF_LIFE")
+        p["details"]["pickup_at"] = "2026-10-16T20:00:00+07:00"
+        self.assertTrue(any(v["rule"] == "H4_PICKUP_SLOT" for v in validate_plan(plan, self.ctx)))
+
+    def test_eol_decision_carries_pickup_time(self):
+        r = run(with_baselines=False)
+        eol = [a for a in r["allocations"] if a["details"].get("timing") == "END_OF_LIFE" and a["decision_index"] is not None]
+        self.assertTrue(eol)
+        d = r["payload"]["decisions"][eol[0]["decision_index"]]
+        self.assertEqual(d["due_by"], eol[0]["details"]["pickup_at"])
+        self.assertEqual(d["alternatives"][0]["timing"], "END_OF_LIFE")
+
+    def test_scheduled_trips_drop_fixed_cost(self):
+        cfg = OptimizerConfig(trip_cost_mode="scheduled")
+        ctx = build_context(Inputs.from_json(REAL, PRODUCTS), at("09:00"), cfg)
+        self.assertEqual(ctx.partners["P-LDF-01"].trip_cost, 0.0)
+        self.assertEqual(ctx.partners["P-ADG-01"].min_kg, 0.0)
+        r = run(with_baselines=False, cfg=cfg)
+        self.assertEqual(r["violations"], [])
+        self.assertNotIn("LANDFILL", r["plan"]["summary"]["units_by_method"])   # มีทางที่ดีกว่าฝังกลบทุก lot
+
+
+    def test_deferred_trip_share_keeps_tomorrow_lot_on_shelf(self):
+        # ขนมปังพุดดิ้งหมดอายุพรุ่งนี้: share 1.0 ต้องจ่ายเที่ยวพรุ่งนี้เต็ม -> ดึงทิ้งวันนี้ทั้ง lot
+        #                               share 0.0 (rolling horizon) -> วางขายต่อ ของที่เหลือไปเที่ยวพรุ่งนี้
+        def bread(cfg):
+            r = run(with_baselines=False, cfg=cfg)
+            self.assertEqual(r["violations"], [])
+            return next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000011")
+        self.assertNotIn("SELL_REGULAR", {p["method"] for p in bread(OptimizerConfig(deferred_trip_cost_share=1.0))["portions"]})
+        self.assertEqual(OptimizerConfig().deferred_trip_cost_share, 0.0)
+        kept = bread(OptimizerConfig(deferred_trip_cost_share=0.0))
+        sale = next(p for p in kept["portions"] if p["method"] == "SELL_REGULAR")
+        self.assertEqual(sale["details"]["shelf_units"], 55)
+        eol = [p for p in kept["portions"] if p["details"].get("timing") == "END_OF_LIFE"]
+        self.assertTrue(eol)                                         # หมดเวลาขาย 17 ต.ค. 22:00 -> รับหลังจากนั้น
+        self.assertTrue(all(datetime.fromisoformat(p["details"]["pickup_at"]) >= at("22:00", "2026-10-17")
+                            for p in eol))
+
+
+class Rolling(unittest.TestCase):
+    """deferred_trip_cost_share = 0: แผนกำจัดวันถัดไปเป็นแผนชั่วคราว ไม่ล็อก lot ด้วย decision"""
+
+    def test_tomorrow_lot_is_released_without_decision(self):
+        r = run(with_baselines=False)
+        bread = next(l for l in r["plan"]["lots"] if l["lot_id"] == "LOT-000011")
+        self.assertEqual(next(p for p in bread["portions"] if p["method"] == "SELL_REGULAR")["details"]["shelf_units"], 55)
+        self.assertTrue(all(p["details"].get("provisional") for p in bread["portions"] if p["method"] != "SELL_REGULAR"))
+        self.assertIn("LOT-000011", r["lots_to_release"])
+        self.assertFalse(any(d["assessment_id"].startswith("c1ccb78e") for d in r["payload"]["decisions"]))
+
+    def test_tonight_disposal_still_gets_a_decision(self):
+        r = run(with_baselines=False)
+        salad = [d for d in r["payload"]["decisions"] if d["assessment_id"].startswith("eb742153")]
+        self.assertTrue(any(d["action_type"] == "LANDFILL" and d["due_by"] == "2026-10-16T22:00:00+07:00" for d in salad))
+        self.assertNotIn("LOT-000012", r["lots_to_release"])
+
+    def test_milk_is_not_locked_into_future_biogas(self):
+        data = forward(copy.deepcopy(REAL), "LOT-000002", shelf_rows(47.5, [(0, 10, 5, 15)], "2026-10-24"))
+        r = run(data, with_baselines=False)
+        self.assertEqual(r["violations"], [])
+        self.assertIn("LOT-000002", r["lots_to_release"])                 # สแกนใหม่พรุ่งนี้ ยังบริจาคได้ถึง 22 ต.ค.
+
+
+class KitchenTiming(unittest.TestCase):
+    def test_menu_sale_starts_when_first_batch_is_done(self):
+        r = run(with_baselines=False)
+        job = r["plan"]["kitchen_jobs"][0]
+        self.assertEqual(job["start_at"], "2026-10-16T09:30:00+07:00")
+        self.assertEqual(job["sale_start"], "2026-10-16T10:15:00+07:00")
+        self.assertLessEqual(datetime.fromisoformat(job["due_by"]), at("17:00"))
+
+    def test_job_that_cannot_finish_before_shift_end_is_dropped(self):
+        r = run(hhmm="16:15", with_baselines=False)                  # เริ่ม 16:45 + 45 นาที > 17:00
+        self.assertEqual(r["plan"]["kitchen_jobs"], [])
+
+
+class MockV4(unittest.TestCase):
+    """mock data v4 (27 ล็อต หลายล็อตต่อสินค้า) ผ่าน Risk Scanner แล้ว 13 ล็อตเข้า Optimizer"""
+    V4 = json.loads((Path(__file__).parent / "fixtures" / "mock_v4_2026-10-16.json").read_text(encoding="utf-8"))
+
+    def _run(self, hhmm):
+        return run_optimizer(copy.deepcopy(self.V4["optimize_inputs"]), products_catalog=self.V4["products"],
+                             now=at(hhmm), with_baselines=False)
+
+    def test_every_hour_is_valid(self):
+        # เคยพังที่ 13:00: solver ปัด ceil ของวัตถุดิบ 8.0 หน่วยเป็น 9 ภายใน tolerance (H6_FEFO_MISMATCH)
+        for hhmm in ("07:00", "09:00", "10:00", "12:00", "13:00", "15:00", "17:00", "19:00", "21:30"):
+            r = self._run(hhmm)                                   # strict=True: violation -> raise
+            self.assertTrue(r["plan"]["summary"]["reconciliation_ok"], hhmm)
+
+    def test_covers_several_action_types(self):
+        actions = {d["action_type"] for d in self._run("09:00")["payload"]["decisions"]}
+        self.assertLessEqual({"MARKDOWN", "KITCHEN_REPURPOSE", "LANDFILL", "ANIMAL_FEED"}, actions)
+
+    def test_no_orphan_provisional_disposal(self):
+        # แผนกำจัดชั่วคราวได้เฉพาะ lot ที่ถูกคืน IDLE ทั้ง lot; lot ที่มี decision อื่นต้องได้ decision กำจัดด้วย
+        for hhmm in ("09:00", "13:00"):
+            r = self._run(hhmm)
+            released = set(r["lots_to_release"])
+            for lo in r["plan"]["lots"]:
+                if any(p["details"].get("provisional") for p in lo["portions"]):
+                    self.assertIn(lo["lot_id"], released, hhmm)
 
 
 if __name__ == "__main__":

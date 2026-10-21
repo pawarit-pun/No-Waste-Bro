@@ -3,7 +3,7 @@
   1. MARKDOWN                 with alternatives
   2. KITCHEN_REPURPOSE        no shelf location
   3. DONATE                   with partner
-  4. DISCARD + partner        no partner context (server sends it only for DONATE)
+  4. ANIMAL_FEED + partner    partner disposal (same steps as a discard picked up by a partner)
   5. DISCARD, no partner      no assessment, no due time
 """
 
@@ -103,7 +103,7 @@ RAW_DECISIONS = [
     _decision(
         4,
         lot_id="LOT-900004",
-        action_type="DISCARD",
+        action_type="ANIMAL_FEED",
         action_quantity=6,
         target_partner_id="P-905",
         due_by="2026-10-16T18:00:00+07:00",
@@ -117,6 +117,10 @@ RAW_DECISIONS = [
              "location_aisle": "MEAT-C", "location_shelf": "C-03"},
         product={"product_id": "MEA-001", "name": "อกไก่สด 500g", "category": "MEAT",
                  "unit_of_measure": "PACK", "regular_price": 44.5, "min_allowed_price": 22.25},
+        partner={"partner_id": "P-905", "name": "ฟาร์มอาหารสัตว์ (ตัวอย่าง)",
+                 "partner_type": "ANIMAL_FEED", "pickup_days": [2, 3, 4, 6],
+                 "pickup_time_start": "16:00", "pickup_time_end": "18:00",
+                 "contact_name": None, "contact_phone": None},
     ),
     _decision(
         5,

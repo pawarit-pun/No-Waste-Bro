@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable, Optional
 
-DEFAULT_API_BASE = "http://127.0.0.1:8000/api/v1"
+DEFAULT_API_BASE = "https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1"
 
 
 class ApiError(RuntimeError):

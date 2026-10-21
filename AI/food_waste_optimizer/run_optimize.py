@@ -10,7 +10,7 @@
     python run_optimize.py --via-server [--dry-run] ให้ server รัน Optimizer เอง (POST /api/v1/ai/optimize)
     python run_optimize.py --input output/<รอบ>/optimize_inputs.json   รันซ้ำจากข้อมูลจริงที่บันทึกไว้ (ไม่ต่อ server ไม่เขียน)
 
-URL ของ server: env API_BASE_URL (ค่าเริ่มต้น http://127.0.0.1:8000/api/v1)
+URL ของ server: env API_BASE_URL (ค่าเริ่มต้น https://yu00jk24pk.execute-api.ap-southeast-1.amazonaws.com/api/v1)
 ผลแต่ละรอบ: output/<วันที่>_<เวลา>_<โหมด>/ (optimize_inputs.json, plan.json, decisions_request.json,
              decisions_response.json, allocations.json, report.txt)
 """
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -25,7 +26,7 @@ from pathlib import Path
 from ai_engine.optimizer import ApiClient, ApiError, PlanValidationError, optimize_and_post, pick_run, run_optimizer
 from ai_engine.optimizer.config import BKK
 
-OUTPUT_DIR = Path(__file__).resolve().parent / "output"
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR") or Path(__file__).resolve().parent / "output")   # env: ใช้บน Lambda (เขียนได้แค่ /tmp)
 
 
 # ---------------------------------------------------------------- PART 1: รายงาน
@@ -41,13 +42,17 @@ def format_report(plan: dict, decisions: list) -> str:
                      f"{lo['demand_fraction'] * 100:.0f}% ของที่ forecaster คาด")
         for p in lo["portions"]:
             tag = p["method"] + (f" {p['details']['discount_pct']}%" if p["method"] == "MARKDOWN" else "")
+            if p["details"].get("timing") == "END_OF_LIFE":
+                tag += " (เหลือ)"
+            elif "shelf_units" in p["details"]:
+                tag += f" (ชั้น {p['details']['shelf_units']})"
             who = p["details"].get("partner_name") or p["details"].get("recipe_id") or ""
             lines.append(f"    {p['share_pct']:6.2f}% {p['units']:4d} หน่วย {p['weight_kg']:7.2f} kg  {tag:20s} "
                          f"รับ {p['revenue_thb']:9.2f} จ่าย {p['cost_thb']:8.2f} ต้นทุนสินค้า {p['cogs_thb']:8.2f} "
                          f"สุทธิ {p['net_profit_thb']:9.2f}  {who}")
         lines.append(f"    -> lot นี้ {lo['net_profit_thb']:.2f} บาท")
     lines += ["", "เที่ยวรับของ:"] + [
-        f"  {t['partner_id']} {t['partner_type']:20s} {t['kg']:8.2f} kg รับ {t['pickup_at']} ค่าเที่ยว {t['trip_cost_thb']:.2f} "
+        f"  {t['trip_id']} {t['partner_type']:20s} {t['kg']:8.2f} kg รับ {t['pickup_at']} ค่าเที่ยว {t['trip_cost_thb']:.2f} "
         f"+ handling {t['handling_thb']:.2f} - รับซื้อ {t['buyback_revenue_thb']:.2f}" for t in plan["trips"]]
     lines += ["งานครัว:"] + [
         f"  {j['job_id']} {j['name']} {j['batches']} batch ใช้ {j['anchor_units']} หน่วยจาก {j['anchor_lot_id']} "
@@ -56,6 +61,8 @@ def format_report(plan: dict, decisions: list) -> str:
     lines += ["", "สัดส่วนรวม (ตามจำนวนหน่วย): " + ", ".join(f"{k} {v}%" for k, v in s["split_pct_by_method"].items()),
               f"รายได้ {s['gross_revenue_thb']:.2f} | ค่าใช้จ่าย {s['route_costs_thb']:.2f} | ต้นทุนสินค้า {s['cogs_thb']:.2f}",
               f"เงินที่ได้กลับคืนสุทธิ {s['net_recovery_thb']:.2f} บาท | กำไร(ขาดทุน)สุทธิรวมต้นทุนสินค้า {s['net_profit_thb']:.2f} บาท",
+              f"วางขาย {s['shelf_units']} หน่วย คาดขายได้ {s['expected_sold_units']} | คาดว่าเหลือหลังหมดเวลาขาย "
+              f"{s['expected_end_of_life_units']} หน่วย (ตัวเงินเป็นค่าคาดหมายจาก P10/P50/P90)",
               "", "เทียบกับไม่ใช้ Optimizer:"]
     for k, v in plan.get("baselines", {}).items():
         lines.append(f"  {k}: {v['net_profit_thb'] if isinstance(v, dict) else v}")
