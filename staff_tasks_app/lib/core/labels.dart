@@ -71,6 +71,21 @@ String actionLabel(Task task) => switch (task.actionType) {
       ActionType.discard => 'Discard',
     };
 
+/// ชื่อหัวกลุ่มในหน้า My tasks (ไม่มี % ต่อท้ายแบบ actionLabel)
+String actionGroupLabel(ActionType type) => switch (type) {
+      ActionType.markdown => 'Markdown',
+      ActionType.kitchenRepurpose => 'Kitchen repurpose',
+      ActionType.donate => 'Donation',
+      ActionType.animalFeed => 'Animal feed',
+      ActionType.compost => 'Compost',
+      ActionType.anaerobicDigestion => 'Biogas',
+      ActionType.landfill => 'Landfill',
+      ActionType.discard => 'Discard',
+    };
+
+/// ป้าย priority บนการ์ด เช่น 1 → "P1"
+String priorityLabel(int priority) => 'P$priority';
+
 /// งานที่ partner มารับของ (บริจาค / อาหารสัตว์ / ปุ๋ยหมัก / ก๊าซชีวภาพ / ฝังกลบ) ใช้คำว่า Pickup นอกนั้นใช้ Due
 String dueLabel(Task task, DateTime dueBy) {
   final prefix = task.actionType.usesPartner ? 'Pickup' : 'Due';

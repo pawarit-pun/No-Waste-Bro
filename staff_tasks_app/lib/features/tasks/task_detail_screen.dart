@@ -6,6 +6,7 @@ import '../../core/labels.dart';
 import '../../core/theme.dart';
 import '../../models/task.dart';
 import 'task_actions.dart';
+import 'task_completed_screen.dart';
 import 'task_providers.dart';
 import 'widgets/action_section.dart';
 import 'widgets/complete_sheet.dart';
@@ -62,7 +63,14 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     final qty = await showCompleteSheet(context, task);
     if (qty == null || !mounted) return;
     final result = await _run(() => _actions.complete(widget.taskId, widget.staffId, qty));
-    if (result != null && mounted) _toast(_effectsMessage(result));
+    if (result != null && mounted) {
+      // แทนหน้า detail ด้วยหน้าสรุป → กด Back to inbox แล้วกลับหน้า My tasks
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => TaskCompletedScreen(task: task, result: result, handled: qty),
+        ),
+      );
+    }
   }
 
   Future<void> _reject() async {
@@ -73,21 +81,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       _toast('Task rejected');
       Navigator.of(context).pop();
     }
-  }
-
-  /// สรุปผลต่อสต็อกจาก effects ของ POST /complete
-  String _effectsMessage(TaskCompleteResult result) {
-    final created = (result.effects['lots_created'] as List? ?? const [])
-        .cast<Map<String, dynamic>>();
-    if (created.isEmpty) return 'Task completed';
-    final lot = created.first;
-    final price = lot['current_selling_price'] as num?;
-    return switch (lot['reason']) {
-      'MARKDOWN_SPLIT' =>
-        'Task completed · new lot ${lot['lot_id']}${price == null ? '' : ' at ${baht(price)}'}',
-      'KITCHEN_OUTPUT' => 'Task completed · ${lot['quantity']} items added as ${lot['lot_id']}',
-      _ => 'Task completed',
-    };
   }
 
   @override

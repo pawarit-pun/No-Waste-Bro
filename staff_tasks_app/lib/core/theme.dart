@@ -143,3 +143,11 @@ Color statusColor(TaskStatus status) => switch (status) {
       'MEDIUM' => (const Color(0xFFFFF0C2), const Color(0xFF8A6100)),
       _ => (const Color(0xFFDDF3E4), AppColors.statusCompleted),
     };
+
+/// สีป้าย priority บนการ์ด (พื้น, ตัวหนังสือ) 1 = ด่วนที่สุด
+(Color, Color) priorityColors(int priority) => switch (priority) {
+      1 => (AppColors.urgent, Colors.white),
+      2 => (const Color(0xFFFBD5D5), AppColors.urgent),
+      3 => (const Color(0xFFFFF0C2), const Color(0xFF8A6100)),
+      _ => (const Color(0xFFE5E5EA), AppColors.textSecondary),
+    };

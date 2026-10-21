@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/task.dart';
 import 'task_providers.dart';
 import 'task_repository.dart';
+import 'task_start_times.dart';
 
 /// กดรับ / ปฏิเสธ / ปิดงาน แล้วโหลดหน้ารายละเอียดและรายการงานใหม่
 final taskActionsProvider = Provider<TaskActions>(TaskActions.new);
@@ -20,6 +21,7 @@ class TaskActions {
 
   Future<Task> accept(String taskId, String staffId) async {
     final task = await _repo.accept(taskId, staffId);
+    await TaskStartTimes.save(taskId, DateTime.now()); // ใช้ในหน้า Task completed
     _refresh(taskId, staffId);
     return task;
   }

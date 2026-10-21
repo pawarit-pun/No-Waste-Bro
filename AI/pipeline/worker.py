@@ -8,7 +8,7 @@
 
   SCAN      risk_forecaster/run_scan.py --source api          -> run_id, จำนวน lot HIGH / CRITICAL
   OPTIMIZE  food_waste_optimizer/run_optimize.py --run-id ID  -> จำนวน decision ที่บันทึก
-  TASKS     llm-task-agent/main.py --source api --run-id ID --post -> จำนวน task, batch ที่ POST ไม่ผ่าน
+  TASKS     llm-task-agent/main.py --source api --run-id ID --post -> จำนวน plan ที่เข้าคิวรออนุมัติ, batch ที่ POST ไม่ผ่าน
 
 จบก่อนครบได้เมื่อไม่มีอะไรต้องทำต่อ (ไม่มี lot IDLE / ไม่มี lot เสี่ยง / 0 decision) = SUCCEEDED + message
 สถานะทุกขั้นส่งกลับ server ด้วย PATCH /ai/pipeline-runs/{id}
@@ -179,14 +179,15 @@ def step_tasks(run_id, work_dir, reporter) -> dict:
         raise PipelineError("TASKS ไม่มี report (task_agent_*.json)")
     report = _read_json(reports[-1])
     posts = report.get("post_results", [])
-    created = sum(p.get("created") or 0 for p in posts if p.get("status") == "CREATED")
+    # plan ที่เข้าคิวรอผู้จัดการอนุมัติ (pipeline_runs.tasks_created = จำนวน plan ที่เข้าคิว ยังไม่ใช่ task ของ staff)
+    created = sum(p.get("created") or 0 for p in posts if p.get("status") == "QUEUED")
     failed = [p for p in posts if str(p.get("status", "")).startswith("FAILED")]
     summary = {**report.get("summary", {}), "tasks_created": created, "failed_batches": len(failed),
                "post_results": [{k: p.get(k) for k in ("batch", "count", "status", "created", "error")} for p in posts]}
     reporter.steps["TASKS"].update(status="FAILED" if failed else "OK", summary=summary)
     reporter.patch(tasks_created=created, failed_batches=len(failed), steps=reporter.steps)
     if failed:
-        raise PipelineError("POST /tasks ไม่ผ่าน " + ", ".join(f"{p['batch']} ({p['status']})" for p in failed)
+        raise PipelineError("POST /pending-tasks ไม่ผ่าน " + ", ".join(f"{p['batch']} ({p['status']})" for p in failed)
                             + " decision ของ batch นี้ยังเป็น PENDING")
     if report.get("summary", {}).get("decisions", 0) == 0:
         return {**summary, "done": True, "message": "ไม่มี decision ที่รอสร้าง task"}
@@ -214,7 +215,7 @@ def run_pipeline(stop_after: str = "TASKS", pipeline_run_id=None) -> dict:
             if not opt.get("done") and stop_after == "TASKS":
                 tasks = step_tasks(scan["run_id"], work_dir, reporter)
                 result["tasks"] = tasks
-                message = tasks.get("message") or (f"สร้าง task {tasks['tasks_created']} งาน "
+                message = tasks.get("message") or (f"ส่ง plan เข้าคิวรออนุมัติ {tasks['tasks_created']} รายการ "
                                                    f"จาก {opt['decisions_created']} decision")
         message = message or f"หยุดหลังขั้น {stop_after} ตามที่สั่ง"
         reporter.patch(status="SUCCEEDED", message=message, steps=reporter.steps)

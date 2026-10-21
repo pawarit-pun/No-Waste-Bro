@@ -27,6 +27,7 @@ def build_task(
     now: datetime,
     ai_reasoning: str,
     instruction_steps: list[InstructionStep],
+    model_used: str | None = None,
 ) -> TaskCreate:
     """Code-owned fields + written (LLM or standard) fields."""
     return TaskCreate(
@@ -35,4 +36,5 @@ def build_task(
         ai_reasoning=ai_reasoning,
         staff_instructions=staff_instructions(facts),
         instruction_steps=instruction_steps,
+        model_used=model_used,
     )

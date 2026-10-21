@@ -1,6 +1,7 @@
 # LLM Task Agent
 
-เปลี่ยน decision จาก Optimizer เป็น task ให้พนักงาน (priority, คำสั่งงาน, ขั้นตอนทีละข้อ, เหตุผลสำหรับผู้จัดการ)
+เปลี่ยน decision จาก Optimizer เป็น plan ของ task (priority, คำสั่งงาน, ขั้นตอนทีละข้อ, เหตุผลสำหรับผู้จัดการ)
+แล้วส่งเข้าคิวรออนุมัติ **ไม่มีการอนุมัติอัตโนมัติ** task ถึงมือพนักงานเมื่อผู้จัดการกดอนุมัติใน dashboard เท่านั้น
 
 ```
 GET /optimization-decisions?status=PENDING
@@ -9,9 +10,10 @@ GET /optimization-decisions?status=PENDING
   -> REQUIRED_STEPS   โค้ดกำหนด title + ลำดับขั้น + ข้อมูลที่แต่ละขั้นต้องมี
   -> LLM              Nova Lite เขียน detail ของแต่ละขั้น + ai_reasoning
   -> Validate         ตัวเลข / title / ข้อมูลบังคับ / ชื่อ SOP / พ.ศ. / ความยาว / เงื่อนไขหยุด
-       ไม่ผ่าน -> Nova Lite แก้ 1 ครั้ง -> Qwen3 Next -> ข้อความมาตรฐาน (งานถึงพนักงานเสมอ)
-  -> POST /tasks      แยก batch: งานทั่วไป 1 ก้อน, งานครัวแยกตามครัว + วัน
-  -> PATCH /inventory-lots/ai-status   lot ที่ได้ task ครบทุก decision -> CHECKED (เรียกครั้งเดียว)
+       ไม่ผ่าน -> Nova Lite แก้ 1 ครั้ง -> Qwen3 Next -> ข้อความมาตรฐาน (ทุก decision ได้ plan เสมอ, model_used = TEMPLATE)
+  -> POST /pending-tasks   ส่ง plan + model_used เข้าคิว (WAITING) แยก batch: งานทั่วไป 1 ก้อน, งานครัวแยกตามครัว + วัน
+  -> PATCH /inventory-lots/ai-status   lot ที่ส่ง plan ครบทุก decision -> CHECKED (เรียกครั้งเดียว)
+  (ผู้จัดการ) POST /pending-tasks/approve -> server สร้าง task, มอบหมายพนักงาน, จองครัว
   -> report JSON      audit trail ทุกรอบ
 ```
 
@@ -30,14 +32,14 @@ GET /optimization-decisions?status=PENDING
 | --- | --- |
 | `config.py` | ค่าตั้งต้นทั้งหมด อ่านจาก env / `.env` |
 | `models.py` | รูปแบบ decision และ task (ขีดจำกัดตรงกับ server) |
-| `api_client.py` | GET decision, POST task, PATCH ai_status ของ lot |
+| `api_client.py` | GET decision, POST plan เข้าคิว (`/pending-tasks`), PATCH ai_status ของ lot |
 | `facts.py` | Build Facts |
 | `steps.py` | REQUIRED_STEPS, staff_instructions, ข้อความมาตรฐาน, priority |
 | `knowledge_base.py` | ค้น SOP จาก Knowledge Base |
 | `llm.py` | prompt, เรียก Bedrock Converse, parse JSON |
 | `validate.py` | ตรวจคำตอบ LLM |
 | `task_generator.py` | ประกอบ task จากส่วนของโค้ดและส่วนที่เขียนแล้ว |
-| `agent.py` | ร้อยทุกขั้น, retry, แยก batch, POST, ตั้ง lot เป็น CHECKED, report |
+| `agent.py` | ร้อยทุกขั้น, retry, แยก batch, POST plan เข้าคิว, ตั้ง lot เป็น CHECKED, report |
 | `main.py` | รันจากเครื่อง / CloudShell |
 | `handler.py` | entry point ของ AWS Lambda |
 | `mock_data.py` | decision ตัวอย่างครบ 4 action สำหรับทดสอบ |
@@ -59,7 +61,7 @@ AWS credentials ไม่ใส่ใน `.env` ให้ใช้ `aws configur
 
 ## วิธีรัน
 
-ค่าเริ่มต้นคือ **ดูอย่างเดียว ไม่ POST** ต้องใส่ `--post` จึงจะสร้าง task จริง
+ค่าเริ่มต้นคือ **ดูอย่างเดียว ไม่ POST** ต้องใส่ `--post` จึงจะส่ง plan เข้าคิวรออนุมัติจริง
 
 ```bash
 # 1. test (ไม่ต้องต่อ AWS)
@@ -79,7 +81,7 @@ python main.py --source api --post
 ตัวเลือกอื่น: `--run-id`, `--limit N`, `--now 2026-10-19T08:00:00+07:00`
 
 ผลแต่ละรอบอยู่ใน `output/task_agent_<เวลา>.json` มี task ทุกตัว, โมเดลที่ใช้, คำตอบดิบของโมเดล,
-ข้อผิดพลาดที่ validator เจอ, SOP ที่ดึงมา และผล POST
+ข้อผิดพลาดที่ validator เจอ, SOP ที่ดึงมา และผล POST (`review_ids` ของ plan ที่เข้าคิว, `summary.plans_queued`)
 
 ## Deploy เป็น Lambda
 
@@ -107,8 +109,8 @@ python main.py --source api --post
 
 - `priority` เป็น heuristic ของ Prototype ไม่ใช่นโยบายร้านจริง
 - `GET /optimization-decisions` ส่ง `partner` มาเฉพาะ DONATE งาน DISCARD ที่มี partner จึงเห็นแค่รหัส ไม่เห็นชื่อ
-- `POST /tasks` สร้างทั้ง batch หรือไม่สร้างเลย ถ้า batch ล้ม (เช่น ครัวเต็ม 409) decision จะยังเป็น PENDING ให้ผู้จัดการดู และ lot นั้นยังเป็น PROCESSING (อยู่ใน `lot_status.pending_lots` ของ report)
+- `POST /pending-tasks` ส่งทั้ง batch หรือไม่ส่งเลย ถ้า batch ล้ม (เช่น decision ไม่ใช่ PENDING แล้ว 409) decision ของ batch นั้นยังเป็น PENDING และ lot นั้นยังเป็น PROCESSING (อยู่ใน `lot_status.pending_lots` ของ report)
+- ครัวถูกจองตอนผู้จัดการอนุมัติ ไม่ใช่ตอน agent ส่ง plan ถ้าครัวเต็มผู้จัดการจะเห็น error ตอนกดอนุมัติ
 - `--source api` แบบไม่ใส่ `--post` จะไม่ PATCH lot แต่แสดงว่าจะตั้ง lot ไหนเป็น CHECKED
 - งานกำจัดผ่าน partner (`ANIMAL_FEED` / `COMPOST` / `ANAEROBIC_DIGESTION` / `LANDFILL`) ใช้ขั้นตอนและ SOP ชุดเดียวกับ `DISCARD` ที่มี partner (KB ยังไม่มีเอกสารที่ติด tag 4 ค่านี้)
 - `DISCARD` = ทิ้งเองในร้าน ไม่มี partner
-- `POST /tasks` สร้างทั้ง batch หรือไม่สร้างเลย ถ้า batch ล้ม (เช่น ครัวเต็ม 409) decision จะยังเป็น PENDING ให้ผู้จัดการดู

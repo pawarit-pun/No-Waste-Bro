@@ -391,11 +391,12 @@ class FakeSource:
     def pending_decisions(self, run_id=None):
         return "run-1", self.decisions
 
-    def post_tasks(self, tasks):
+    def post_pending_tasks(self, tasks):
         if self.kitchen_full and any(t.decision_id == BY_ID["2"].decision_id for t in tasks):
-            raise ApiError(409, "Kitchen 'DEPT-BAKERY' does not have 0.75 hours available")
+            raise ApiError(409, "decision is already IN_REVIEW")
         self.posted.append(tasks)
-        return {"created": len(tasks), "tasks": [{"assigned_staff_id": "STF-001"}] * len(tasks)}
+        return {"created": len(tasks),
+                "reviews": [{"review_id": f"rv-{t.decision_id}", "decision_id": t.decision_id} for t in tasks]}
 
     def set_lots_ai_status(self, lot_ids, ai_status):
         self.patched.append((lot_ids, ai_status))
@@ -425,10 +426,11 @@ def test_run_posts_batches_and_writes_report():
     source = FakeSource()
     report = run(source, NullRetriever(), None, dry_run=False)
     results = {r["batch"]: r for r in report["post_results"]}
-    assert results["GENERAL"]["status"] == "CREATED" and results["GENERAL"]["count"] == 4
+    assert results["GENERAL"]["status"] == "QUEUED" and results["GENERAL"]["count"] == 4
+    assert len(results["GENERAL"]["review_ids"]) == 4
     assert results["KITCHEN:DEPT-BAKERY@2026-10-16"]["status"] == "FAILED_409"
     assert report["summary"] == {"decisions": 5, "tasks": 5, "llm_ok": 0, "template_fallback": 5,
-                                 "llm_calls": 0, "lots_checked": 4, "lots_pending": 1}
+                                 "plans_queued": 4, "llm_calls": 0, "lots_checked": 4, "lots_pending": 1}
     assert os.path.exists(report["report_path"])
 
 
@@ -482,7 +484,7 @@ def test_lots_patch_error_does_not_fail_run():
         report = run(source, NullRetriever(), None, dry_run=False)
         lots = report["lot_status"]
         assert lots["status"] == status and lots["error"], lots
-        assert {r["status"] for r in report["post_results"]} == {"CREATED"}  # tasks still created
+        assert {r["status"] for r in report["post_results"]} == {"QUEUED"}  # plans still queued
         assert os.path.exists(report["report_path"])
 
 
@@ -490,6 +492,14 @@ def test_lots_no_patch_when_nothing_succeeded():
     source = FakeSource([BY_ID["2"]], kitchen_full=True)  # only the kitchen decision, and it fails
     lots = run(source, NullRetriever(), None, dry_run=False)["lot_status"]
     assert source.patched == [] and lots["status"] == "SKIPPED"
+
+
+def test_posted_plans_carry_model_used():
+    source = FakeSource(kitchen_full=False)
+    run(source, NullRetriever(), None, dry_run=False)
+    posted = [t for batch in source.posted for t in batch]
+    assert posted and all(t.model_used == "TEMPLATE" for t in posted)  # no LLM -> standard text
+    assert all(t.model_dump(mode="json", exclude_none=True)["model_used"] == "TEMPLATE" for t in posted)
 
 
 def test_run_dry_run_posts_nothing():

@@ -11,7 +11,7 @@ import '../staff_picker/staff_providers.dart';
 import 'task_detail_screen.dart';
 import 'task_providers.dart';
 import 'widgets/filter_chips.dart';
-import 'widgets/task_card.dart';
+import 'widgets/task_group_section.dart';
 import 'widgets/urgent_banner.dart';
 
 /// หน้าแรกหลังเลือก staff: งานของคนนี้ แยกตามสถานะ
@@ -26,6 +26,7 @@ class MyTasksScreen extends ConsumerWidget {
     final provider = taskListProvider(staff.staffId);
     final tasks = ref.watch(provider);
     final filter = ref.watch(taskFilterProvider);
+    final collapsed = ref.watch(collapsedGroupsProvider);
     final topInset = MediaQuery.paddingOf(context).top;
 
     final List<Widget> body = tasks.when(
@@ -44,7 +45,7 @@ class MyTasksScreen extends ConsumerWidget {
           onAction: () => ref.invalidate(provider),
         ),
       ],
-      data: (list) => _content(context, ref, list, filter),
+      data: (list) => _content(context, ref, list, filter, collapsed),
     );
 
     return Scaffold(
@@ -65,16 +66,32 @@ class MyTasksScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _content(BuildContext context, WidgetRef ref, List<Task> list, TaskFilter filter) {
+  void _openTask(BuildContext context, Task task) => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => TaskDetailScreen(taskId: task.taskId, staffId: staff.staffId),
+        ),
+      );
+
+  List<Widget> _content(
+    BuildContext context,
+    WidgetRef ref,
+    List<Task> list,
+    TaskFilter filter,
+    Set<ActionType> collapsed,
+  ) {
     final urgent = list.where(isUrgentTask).toList();
-    final visible = list.where(filter.matches).toList();
+    final groups = groupTasksByAction(list.where(filter.matches).toList());
     return [
       if (urgent.isNotEmpty) ...[
-        UrgentBanner(tasks: urgent),
+        // กดแล้วเปิดงานด่วนที่ priority สูงสุด
+        UrgentBanner(
+          tasks: urgent,
+          onTap: () => _openTask(context, topUrgentTask(urgent)),
+        ),
         const SizedBox(height: 16),
       ],
       TaskFilterChips(
-        total: list.length,
+        total: list.where(TaskFilter.all.matches).length,
         selected: filter,
         onSelected: ref.read(taskFilterProvider.notifier).select,
       ),
@@ -83,20 +100,20 @@ class MyTasksScreen extends ConsumerWidget {
         'Tasks',
         style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.3),
       ),
-      const SizedBox(height: 12),
-      if (visible.isEmpty)
+      const SizedBox(height: 8),
+      if (groups.isEmpty)
         _MessageCard(message: _emptyMessage(filter))
       else
-        for (final task in visible)
+        for (final group in groups)
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: TaskCard(
-              task: task,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => TaskDetailScreen(taskId: task.taskId, staffId: staff.staffId),
-                ),
-              ),
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TaskGroupSection(
+              key: ValueKey('group-${group.type.value}'),
+              type: group.type,
+              tasks: group.tasks,
+              collapsed: collapsed.contains(group.type),
+              onToggle: () => ref.read(collapsedGroupsProvider.notifier).toggle(group.type),
+              onTapTask: (task) => _openTask(context, task),
             ),
           ),
     ];
@@ -200,6 +217,7 @@ class _AvatarMenu extends ConsumerWidget {
       position: PopupMenuPosition.under,
       onSelected: (_) {
         ref.read(taskFilterProvider.notifier).select(TaskFilter.all);
+        ref.read(collapsedGroupsProvider.notifier).reset();
         ref.read(selectedStaffProvider.notifier).clear();
       },
       itemBuilder: (_) => const [

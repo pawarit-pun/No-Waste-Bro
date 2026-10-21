@@ -32,10 +32,11 @@ class ApiSource:
         decisions = [OptimizationDecision.model_validate(d) for d in payload.get("decisions", [])]
         return payload.get("run_id"), decisions
 
-    def post_tasks(self, tasks: list[TaskCreate]) -> dict:
-        """All tasks in one call are created together or not at all."""
-        body = {"tasks": [t.model_dump(mode="json") for t in tasks]}
-        return self._request("POST", "/tasks", json=body)
+    def post_pending_tasks(self, tasks: list[TaskCreate]) -> dict:
+        """Send plans to the review queue (WAITING). All plans in one call are queued together or not at all.
+        Staff tasks are created only when a manager approves them in the dashboard."""
+        body = {"tasks": [t.model_dump(mode="json", exclude_none=True) for t in tasks]}
+        return self._request("POST", "/pending-tasks", json=body)
 
     def set_lots_ai_status(self, lot_ids: list[str], ai_status: str) -> dict:
         """Unknown lot_ids come back in not_found; 404 only when none exist."""

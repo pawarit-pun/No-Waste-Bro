@@ -46,9 +46,16 @@ class TaskCard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: _Badge(label: actionLabel(task), style: style),
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: _Badge(label: actionLabel(task), style: style),
+                              ),
+                              if (!_done) ...[
+                                const SizedBox(width: 6),
+                                _PriorityBadge(priority: task.priority),
+                              ],
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -108,6 +115,26 @@ class _Badge extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: style.tint),
+      ),
+    );
+  }
+}
+
+/// ป้าย priority เช่น "P1" (แสดงเฉพาะงานที่ยังไม่เสร็จ)
+class _PriorityBadge extends StatelessWidget {
+  const _PriorityBadge({required this.priority});
+
+  final int priority;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, foreground) = priorityColors(priority);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(8)),
+      child: Text(
+        priorityLabel(priority),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: foreground),
       ),
     );
   }

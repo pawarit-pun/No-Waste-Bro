@@ -1,4 +1,6 @@
-"""Task Agent: decision -> Facts -> SOP -> LLM -> Validate -> POST /tasks -> lots CHECKED -> report
+"""Task Agent: decision -> Facts -> SOP -> LLM -> Validate -> POST /pending-tasks -> lots CHECKED -> report
+
+Plans wait in the review queue (WAITING) until a manager approves them; there is no auto-approval.
 
 Per decision: primary model -> primary fixes its errors once -> fallback model -> standard text.
 """
@@ -80,8 +82,11 @@ def write_steps(facts: Facts, specs: list[StepSpec], sop: list[dict], llm) -> di
     }
 
 
+QUEUED = "QUEUED"
+
+
 def batch_key(facts: Facts) -> str:
-    """POST is all-or-nothing: one batch per kitchen + day, so a full kitchen fails only its own tasks."""
+    """POST is all-or-nothing: one batch per kitchen + day, so a failed batch only holds back its own plans."""
     if facts.action == "KITCHEN_REPURPOSE":
         day = facts.due_dt.date().isoformat() if facts.due_dt else "no-date"
         return f"KITCHEN:{facts.kitchen or 'UNKNOWN'}@{day}"
@@ -96,27 +101,26 @@ def post_batches(source, batches: dict[str, list[TaskCreate]], dry_run: bool) ->
             results.append({**result, "status": "DRY_RUN"})
             continue
         try:
-            response = source.post_tasks(tasks)
+            response = source.post_pending_tasks(tasks)
             results.append({
                 **result,
-                "status": "CREATED",
+                "status": QUEUED,
                 "created": response.get("created"),
-                "assigned": [t.get("assigned_staff_id") for t in response.get("tasks", [])],
-                "kitchen_bookings": response.get("kitchen_bookings", []),
+                "review_ids": [r.get("review_id") for r in response.get("reviews", [])],
             })
         except ApiError as e:
-            # Decisions stay PENDING for a manager to retry
+            # Decisions stay PENDING (not in the review queue)
             results.append({**result, "status": f"FAILED_{e.status}", "error": e.body[:500]})
     return results
 
 
 def update_lot_status(source, decisions: list, post_results: list[dict], dry_run: bool) -> dict:
-    """Step 8: lots whose every decision in this run got a task -> CHECKED (one PATCH call).
+    """Step 8: lots whose every decision in this run is in the review queue -> CHECKED (one PATCH call).
 
     Lots with a failed batch or an unprocessed decision (--limit) stay PROCESSING.
     A failed PATCH is recorded, never raised.
     """
-    created = {d_id for r in post_results if r["status"] in ("CREATED", "DRY_RUN") for d_id in r["decision_ids"]}
+    created = {d_id for r in post_results if r["status"] in (QUEUED, "DRY_RUN") for d_id in r["decision_ids"]}
     failed = {d_id: r["status"] for r in post_results if r["status"].startswith("FAILED") for d_id in r["decision_ids"]}
 
     reasons: dict[str, set[str]] = defaultdict(set)
@@ -170,7 +174,7 @@ def run(
             sop, sop_error = [], f"{type(e).__name__}: {e}"
 
         written = write_steps(facts, specs, sop, llm)
-        task = build_task(facts, now, written["ai_reasoning"], written["instruction_steps"])
+        task = build_task(facts, now, written["ai_reasoning"], written["instruction_steps"], written["model_used"])
         tasks.append(task)
         batches[batch_key(facts)].append(task)
         audit.append({
@@ -201,6 +205,7 @@ def run(
             "tasks": len(tasks),
             "llm_ok": sum(1 for a in audit if not a["fallback_used"]),
             "template_fallback": sum(1 for a in audit if a["fallback_used"]),
+            "plans_queued": sum(r.get("created") or 0 for r in post_results if r["status"] == QUEUED),
             "llm_calls": sum(len(a["attempts"]) for a in audit),
             "lots_checked": len(lot_status.get("updated", [])),
             "lots_pending": len(lot_status["pending_lots"]),

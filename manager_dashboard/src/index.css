@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, monospace;
+
+  /* สีแบรนด์ เดียวกับ staff mobile app (AppColors.orange / orangeSoft) */
+  --color-brand: #e8622c;
+  --color-brand-dark: #f08a4b;
+  --color-brand-soft: #f4a97f;
+  --color-brand-tint: #ffe1cc;
+}
+
+body {
+  @apply bg-white font-sans text-slate-900 antialiased;
+}

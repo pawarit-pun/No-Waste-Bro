@@ -3,7 +3,7 @@
   python main.py --source mock --no-llm --no-kb     # fully offline
   python main.py --source mock                      # sample data + real KB and LLM
   python main.py --source api                       # real decisions, preview
-  python main.py --source api --post                # real decisions, create tasks
+  python main.py --source api --post                # real decisions, send plans to the review queue
 """
 
 import argparse
@@ -21,8 +21,8 @@ class MockSource:
 
         return "mock-run", get_mock_decisions()
 
-    def post_tasks(self, tasks):
-        raise RuntimeError("MockSource cannot create tasks; use --source api")
+    def post_pending_tasks(self, tasks):
+        raise RuntimeError("MockSource cannot send plans; use --source api")
 
     def set_lots_ai_status(self, lot_ids, ai_status):
         raise RuntimeError("MockSource cannot update lots; use --source api")
@@ -47,7 +47,7 @@ def print_report(report: dict) -> None:
         for attempt in audit["attempts"]:
             for error in attempt["errors"]:
                 print(f"     ! {attempt['model']}: {error}")
-    print("\nPOST:", json.dumps(
+    print("\nPOST /pending-tasks (waiting for manager approval):", json.dumps(
         [{k: v for k, v in r.items() if k != "decision_ids"} for r in report["post_results"]], ensure_ascii=False))
     lots = report["lot_status"]
     print(f"LOTS -> CHECKED ({lots['status']}): {lots['to_check']}")
@@ -63,7 +63,7 @@ def print_report(report: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="No-Waste-Bro LLM Task Agent")
     parser.add_argument("--source", choices=["api", "mock"], default="api")
-    parser.add_argument("--post", action="store_true", help="really POST /tasks (default: preview only)")
+    parser.add_argument("--post", action="store_true", help="really POST /pending-tasks (default: preview only)")
     parser.add_argument("--no-llm", action="store_true", help="skip the LLM, use standard text")
     parser.add_argument("--no-kb", action="store_true", help="skip the Knowledge Base")
     parser.add_argument("--run-id", help="decision run to use (default: latest)")

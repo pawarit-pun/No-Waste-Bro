@@ -57,11 +57,13 @@ class InstructionStep(BaseModel):
 
 
 class TaskCreate(BaseModel):
+    """One plan for POST /pending-tasks (waits for a manager to approve before it becomes a staff task)."""
     decision_id: str
     priority: int = Field(ge=1, le=5)
     ai_reasoning: str
     staff_instructions: str
     instruction_steps: list[InstructionStep] = Field(min_length=1, max_length=8)
+    model_used: Optional[str] = Field(None, max_length=120)  # model that wrote the text, or "TEMPLATE"
 
 
 class TaskBatchCreate(BaseModel):
