@@ -1,0 +1,627 @@
+{
+ "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+ "reference_date": "2026-10-19",
+ "simulated_now": "2026-10-19T19:48:40+07:00",
+ "model_version": "optimizer_v3",
+ "solver": {
+  "name": "HiGHS",
+  "status": "optimal",
+  "gap": 0.0,
+  "time_ms": 53
+ },
+ "lots": [
+  {
+   "lot_id": "LOT-000001",
+   "assessment_id": "cb400a9b-0216-41f8-b395-50606be8401f",
+   "product_id": "DAI-001",
+   "name": "นมสดพาสเจอร์ไรส์ รสจืด 830ml",
+   "category": "DAIRY",
+   "quantity": 150,
+   "unit_cost": 38.95,
+   "current_price": 47.5,
+   "location": "CHILL-A / A-01",
+   "expiration_date": "2026-10-18",
+   "days_to_expiry": -1,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 5842.5,
+   "units_planned": 150,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 150,
+     "share_pct": 100.0,
+     "weight_kg": 124.5,
+     "revenue_thb": 0.0,
+     "cost_thb": 453.18,
+     "cogs_thb": 5842.5,
+     "net_profit_thb": -6295.68,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 124.5,
+      "trip_allocated_thb": 310.0,
+      "handling_thb": 143.17,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -6295.68,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P4_MIN_DAYS -3d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ],
+     "ANIMAL_FEED:P-ANI-01": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ],
+     "COMPOSTING:P-CMP-01": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ],
+     "KITCHEN:RCP-006": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.83h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  },
+  {
+   "lot_id": "LOT-000003",
+   "assessment_id": "685a2e44-da63-4d1a-b6e1-f96ffdefe070",
+   "product_id": "DAI-002",
+   "name": "โยเกิร์ต รสธรรมชาติ 125g",
+   "category": "DAIRY",
+   "quantity": 45,
+   "unit_cost": 11.89,
+   "current_price": 14.5,
+   "location": "CHILL-A / A-03",
+   "expiration_date": "2026-10-17",
+   "days_to_expiry": -2,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 535.05,
+   "units_planned": 45,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 45,
+     "share_pct": 100.0,
+     "weight_kg": 5.625,
+     "revenue_thb": 0.0,
+     "cost_thb": 20.47,
+     "cogs_thb": 535.05,
+     "net_profit_thb": -555.52,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 5.625,
+      "trip_allocated_thb": 14.01,
+      "handling_thb": 6.47,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -555.52,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ],
+     "ANIMAL_FEED:P-ANI-01": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ],
+     "COMPOSTING:P-CMP-01": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ],
+     "KITCHEN:RCP-004": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.33h",
+      "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  },
+  {
+   "lot_id": "LOT-000004",
+   "assessment_id": "d3b38178-6471-495e-ad82-91694b0870df",
+   "product_id": "MEA-001",
+   "name": "อกไก่สด 500g",
+   "category": "MEAT",
+   "quantity": 58,
+   "unit_cost": 33.38,
+   "current_price": 44.5,
+   "location": "MEAT-B / B-01",
+   "expiration_date": "2026-10-17",
+   "days_to_expiry": -2,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 1936.04,
+   "units_planned": 58,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 58,
+     "share_pct": 100.0,
+     "weight_kg": 29.0,
+     "revenue_thb": 0.0,
+     "cost_thb": 105.56,
+     "cogs_thb": 1936.04,
+     "net_profit_thb": -2041.6,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 29.0,
+      "trip_allocated_thb": 72.21,
+      "handling_thb": 33.35,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -2041.6,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P1_FLAG_ALLOW_DONATION_FALSE",
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ],
+     "ANIMAL_FEED:P-ANI-01": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ],
+     "COMPOSTING:P-CMP-01": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ],
+     "KITCHEN:RCP-002": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.75h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  },
+  {
+   "lot_id": "LOT-000005",
+   "assessment_id": "605b0ebe-88bb-485b-9658-66ed19cc8f47",
+   "product_id": "MEA-002",
+   "name": "เนื้อวัวสันนอก สเต็ก 500g",
+   "category": "MEAT",
+   "quantity": 24,
+   "unit_cost": 97.5,
+   "current_price": 130.0,
+   "location": "MEAT-B / B-02",
+   "expiration_date": "2026-10-17",
+   "days_to_expiry": -2,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 2340.0,
+   "units_planned": 24,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 24,
+     "share_pct": 100.0,
+     "weight_kg": 12.0,
+     "revenue_thb": 0.0,
+     "cost_thb": 43.68,
+     "cogs_thb": 2340.0,
+     "net_profit_thb": -2383.68,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 12.0,
+      "trip_allocated_thb": 29.88,
+      "handling_thb": 13.8,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -2383.68,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P1_FLAG_ALLOW_DONATION_FALSE",
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ],
+     "ANIMAL_FEED:P-ANI-01": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ],
+     "COMPOSTING:P-CMP-01": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ],
+     "KITCHEN:RCP-001": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 1.00h",
+      "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  },
+  {
+   "lot_id": "LOT-000007",
+   "assessment_id": "1b3aa95a-dcc5-4c8e-a9de-0df22605fb01",
+   "product_id": "PRO-001",
+   "name": "กล้วยหอม 1kg",
+   "category": "PRODUCE",
+   "quantity": 50,
+   "unit_cost": 24.5,
+   "current_price": 35.0,
+   "location": "PRODUCE-D / D-04",
+   "expiration_date": "2026-10-17",
+   "days_to_expiry": -2,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 1225.0,
+   "units_planned": 50,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 50,
+     "share_pct": 100.0,
+     "weight_kg": 50.0,
+     "revenue_thb": 0.0,
+     "cost_thb": 182.0,
+     "cogs_thb": 1225.0,
+     "net_profit_thb": -1407.0,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 50.0,
+      "trip_allocated_thb": 124.5,
+      "handling_thb": 57.5,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -1407.0,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ],
+     "KITCHEN:RCP-004": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.33h",
+      "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+     ],
+     "KITCHEN:RCP-005": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 1.25h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  },
+  {
+   "lot_id": "LOT-000008",
+   "assessment_id": "16681444-2714-4fb8-b39f-9dbae8973489",
+   "product_id": "PRO-002",
+   "name": "ผักกาดหอม 250g",
+   "category": "PRODUCE",
+   "quantity": 90,
+   "unit_cost": 16.63,
+   "current_price": 23.75,
+   "location": "PRODUCE-D / D-02",
+   "expiration_date": "2026-10-18",
+   "days_to_expiry": -1,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 1496.7,
+   "units_planned": 90,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 90,
+     "share_pct": 100.0,
+     "weight_kg": 22.5,
+     "revenue_thb": 0.0,
+     "cost_thb": 81.9,
+     "cogs_thb": 1496.7,
+     "net_profit_thb": -1578.6,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 22.5,
+      "trip_allocated_thb": 56.02,
+      "handling_thb": 25.87,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -1578.6,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P4_MIN_DAYS -3d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  },
+  {
+   "lot_id": "LOT-000009",
+   "assessment_id": "a1dcfaf0-efc5-47f7-b012-13e56d1a39c8",
+   "product_id": "BAK-001",
+   "name": "ขนมปังแซนวิช 480g",
+   "category": "BAKERY",
+   "quantity": 70,
+   "unit_cost": 32.0,
+   "current_price": 40.0,
+   "location": "BAKERY-E / E-01",
+   "expiration_date": "2026-10-17",
+   "days_to_expiry": -2,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 2240.0,
+   "units_planned": 70,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 70,
+     "share_pct": 100.0,
+     "weight_kg": 33.6,
+     "revenue_thb": 0.0,
+     "cost_thb": 122.3,
+     "cogs_thb": 2240.0,
+     "net_profit_thb": -2362.3,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 33.6,
+      "trip_allocated_thb": 83.66,
+      "handling_thb": 38.64,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -2362.3,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ],
+     "KITCHEN:RCP-006": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.83h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  },
+  {
+   "lot_id": "LOT-000010",
+   "assessment_id": "60df462b-4b0f-4863-9eed-7051756c8430",
+   "product_id": "BAK-002",
+   "name": "เค้กกล้วยหอม 700g",
+   "category": "BAKERY",
+   "quantity": 22,
+   "unit_cost": 65.19,
+   "current_price": 179.0,
+   "location": "BAKERY-E / E-05",
+   "expiration_date": "2026-10-17",
+   "days_to_expiry": -2,
+   "risk_level": "CRITICAL",
+   "risk_score": 100.0,
+   "demand_source": "expired",
+   "demand_fraction": 0.0,
+   "cogs_thb": 1434.18,
+   "units_planned": 22,
+   "portions": [
+    {
+     "method": "LANDFILL",
+     "units": 22,
+     "share_pct": 100.0,
+     "weight_kg": 15.4,
+     "revenue_thb": 0.0,
+     "cost_thb": 56.06,
+     "cogs_thb": 1434.18,
+     "net_profit_thb": -1490.24,
+     "details": {
+      "partner_id": "P-LDF-01",
+      "partner_name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+      "pickup_at": "2026-10-19T20:48:40+07:00",
+      "kg": 15.4,
+      "trip_allocated_thb": 38.35,
+      "handling_thb": 17.71,
+      "buyback_thb": 0.0
+     }
+    }
+   ],
+   "net_profit_thb": -1490.24,
+   "explain": {
+    "excluded": {
+     "MARKDOWN:ALL": [
+      "K0_EXPIRED"
+     ],
+     "DONATION:P-DON-01": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ],
+     "KITCHEN:ALL": [
+      "U2_NOT_AN_INGREDIENT"
+     ]
+    },
+    "binding": [],
+    "notes": [],
+    "price_options": []
+   }
+  }
+ ],
+ "skipped_lots": {},
+ "trips": [
+  {
+   "partner_id": "P-LDF-01",
+   "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+   "partner_type": "LANDFILL",
+   "pickup_at": "2026-10-19T20:48:40+07:00",
+   "kg": 292.625,
+   "capacity_kg": 1000.0,
+   "min_kg": 0.0,
+   "fixed_cost_thb": 650.0,
+   "travel_cost_thb": 78.62,
+   "trip_cost_thb": 728.62,
+   "handling_thb": 336.52,
+   "buyback_revenue_thb": 0.0,
+   "total_cost_thb": 1065.14,
+   "net_cash_thb": -1065.14,
+   "cost_per_kg_thb": 3.64,
+   "units": {
+    "LOT-000001": 150,
+    "LOT-000003": 45,
+    "LOT-000004": 58,
+    "LOT-000005": 24,
+    "LOT-000007": 50,
+    "LOT-000008": 90,
+    "LOT-000009": 70,
+    "LOT-000010": 22
+   }
+  }
+ ],
+ "kitchen_jobs": [],
+ "kitchen_usage": [],
+ "recipes": {
+  "RCP-001": {
+   "eligible": false,
+   "reasons": [
+    "U3_KITCHEN_HOURS 2026-10-19 0.00h < 1.00h",
+    "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+   ]
+  },
+  "RCP-002": {
+   "eligible": false,
+   "reasons": [
+    "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.75h"
+   ]
+  },
+  "RCP-003": {
+   "eligible": false,
+   "reasons": [
+    "U2_NO_AT_RISK_PRIMARY_INGREDIENT"
+   ]
+  },
+  "RCP-004": {
+   "eligible": false,
+   "reasons": [
+    "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.33h",
+    "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+   ]
+  },
+  "RCP-005": {
+   "eligible": false,
+   "reasons": [
+    "U3_KITCHEN_HOURS 2026-10-19 0.00h < 1.25h"
+   ]
+  },
+  "RCP-006": {
+   "eligible": false,
+   "reasons": [
+    "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.83h"
+   ]
+  }
+ },
+ "summary": {
+  "lots": 8,
+  "units": 509,
+  "split_pct_by_method": {
+   "LANDFILL": 100.0
+  },
+  "units_by_method": {
+   "LANDFILL": 509
+  },
+  "kg_by_method": {
+   "LANDFILL": 292.625
+  },
+  "gross_revenue_thb": 0.0,
+  "route_costs_thb": 1065.15,
+  "cogs_thb": 17049.47,
+  "net_recovery_thb": -1065.15,
+  "net_profit_thb": -18114.62,
+  "unresolved_units": 0,
+  "reconciliation_gap_thb": 0.0062,
+  "reconciliation_ok": true
+ },
+ "baselines": {
+  "do_nothing_no_disposal_cost": {
+   "net_profit_thb": -17049.47
+  },
+  "regular_price_then_landfill": {
+   "net_profit_thb": -18114.61,
+   "unresolved_units": 0
+  },
+  "markdown_then_landfill": {
+   "net_profit_thb": -18114.61,
+   "unresolved_units": 0
+  },
+  "optimized": {
+   "net_profit_thb": -18114.61,
+   "unresolved_units": 0
+  },
+  "improvement_vs_regular_then_landfill_thb": 0.0
+ },
+ "warnings": [],
+ "violations": [],
+ "payload_errors": []
+}

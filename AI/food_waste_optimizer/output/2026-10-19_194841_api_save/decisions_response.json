@@ -1,0 +1,61 @@
+{
+ "created": 8,
+ "decisions": [
+  {
+   "decision_id": "c3a842ba-56bd-4c8c-a93e-dd4cf13248af",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "cb400a9b-0216-41f8-b395-50606be8401f",
+   "lot_id": "LOT-000001",
+   "action_type": "DISCARD"
+  },
+  {
+   "decision_id": "516d612e-c43e-4c3f-a3db-f7792c9cbc5a",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "685a2e44-da63-4d1a-b6e1-f96ffdefe070",
+   "lot_id": "LOT-000003",
+   "action_type": "DISCARD"
+  },
+  {
+   "decision_id": "76e65426-125c-411b-b66f-d3d8629af4a4",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "d3b38178-6471-495e-ad82-91694b0870df",
+   "lot_id": "LOT-000004",
+   "action_type": "DISCARD"
+  },
+  {
+   "decision_id": "8f9a3d6b-d43c-45d6-97ef-8be9674a8505",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "605b0ebe-88bb-485b-9658-66ed19cc8f47",
+   "lot_id": "LOT-000005",
+   "action_type": "DISCARD"
+  },
+  {
+   "decision_id": "1014b791-d6d3-4490-ab26-aee5a0c19849",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "1b3aa95a-dcc5-4c8e-a9de-0df22605fb01",
+   "lot_id": "LOT-000007",
+   "action_type": "DISCARD"
+  },
+  {
+   "decision_id": "e526f7aa-1cea-4f6f-9d14-4a709e35d1f9",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "16681444-2714-4fb8-b39f-9dbae8973489",
+   "lot_id": "LOT-000008",
+   "action_type": "DISCARD"
+  },
+  {
+   "decision_id": "51bfa195-7440-4c68-b3c7-6472427bd91c",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "a1dcfaf0-efc5-47f7-b012-13e56d1a39c8",
+   "lot_id": "LOT-000009",
+   "action_type": "DISCARD"
+  },
+  {
+   "decision_id": "5d89427e-9e7f-4c8f-b0a6-bb29fa2479e7",
+   "run_id": "f84a00f5-8cc8-4a6e-8698-5edad76207e0",
+   "assessment_id": "60df462b-4b0f-4863-9eed-7051756c8430",
+   "lot_id": "LOT-000010",
+   "action_type": "DISCARD"
+  }
+ ]
+}

@@ -1,0 +1,391 @@
+{
+ "optimizer_version": "optimizer_v3",
+ "decisions": [
+  {
+   "assessment_id": "cb400a9b-0216-41f8-b395-50606be8401f",
+   "action_type": "DISCARD",
+   "action_quantity": 150,
+   "expected_profit_impact": -6295.68,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "ANAEROBIC_DIGESTION",
+     "partner_id": "P-ADG-01",
+     "expected_profit_impact": -7805.19,
+     "note": "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว"
+    },
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P4_MIN_DAYS -3d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ]
+    },
+    {
+     "option": "ANIMAL_FEED:P-ANI-01",
+     "rejected_because": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "COMPOSTING:P-CMP-01",
+     "rejected_because": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "KITCHEN:RCP-006",
+     "rejected_because": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.83h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -5842.5,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  },
+  {
+   "assessment_id": "685a2e44-da63-4d1a-b6e1-f96ffdefe070",
+   "action_type": "DISCARD",
+   "action_quantity": 45,
+   "expected_profit_impact": -555.52,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ]
+    },
+    {
+     "option": "ANIMAL_FEED:P-ANI-01",
+     "rejected_because": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "COMPOSTING:P-CMP-01",
+     "rejected_because": [
+      "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "KITCHEN:RCP-004",
+     "rejected_because": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.33h",
+      "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -535.05,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  },
+  {
+   "assessment_id": "d3b38178-6471-495e-ad82-91694b0870df",
+   "action_type": "DISCARD",
+   "action_quantity": 58,
+   "expected_profit_impact": -2041.6,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P1_FLAG_ALLOW_DONATION_FALSE",
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "ANIMAL_FEED:P-ANI-01",
+     "rejected_because": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "COMPOSTING:P-CMP-01",
+     "rejected_because": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "KITCHEN:RCP-002",
+     "rejected_because": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.75h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -1936.04,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  },
+  {
+   "assessment_id": "605b0ebe-88bb-485b-9658-66ed19cc8f47",
+   "action_type": "DISCARD",
+   "action_quantity": 24,
+   "expected_profit_impact": -2383.68,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P1_FLAG_ALLOW_DONATION_FALSE",
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "ANIMAL_FEED:P-ANI-01",
+     "rejected_because": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "COMPOSTING:P-CMP-01",
+     "rejected_because": [
+      "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+     ]
+    },
+    {
+     "option": "KITCHEN:RCP-001",
+     "rejected_because": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 1.00h",
+      "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -2340.0,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  },
+  {
+   "assessment_id": "1b3aa95a-dcc5-4c8e-a9de-0df22605fb01",
+   "action_type": "DISCARD",
+   "action_quantity": 50,
+   "expected_profit_impact": -1407.0,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "ANIMAL_FEED",
+     "partner_id": "P-ANI-01",
+     "expected_profit_impact": -2231.74,
+     "note": "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว"
+    },
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ]
+    },
+    {
+     "option": "KITCHEN:RCP-004",
+     "rejected_because": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.33h",
+      "U5_NO_MENU_DEMAND 2026-10-20 cap 0.00"
+     ]
+    },
+    {
+     "option": "KITCHEN:RCP-005",
+     "rejected_because": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 1.25h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -1225.0,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  },
+  {
+   "assessment_id": "16681444-2714-4fb8-b39f-9dbae8973489",
+   "action_type": "DISCARD",
+   "action_quantity": 90,
+   "expected_profit_impact": -1578.6,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "ANIMAL_FEED",
+     "partner_id": "P-ANI-01",
+     "expected_profit_impact": -2520.49,
+     "note": "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว"
+    },
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P4_MIN_DAYS -3d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -1496.7,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  },
+  {
+   "assessment_id": "a1dcfaf0-efc5-47f7-b012-13e56d1a39c8",
+   "action_type": "DISCARD",
+   "action_quantity": 70,
+   "expected_profit_impact": -2362.3,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "ANIMAL_FEED",
+     "partner_id": "P-ANI-01",
+     "expected_profit_impact": -3256.91,
+     "note": "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว"
+    },
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ]
+    },
+    {
+     "option": "KITCHEN:RCP-006",
+     "rejected_because": [
+      "U3_KITCHEN_HOURS 2026-10-19 0.00h < 0.83h",
+      "U4_EXPIRES_BEFORE_DUE 2026-10-20"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -2240.0,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  },
+  {
+   "assessment_id": "60df462b-4b0f-4863-9eed-7051756c8430",
+   "action_type": "DISCARD",
+   "action_quantity": 22,
+   "expected_profit_impact": -1490.24,
+   "decision_score": 0.0,
+   "alternatives": [
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "ANIMAL_FEED",
+     "partner_id": "P-ANI-01",
+     "expected_profit_impact": -2462.37,
+     "note": "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว"
+    },
+    {
+     "option": "MARKDOWN:ALL",
+     "rejected_because": [
+      "K0_EXPIRED"
+     ]
+    },
+    {
+     "option": "DONATION:P-DON-01",
+     "rejected_because": [
+      "P4_MIN_DAYS -4d at pickup < 2d",
+      "P5_EXPIRED_FOR_HUMAN_USE"
+     ]
+    },
+    {
+     "option": "KITCHEN:ALL",
+     "rejected_because": [
+      "U2_NOT_AN_INGREDIENT"
+     ]
+    },
+    {
+     "action_type": "DISCARD",
+     "disposal_method": "COST_WRITE_OFF_REFERENCE",
+     "feasible": false,
+     "expected_profit_impact": -1434.18,
+     "note": "ค่าอ้างอิงเท่านั้น: ต้นทุนสินค้าที่เสียไปถ้าทิ้งหมด ยังไม่รวมค่ากำจัดที่ต้องจ่าย partner"
+    }
+   ],
+   "target_partner_id": "P-LDF-01",
+   "due_by": "2026-10-19T20:48:40+07:00"
+  }
+ ]
+}

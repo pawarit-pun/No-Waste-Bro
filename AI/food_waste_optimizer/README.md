@@ -28,7 +28,7 @@ run_full_pipeline(dry_run=True)                       # dry_run=False = PATCH PR
 
 | PART | ไฟล์ | หน้าที่ |
 | --- | --- | --- |
-| 0 | `clock.py`, `optimizer/config.py` | เวลาไทย + `DEMO_DATE`/`DEMO_TIME`; ค่า tunable ทั้งหมด + map action_type |
+| 0 | `optimizer/config.py` | เวลาไทย (`simulated_now`); ค่า tunable ทั้งหมด + map action_type |
 | 1 | `optimizer/models.py` | แปลง JSON ตาม Swagger เป็น object; แปลงหน่วย G/ML (KG, L ×1000) |
 | 2 | `optimizer/rules.py`, `optimizer/demand.py` | กฎ Markdown (K0-K6): หมดอายุ, ราคาต่ำสุด, demand, ลดแล้วไม่คุ้ม |
 | 3 | `optimizer/rules.py` | กฎ Partner (P1-P8): วัน/เวลารับ, หมวด, อายุคงเหลือ, kg ขั้นต่ำ/สูงสุด, flag; ต้นทุนเที่ยว |
@@ -38,8 +38,7 @@ run_full_pipeline(dry_run=True)                       # dry_run=False = PATCH PR
 | 7 | `optimizer/validate.py` | ตรวจแผนซ้ำจากข้อมูลดิบ (ตาข่ายนิรภัย) ก่อนส่ง |
 | 8 | `optimizer/decisions.py` | Plan -> payload ของ POST /optimization-decisions + จำลองการตรวจของ server |
 | 9 | `optimizer/io.py` | ApiClient (urllib), loader จาก Supabase, เติม flag การกำจัดให้ products |
-| 10 | `optimizer/pipeline.py` | ฟังก์ชันครอบ `run_optimizer` / `optimize_and_post` / `run_full_pipeline` |
-| — | `forecaster/mock_forecaster.py` | mock risk+forecast ตามฟิลด์ `lot_risk_assessments` (1 lot = 1 สินค้า) |
+| 10 | `optimizer/pipeline.py` | ฟังก์ชันครอบ `run_optimizer` / `optimize_and_post` |
 
 ## หลักการคำนวณ (ตามคำสั่งงาน)
 
@@ -96,5 +95,5 @@ products = supabase.table("products").select(
 
 ## ความปลอดภัย
 
-`.env` ที่แนบมามี `SUPABASE_SERVICE_ROLE_KEY` (สิทธิ์เต็ม ข้าม RLS) ถือว่าหลุดแล้ว ควร rotate ใน Supabase
-และอย่า commit — ใช้ `.env.example` เป็นแบบ
+`SUPABASE_SERVICE_ROLE_KEY` (สิทธิ์เต็ม ข้าม RLS) เคยหลุดใน `.env.example` ที่ push ไปแล้ว ถือว่าหลุด ต้อง rotate ใน Supabase
+Optimizer ไม่ต้องใช้ key นี้ (อ่าน/เขียนผ่าน server) ตั้งแค่ `API_BASE_URL` ถ้า server ไม่ได้อยู่ที่ `http://127.0.0.1:8000/api/v1`
