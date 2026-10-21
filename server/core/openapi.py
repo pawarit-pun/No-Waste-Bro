@@ -1,7 +1,7 @@
 """ข้อความที่แสดงในหน้า Swagger UI (/docs) สำหรับ Team AI"""
 
 APP_TITLE = "No-Waste-Bro API"
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 
 APP_DESCRIPTION = """
 API สำหรับระบบลด Food Waste ใน Hypermarket ใช้ร่วมกันระหว่าง **AI Agent**, **Admin Dashboard** และ **Staff Mobile App**
@@ -20,8 +20,9 @@ AI Agent เรียก route ตามลำดับนี้ในการ�
 | 5 | `POST /optimization-decisions` | Optimizer | บันทึกการตัดสินใจ **รวมตัวเลขทั้งหมด** | `decision_id` |
 | 4-5 | `POST /ai/optimize?run_id=...&dry_run=false` | Risk Scanner / ใครก็ได้ | ทางลัด: server รัน Optimizer กับรอบสแกนแล้วบันทึก decision ให้ในคำขอเดียว (`dry_run=true` = ดูผลอย่างเดียว) | `decision_id` |
 | 6 | `GET /optimization-decisions?status=PENDING` | LLM (RAG) | ดึง decision + context ไปเขียนคำสั่งงาน | `decision_id` |
-| 7 | `POST /tasks` | LLM | สร้าง task จาก decision (ส่งแค่ข้อความ + priority + `instruction_steps` ขั้นตอนทีละข้อ) **server มอบหมาย staff ให้อัตโนมัติ** | `task_id` |
-| 8 | `PATCH /inventory-lots/ai-status` | AI | เปลี่ยน lot ที่สแกนเสร็จเป็น `CHECKED` | – |
+| 7 | `POST /pending-tasks` | LLM | ส่ง plan ของ task จาก decision (ข้อความ + priority + `instruction_steps` + `model_used`) เข้าคิวรออนุมัติ (`WAITING`) | `review_id` |
+| 8 | `PATCH /inventory-lots/ai-status` | AI | เปลี่ยน lot ที่ส่ง plan ครบแล้วเป็น `CHECKED` | – |
+| 9 | `POST /pending-tasks/approve` หรือ `/reject` | ผู้จัดการ (Dashboard) | **ไม่มีการอนุมัติอัตโนมัติ** อนุมัติ = สร้าง task, มอบหมาย staff, จองครัว / ปฏิเสธ = ปิด decision พร้อมเหตุผล | `task_id` |
 
 **lot แต่ละตัวถูกสแกนครั้งเดียว:** `scan-inputs` ส่งเฉพาะ lot ที่เป็น `IDLE` เมื่อเป็น `PROCESSING` / `CHECKED` แล้วจะไม่ถูกสแกนอีก
 
@@ -30,7 +31,7 @@ AI Agent เรียก route ตามลำดับนี้ในการ�
 
 ## หลังสร้าง task: Staff mobile app
 
-server มอบหมาย task ให้ staff ที่ดูแลหมวดสินค้านั้นตั้งแต่ตอนสร้าง (`assigned_staff_id`)
+task ถูกสร้างตอนผู้จัดการอนุมัติเท่านั้น server มอบหมาย task ให้ staff ที่ดูแลหมวดสินค้านั้นตั้งแต่ตอนสร้าง (`assigned_staff_id`)
 mobile app subscribe Supabase Realtime เพื่อรู้ทันทีว่ามีงานใหม่ แล้วเรียก `GET /tasks?staff_id=...`
 
 ```js
@@ -78,6 +79,11 @@ TAGS_METADATA = [
     {
         "name": "Optimization Decisions",
         "description": "ผลของ Optimizer (ตัวเลขทั้งหมดของ task) เก็บไว้ก่อนส่งให้ LLM เขียนคำสั่งงาน",
+    },
+    {
+        "name": "Review Queue",
+        "description": "plan จาก LLM ที่รอผู้จัดการอนุมัติ (`pending_tasks`) ไม่มีการอนุมัติอัตโนมัติ "
+                       "อนุมัติแล้ว server สร้าง task ให้ staff / ปฏิเสธต้องใส่เหตุผล",
     },
     {
         "name": "Tasks",

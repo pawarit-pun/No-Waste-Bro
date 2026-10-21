@@ -266,12 +266,6 @@ class KitchenBooking(BaseModel):
     hours: float = Field(..., description="ชั่วโมงที่จอง (รวมทุก task ของครัวเดียวกันในวันเดียวกัน)")
 
 
-class TaskCreateResponse(BaseModel):
-    created: int = Field(..., description="จำนวน task ที่สร้าง")
-    tasks: list[TaskRow] = Field(..., description="task ที่สร้าง (แถวเต็มจาก DB)")
-    kitchen_bookings: list[KitchenBooking] = Field(..., description="ชั่วโมงครัวที่จองไป ว่าง = ไม่มี task ครัว")
-
-
 class LotStatus(BaseModel):
     lot_id: str
     ai_status: str
@@ -366,7 +360,9 @@ class DecisionWithContext(_Row):
     alternatives: Optional[list[dict]] = None
     optimizer_version: Optional[str] = None
     created_at: datetime
-    status: str = Field(..., description="PENDING = ยังไม่มี task, TASK_CREATED = สร้าง task แล้ว")
+    status: str = Field(..., description="PENDING = LLM ยังไม่ได้เขียน, IN_REVIEW = รอผู้จัดการอนุมัติ, "
+                                         "REJECTED = ผู้จัดการปฏิเสธ, TASK_CREATED = อนุมัติและสร้าง task แล้ว")
+    review_id: Optional[UUID] = Field(None, description="plan ใน pending_tasks ของ decision นี้ (ถ้า LLM ส่งมาแล้ว)")
     task_id: Optional[UUID] = Field(None, description="task ที่สร้างจาก decision นี้ (ถ้ามี)")
     assessment: Optional[DecisionAssessment] = Field(None, description="ผลประเมินความเสี่ยง")
     lot: Optional[DecisionLot] = Field(None, description="สภาพ lot ปัจจุบัน + ตำแหน่งชั้นวาง")
@@ -462,3 +458,102 @@ class CompleteEffects(BaseModel):
 class TaskCompleteResponse(BaseModel):
     task: TaskDetail
     effects: CompleteEffects
+
+
+# ---------- Review queue (pending_tasks) ----------
+
+class PendingTaskRow(_Row):
+    review_id: UUID
+    decision_id: UUID
+    run_id: UUID
+    assessment_id: UUID
+    lot_id: str
+    priority: int = Field(..., description="1 (ด่วนที่สุด) – 5")
+    ai_reasoning: Optional[str] = Field(None, description="เหตุผลของ AI สำหรับผู้จัดการ")
+    staff_instructions: Optional[str] = Field(None, description="คำสั่งงานที่ staff จะเห็นหลังอนุมัติ")
+    instruction_steps: Optional[list[dict]] = Field(None, description="ขั้นตอนทำงาน [{title, detail}]")
+    model_used: Optional[str] = Field(None, description="model ที่เขียนข้อความ หรือ TEMPLATE (LLM ไม่ผ่าน validation)")
+    review_status: str = Field(..., description="WAITING / APPROVED / REJECTED")
+    review_deadline: Optional[datetime] = Field(None, description="เวลาล่าสุดที่ staff ยังทำงานได้ (due_by หรือ 22:00 ของวันหมดอายุ)")
+    reviewed_by: Optional[str] = Field(None, description="staff_id ของผู้จัดการที่อนุมัติ/ปฏิเสธ")
+    reviewed_at: Optional[datetime] = None
+    review_note: Optional[str] = Field(None, description="เหตุผลตอนปฏิเสธ หรือหมายเหตุตอนอนุมัติ")
+    task_id: Optional[UUID] = Field(None, description="task ที่สร้างหลังอนุมัติ")
+    created_at: datetime = Field(..., description="เวลาที่ LLM ส่ง plan เข้าคิว")
+
+
+class PendingDecision(_Row):
+    action_type: str
+    action_quantity: int
+    discount_pct: Optional[float] = None
+    new_recommended_price: Optional[float] = None
+    target_recipe_id: Optional[str] = None
+    batch_count: Optional[int] = None
+    target_partner_id: Optional[str] = None
+    due_by: Optional[datetime] = None
+    expected_profit_impact: Optional[float] = Field(None, description="กำไร/ขาดทุนสุทธิที่ Optimizer คาด (บาท) รวมต้นทุนสินค้าแล้ว")
+
+
+class PendingDecisionDetail(PendingDecision):
+    decision_score: Optional[float] = None
+    alternatives: Optional[list[dict]] = Field(None, description="ทางเลือกอื่นที่ Optimizer พิจารณา")
+    optimizer_version: Optional[str] = None
+
+
+class PartnerRef(_Row):
+    partner_id: str
+    name: str
+    partner_type: str
+
+
+class PendingTaskListItem(PendingTaskRow):
+    decision: Optional[PendingDecision] = Field(None, description="action ที่เสนอ (ตัวเลขจาก Optimizer)")
+    lot: Optional[TaskLot] = Field(None, description="lot + ตำแหน่งชั้นวาง")
+    lot_expired: bool = Field(..., description="lot หมดอายุแล้วหรือยัง (เทียบกับวันที่ของระบบ / DEMO_DATE)")
+    product: Optional[TaskProduct] = Field(None, description="สินค้า")
+    assessment: Optional[DecisionAssessment] = Field(None, description="ระดับความเสี่ยงของ lot ใช้เป็น Severity")
+    recipe: Optional[TaskRecipeRef] = Field(None, description="ชื่อสูตร (เฉพาะ KITCHEN_REPURPOSE)")
+    partner: Optional[PartnerRef] = Field(None, description="partner (งานที่มี target_partner_id)")
+    reviewer: Optional[StaffRef] = Field(None, description="ผู้จัดการที่อนุมัติ/ปฏิเสธ")
+
+
+class PendingTaskDetail(PendingTaskListItem):
+    decision: Optional[PendingDecisionDetail] = Field(None, description="action ที่เสนอ พร้อมทางเลือกอื่นของ Optimizer")
+    recipe: Optional[DecisionRecipe] = Field(None, description="สูตรที่จะทำ (เฉพาะ KITCHEN_REPURPOSE)")
+    partner: Optional[DecisionPartner] = Field(None, description="partner ที่มารับของ")
+
+
+class ReviewCounts(BaseModel):
+    waiting: int = Field(..., description="จำนวนที่รออนุมัติทั้งหมด")
+    approved: int = Field(..., description="จำนวนที่อนุมัติ (ตั้งแต่ reviewed_from ถ้าส่งมา)")
+    rejected: int = Field(..., description="จำนวนที่ปฏิเสธ (ตั้งแต่ reviewed_from ถ้าส่งมา)")
+
+
+class PendingTaskListResponse(BaseModel):
+    reference_date: date = Field(..., description="วันที่ระบบถือว่าเป็นวันนี้ (เวลาไทย หรือ DEMO_DATE) ใช้เทียบ review_deadline กับเวลาปัจจุบัน")
+    counts: ReviewCounts
+    items: list[PendingTaskListItem] = Field(..., description="เรียงตามเวลาที่เข้าคิว (เก่าก่อน) แล้วตาม lot")
+
+
+class PendingTaskRef(BaseModel):
+    review_id: UUID
+    decision_id: UUID
+    lot_id: str
+
+
+class PendingTaskCreateResponse(BaseModel):
+    created: int = Field(..., description="จำนวน plan ที่เข้าคิว")
+    reviews: list[PendingTaskRef]
+
+
+class ReviewApproveResponse(BaseModel):
+    approved: int = Field(..., description="จำนวน plan ที่อนุมัติ")
+    reviews: list[PendingTaskRow]
+    tasks: list[TaskRow] = Field(..., description="task ที่สร้างให้ staff (มอบหมายแล้ว)")
+    kitchen_bookings: list[KitchenBooking] = Field(..., description="ชั่วโมงครัวที่จองไป ว่าง = ไม่มีงานครัว")
+
+
+class ReviewRejectResponse(BaseModel):
+    rejected: int = Field(..., description="จำนวน plan ที่ปฏิเสธ")
+    reviews: list[PendingTaskRow]
+    lots_reset: list[str] = Field(..., description="lot ที่ไม่เหลือ plan ที่รอหรืออนุมัติในรอบนั้น จึงตั้งกลับเป็น IDLE ให้สแกนใหม่")

@@ -23,34 +23,6 @@ class TaskCreate(BaseModel):
     )
 
 
-class TaskBatchCreate(BaseModel):
-    tasks: list[TaskCreate] = Field(..., min_length=1, description="รายการ task อย่างน้อย 1 รายการ สร้างทั้งหมดหรือไม่สร้างเลย")
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [{
-                "tasks": [
-                    {
-                        "decision_id": "00000000-0000-0000-0000-000000000000", "priority": 2,
-                        "ai_reasoning": "คาดว่าเหลือ 54 ขวดตอนหมดอายุ ลด 30% ช่วงเย็นช่วยเพิ่มยอดขายได้",
-                        "staff_instructions": "ติดป้ายลด 30% ที่นมสด 830ml จำนวน 30 ขวด ชั้น CHILL-A / A-01",
-                        "instruction_steps": [
-                            {"title": "หา lot", "detail": "ไปที่ชั้น CHILL-A / A-01 ตรวจรหัส lot บนฉลากให้ตรงกับ task"},
-                            {"title": "พิมพ์ป้ายราคา 30 ใบ", "detail": "พิมพ์ราคาใหม่จากเครื่องพิมพ์ป้ายแบบพกพา"},
-                            {"title": "ติดป้ายและย้ายไปด้านหน้า", "detail": "ติดทับราคาเดิม แล้ววางขวดที่ลดราคาไว้หน้าชั้น"},
-                        ],
-                    },
-                    {
-                        "decision_id": "00000000-0000-0000-0000-000000000001", "priority": 1,
-                        "ai_reasoning": "นมที่เหลือใช้ทำขนมปังพุดดิ้งได้ 12 ชิ้น ครัวเบเกอรี่ยังว่าง",
-                        "staff_instructions": "นำนม 2 ขวดจาก CHILL-A / A-01 ส่งแผนกเบเกอรี่ก่อน 17:00",
-                    },
-                ]
-            }]
-        }
-    }
-
-
 STAFF_ID_DESC = "รหัส staff ที่กด (ต้องเป็นคนที่ได้รับมอบหมาย task นี้)"
 
 

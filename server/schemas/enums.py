@@ -37,8 +37,16 @@ class LotAIStatus(str, Enum):
 
 
 class DecisionStatus(str, Enum):
-    PENDING = "PENDING"            # ยังไม่มี task
-    TASK_CREATED = "TASK_CREATED"  # LLM สร้าง task แล้ว
+    PENDING = "PENDING"            # LLM ยังไม่ได้เขียน task
+    IN_REVIEW = "IN_REVIEW"        # LLM ส่ง plan แล้ว รอผู้จัดการอนุมัติ (pending_tasks = WAITING)
+    REJECTED = "REJECTED"          # ผู้จัดการปฏิเสธ plan (ไม่มี task)
+    TASK_CREATED = "TASK_CREATED"  # ผู้จัดการอนุมัติแล้ว สร้าง task ให้ staff แล้ว
+
+
+class ReviewStatus(str, Enum):
+    WAITING = "WAITING"    # รอผู้จัดการอนุมัติ (ไม่มีการอนุมัติอัตโนมัติ)
+    APPROVED = "APPROVED"  # อนุมัติแล้ว สร้าง ai_recommended_tasks แล้ว
+    REJECTED = "REJECTED"  # ปฏิเสธแล้ว (มีเหตุผลใน review_note)
 
 
 class StaffRole(str, Enum):

@@ -45,6 +45,8 @@ begin
     raise exception 'demo_lot_baseline is empty, run demo_snapshot() first';
   end if;
 
+  -- plan ที่รอ/ผ่านการอนุมัติ ต้องลบก่อน เพราะชี้ไปที่ task / decision / assessment / lot
+  delete from pending_tasks where true;
   delete from ai_recommended_tasks where true;           get diagnostics v_tasks = row_count;
   delete from optimization_decisions where true;         get diagnostics v_decisions = row_count;
   delete from lot_risk_assessments where true;           get diagnostics v_assessments = row_count;

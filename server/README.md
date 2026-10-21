@@ -9,7 +9,7 @@ Backend for No-Waste-Bro, built with **FastAPI** and using **Supabase** as the d
   (`products`, `inventory_lots`, `product_daily`, `daily_context`, `daily_sales_velocity`,
   `kitchen_capacity_daily`, `lot_risk_assessments`, `forecast_runs`, `lot_shelf_forecasts`,
   `recipe_demand_forecasts`, `optimization_decisions`,
-  `ai_recommended_tasks`, `recipes`, `recipe_ingredients`, `donation_partners`, `staff`,
+  `pending_tasks`, `ai_recommended_tasks`, `recipes`, `recipe_ingredients`, `donation_partners`, `staff`,
   view `optimization_decisions_status`, RPCs `ensure_kitchen_days`,
   `book_kitchen_hours`, `release_kitchen_hours` and `save_risk_run`; the forecast tables and
   `save_risk_run` are created by `scripts/forecast_tables.sql`)
@@ -184,7 +184,7 @@ worker: SCAN (risk_forecaster/run_scan.py) ─► OPTIMIZE (food_waste_optimizer
 | `status` | `QUEUED` → `RUNNING` → `SUCCEEDED` / `FAILED` |
 | `current_step` | `SCAN` / `OPTIMIZE` / `TASKS` |
 | `run_id` | Scan run, shared by assessments, decisions and tasks |
-| `at_risk_lots` / `decisions_created` / `tasks_created` / `failed_batches` | Result of each step |
+| `at_risk_lots` / `decisions_created` / `tasks_created` / `failed_batches` | Result of each step (`tasks_created` = plans sent to the review queue; staff get tasks only after a manager approves them) |
 | `message` | Why a run ended early (no IDLE lots, no HIGH / CRITICAL lots, 0 decisions) |
 | `error` / `steps` | What failed, with the last lines of each step's output |
 
@@ -250,11 +250,20 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | `POST` | `/api/v1/optimization-decisions` | Save the Optimizer's decisions, including every number a task will use (all rows or none) |
 | `GET` | `/api/v1/optimization-decisions?run_id=&status=PENDING` | Decisions with the context the LLM needs to write staff instructions |
 
+### Review Queue
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/pending-tasks` | LLM sends task plans (text + priority + steps + `model_used`) for decisions; every plan starts as `WAITING` (no auto-approval) |
+| `GET` | `/api/v1/pending-tasks?status=&reviewed_from=` | Review queue for the dashboard with tab counts. Default status: `WAITING` |
+| `GET` | `/api/v1/pending-tasks/{review_id}` | Plan detail with decision (incl. Optimizer alternatives), lot, product, risk, recipe, and partner |
+| `POST` | `/api/v1/pending-tasks/approve` | Manager approves one or more plans: creates the staff tasks, assigns staff, and books kitchen hours (all or nothing) |
+| `POST` | `/api/v1/pending-tasks/reject` | Manager rejects one or more plans with a reason (all or nothing) |
+
 ### Tasks
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/api/v1/tasks` | Turn decisions into staff tasks in bulk; assigns each task to a staff member and books kitchen hours for `KITCHEN_REPURPOSE` |
 | `GET` | `/api/v1/tasks?staff_id=&status=` | Task queue for one staff member (mobile), or all tasks without `staff_id` (dashboard). Default status: `PENDING` + `IN_PROGRESS` |
 | `GET` | `/api/v1/tasks/{task_id}` | Task detail with product, lot, assigned staff, assessment, recipe, and partner |
 | `POST` | `/api/v1/tasks/{task_id}/accept` | Assigned staff starts the task: `PENDING` → `IN_PROGRESS` |
@@ -272,8 +281,9 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 4. GET   /ai/optimize-inputs?run_id=<run_id>                      → Optimizer decides the action per lot
 5. POST  /optimization-decisions                                  ← decision_id per decision
 6. GET   /optimization-decisions?status=PENDING                   → LLM (RAG) writes instructions
-7. POST  /tasks                                                   ← decision_id + text + priority only
+7. POST  /pending-tasks                                           ← decision_id + text + priority + model_used (plans → WAITING)
 8. PATCH /inventory-lots/ai-status   {"ai_status": "CHECKED"}     mark the lots as done
+9. POST  /pending-tasks/approve | /reject                         ← manager (dashboard): approve creates the tasks
 ```
 
 | Step | Caller | Sends | Gets back |
@@ -283,13 +293,15 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | `optimize-inputs` | Optimizer | `run_id` (optional, latest run if omitted), `days_ahead` | `reference_date`, lots with risk `HIGH`/`CRITICAL` (each with its `shelf` curve), `recipe_demand` of the run (sorted by expected revenue), product rules, active recipes with ingredients, kitchen capacity, active donation partners, and `ingredient_stock` (usable, unexpired stock of every recipe ingredient, earliest expiry first) |
 | `optimization-decisions` (POST) | Optimizer | One or more decisions per assessment, with all numbers | `decision_id` of each decision |
 | `optimization-decisions` (GET) | LLM | `run_id` (optional, latest), `status=PENDING` | Decisions with assessment, lot (incl. shelf location), product, recipe, and partner context |
-| `tasks` | LLM | `decision_id`, `priority`, `ai_reasoning`, `staff_instructions`, `instruction_steps` | Created tasks and the kitchen hours that were booked |
+| `pending-tasks` | LLM | `decision_id`, `priority`, `ai_reasoning`, `staff_instructions`, `instruction_steps`, `model_used` | `review_id` of each plan (status `WAITING`) |
+| `pending-tasks/approve` | Manager | `review_ids`, `manager_id`, optional `review_note` | Created tasks (already assigned) and the kitchen hours that were booked |
+| `pending-tasks/reject` | Manager | `review_ids`, `manager_id`, `review_note` (required) | Rejected plans and lots reset to `IDLE` |
 
-Each lot is scanned once: `scan-inputs` only returns `IDLE` lots, and lots never return to `IDLE` once they are `PROCESSING` or `CHECKED`. Lock the returned lots right after step 1.
+Each lot is scanned once: `scan-inputs` only returns `IDLE` lots. Lock the returned lots right after step 1. The only way back to `IDLE` is a manager rejecting every plan of a lot in that run (see [Review Queue and Task Rules](#review-queue-and-task-rules)).
 
 `reference_date` is today in Thailand time, or `DEMO_DATE` if set in `.env`.
 
-A decision's `status` is computed by the `optimization_decisions_status` view: `PENDING` until a task is created from it, then `TASK_CREATED`. Each decision can become exactly one task (enforced by a unique index).
+A decision's `status` is computed by the `optimization_decisions_status` view: `PENDING` until the LLM sends a plan, `IN_REVIEW` while the plan waits for a manager, then `TASK_CREATED` (approved) or `REJECTED`. Each decision can have exactly one plan and one task (both enforced by unique indexes).
 
 ## Decision Rules
 
@@ -316,9 +328,23 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 - `KITCHEN_REPURPOSE`: the recipe must be active, and the lot's product must be one of its ingredients.
 - `DONATE`, `ANIMAL_FEED`, `COMPOST`, `ANAEROBIC_DIGESTION`, `LANDFILL`: the partner must be active, have the partner type that matches the action, accept the product's category, and the lot must have at least `min_days_before_expiry` days left (skipped when it is null).
 
-## Task Rules
+## Review Queue and Task Rules
 
-`POST /api/v1/tasks` accepts only `decision_id` (required), `priority` (1–5, default 3), `ai_reasoning`, `staff_instructions`, and `instruction_steps` (optional list of 1–8 `{title, detail}` objects, shown step by step in the mobile app's "How to do it" section; when it is missing the app shows `staff_instructions` instead). Any other field is ignored.
+**There is no auto-approval.** The LLM never creates staff tasks directly: it sends plans to `pending_tasks`, and a task is created only when a manager approves the plan in the dashboard.
+
+`POST /api/v1/pending-tasks` accepts only `decision_id` (required), `priority` (1–5, default 3), `ai_reasoning`, `staff_instructions`, `instruction_steps` (optional list of 1–8 `{title, detail}` objects, shown step by step in the mobile app's "How to do it" section; when it is missing the app shows `staff_instructions` instead), and `model_used` (the model that wrote the text, or `TEMPLATE` when the LLM failed validation). Any other field is ignored.
+
+- The decision must still be `PENDING`. All plans in one request are saved together or not at all.
+- The server fills in `run_id`, `assessment_id`, `lot_id`, and `review_deadline` (the decision's `due_by`, or 22:00 Thailand time on the lot's expiry day when there is no `due_by`, as for `MARKDOWN`).
+- Plans that nobody reviews stay `WAITING`; there is no expiry.
+
+**Approve / reject** (`POST /pending-tasks/approve`, `POST /pending-tasks/reject`)
+
+- `manager_id` must be an active `MANAGER`; every `review_id` must still be `WAITING`. Several plans (for example every plan of one lot) can be sent in one request, all or nothing.
+- Approve creates the tasks with the rules below, then sets each plan to `APPROVED` with `task_id`, `reviewed_by`, and `reviewed_at`. If a kitchen is full (`409`) or any step fails, the new tasks are deleted, the kitchen hours are released, and the plans stay `WAITING`.
+- Reject requires `review_note`. No task is created. If a lot has no other plan waiting or approved in that run and the lot is `CHECKED`, it goes back to `IDLE` so the next pipeline run can plan it again.
+
+The rules below apply when a plan is approved.
 
 **Copied by the server**
 
@@ -327,7 +353,7 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 
 **Automatic assignment**
 
-- Each task is assigned when it is created, in the same insert, so the first Realtime event already has `assigned_staff_id`.
+- Each task is assigned when it is created (on approval), in the same insert, so the first Realtime event already has `assigned_staff_id`.
 - Candidates are active `STAFF` whose `responsible_categories` include the product's category.
 - With several candidates, the one with the fewest open tasks (`PENDING` + `IN_PROGRESS`) wins; ties go to the lowest `staff_id`. Tasks assigned earlier in the same request count toward the workload.
 - If nobody covers the category, `assigned_staff_id` is `null` and the manager handles it.
@@ -337,8 +363,8 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 - Hours: `recipe.estimated_prep_time_mins × batch_count ÷ 60`, booked in the recipe's `department_id`.
 - The booking date is the date of the decision's `due_by` in Thailand time.
 - Hours for tasks that use the same kitchen on the same day are added together and booked once.
-- Kitchen hours are booked when the task is created, not when the decision is saved.
-- If any kitchen is full, or saving the tasks fails, every booking made by this request is released and no task is created.
+- Kitchen hours are booked when the plan is approved, not when the decision or the plan is saved.
+- If any kitchen is full, or saving the tasks fails, every booking made by this approval is released and no task is created.
 
 ## Task Lifecycle
 
@@ -383,15 +409,17 @@ supabase.channel('my-tasks')
 
 Use the event only as a signal; the API applies the queue's filtering and ordering.
 
+`pending_tasks` is also in the publication with an `anon` read policy, so the dashboard can refresh the review queue (`GET /api/v1/pending-tasks`) when a plan arrives or is reviewed.
+
 ## Error Responses
 
 | Status | When |
 | --- | --- |
 | `400` | The database rejected the write, or kitchen hours exceed capacity on `POST /kitchen-bookings` |
-| `403` | On task actions, `staff_id` is not the assigned staff member |
-| `404` | Unknown `staff_id` or `task_id` on task routes, lot not found on `PATCH /inventory-lots/{lot_id}`, none of the `lot_ids` found on `PATCH /inventory-lots/ai-status`, or unknown `department_id` on `POST /kitchen-bookings` |
-| `409` | Existing `run_id` or duplicate `lot_id` in the same `run_id` on `POST /risk-assessments`; on `POST /tasks`, a kitchen is full or a decision already has a task; on task actions, the task is not in the required status |
-| `422` | Request body fails validation, or a decision fails the checks in [Decision Rules](#decision-rules); on `POST /tasks`, an unknown or repeated `decision_id`; on `complete`, a quantity out of range, not enough stock in the lot, or missing recipe ingredients |
+| `403` | On task actions, `staff_id` is not the assigned staff member; on review actions, `manager_id` is not an active `MANAGER` |
+| `404` | Unknown `staff_id` or `task_id` on task routes, unknown `manager_id` or `review_id` on review routes, lot not found on `PATCH /inventory-lots/{lot_id}`, none of the `lot_ids` found on `PATCH /inventory-lots/ai-status`, or unknown `department_id` on `POST /kitchen-bookings` |
+| `409` | Existing `run_id` or duplicate `lot_id` in the same `run_id` on `POST /risk-assessments`; on `POST /pending-tasks`, a decision is no longer `PENDING`; on `POST /pending-tasks/approve`, a kitchen is full or a plan is no longer `WAITING`; on task actions, the task is not in the required status |
+| `422` | Request body fails validation, or a decision fails the checks in [Decision Rules](#decision-rules); on `POST /pending-tasks`, an unknown or repeated `decision_id`; on review actions, a repeated `review_id`; on `complete`, a quantity out of range, not enough stock in the lot, or missing recipe ingredients |
 
 `PATCH /inventory-lots/ai-status` returns lot IDs that do not exist in `not_found` instead of failing, as long as at least one lot was updated.
 
@@ -431,9 +459,9 @@ curl -X POST $B/optimization-decisions -H "Content-Type: application/json" -d '{
 # 4) Decisions waiting for the LLM
 curl "$B/optimization-decisions?status=PENDING"
 
-# 5) Create tasks (books BAKERY_DEPT for 0.83 h)
-curl -X POST $B/tasks -H "Content-Type: application/json" -d '{"tasks": [
-  {"decision_id": "<markdown decision_id>", "priority": 2,
+# 5) Send the LLM's plans to the review queue → keep review_id
+curl -X POST $B/pending-tasks -H "Content-Type: application/json" -d '{"tasks": [
+  {"decision_id": "<markdown decision_id>", "priority": 2, "model_used": "amazon.nova-lite-v1:0",
    "staff_instructions": "Put 30% off labels on 30 bottles at CHILL-A / A-01",
    "instruction_steps": [
      {"title": "Find the lot", "detail": "Go to CHILL-A / A-01 and check the lot code on the label"},
@@ -442,6 +470,10 @@ curl -X POST $B/tasks -H "Content-Type: application/json" -d '{"tasks": [
   {"decision_id": "<kitchen decision_id>", "priority": 1,
    "staff_instructions": "Bring 2 bottles from CHILL-A / A-01 to the bakery before 17:00"}
 ]}'
+
+# 5b) Manager approves → tasks are created and assigned (books BAKERY_DEPT for 0.83 h)
+curl -X POST $B/pending-tasks/approve -H "Content-Type: application/json" \
+  -d '{"review_ids": ["<review_id>", "<review_id>"], "manager_id": "STF-001"}'
 
 # 6) Mark lots as checked
 curl -X PATCH $B/inventory-lots/ai-status -H "Content-Type: application/json" \
@@ -468,20 +500,23 @@ server/
 │   ├── ai.py                   # scan-inputs, optimize-inputs
 │   ├── risk_assessments.py
 │   ├── optimization_decisions.py
+│   ├── pending_tasks.py        # Review queue: LLM plans → manager approve / reject
 │   ├── tasks.py
 │   └── staff.py
 ├── schemas/                    # Pydantic request and response models
-│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus, DecisionStatus, StaffRole, TaskStatus (match DB)
+│   ├── enums.py                # ActionType, RiskLevel, LotAIStatus, DecisionStatus, ReviewStatus, StaffRole, TaskStatus (match DB)
 │   ├── inventory_lot.py
 │   ├── kitchen.py
 │   ├── risk_assessment.py
 │   ├── decision.py             # Decision rules per action_type
-│   ├── task.py                 # Task creation (decision_id + text) and accept / reject / complete bodies
+│   ├── task.py                 # Task text (decision_id + text) and accept / reject / complete bodies
+│   ├── pending_task.py         # Plans from the LLM (+ model_used) and approve / reject bodies
 │   └── responses.py            # Response shapes shown in Swagger
 ├── services/                   # Business logic shared by routers
 │   ├── kitchen.py              # department_exists, book_hours, release_hours
 │   ├── decisions.py            # Decision checks against real data, listing with context
-│   ├── tasks.py                # Task creation (auto-assign, kitchen booking, rollback), task queue and detail
+│   ├── pending_tasks.py        # Review queue: save plans, list with context, approve (creates tasks) / reject (resets lots)
+│   ├── tasks.py                # Task creation on approval (auto-assign, kitchen booking, rollback), task queue and detail
 │   └── task_actions.py         # Accept, reject (releases kitchen hours), complete (calls the complete_task DB function)
 └── requirements.txt
 ```
@@ -549,19 +584,20 @@ python -m scripts.export_training_data               # export training CSVs for 
 
 | Command | What it does |
 |---|---|
-| `reset` | Deletes **all** tasks, decisions, risk assessments and forecast runs (with their shelf curves and recipe demand); deletes lots that are not in the baseline (markdown splits, kitchen output, the donation lot); restores the baseline lots (quantity, price, `ai_status = IDLE`, dates shifted to the demo day); releases every kitchen booking; restarts lot numbering after the baseline |
+| `reset` | Deletes **all** review-queue plans, tasks, decisions, risk assessments and forecast runs (with their shelf curves and recipe demand); deletes lots that are not in the baseline (markdown splits, kitchen output, the donation lot); restores the baseline lots (quantity, price, `ai_status = IDLE`, dates shifted to the demo day); releases every kitchen booking; restarts lot numbering after the baseline |
 | `seed` | Creates 8 tasks for STF-002/003/004 from real sales velocity: markdown, kitchen, one completed markdown, and one donation to `P-DON-01` on its next pickup day. Due times are fixed clock times on the demo day (15:30–19:00) |
 | `snapshot` | Replaces the baseline with every lot currently in `inventory_lots` |
 
 The same functions can be called from the SQL Editor: `select demo_reset(); select demo_seed();`
 
 Notes:
-- `reset` also deletes tasks created by the real AI pipeline.
+- `reset` also deletes plans and tasks created by the real AI pipeline.
+- `seed` inserts its tasks directly (already approved), so the mobile app has work at once; it does not add plans to the review queue.
 - `seed` is tied to LOT-000001 to LOT-000010. If new mock data changes these lots, update the task list in `demo_seed`.
 - On demo day, remove `DEMO_DATE` from `.env` (or set it to the demo day) so task completion uses the same date as the seeded data.
 
 ## Known Limitations
 
-- Lots are scanned only once by design (prototype): nothing resets `ai_status` back to `IDLE`.
+- Lots are scanned only once by design (prototype): only rejecting every plan of a lot resets `ai_status` back to `IDLE`.
 - When a kitchen task is rejected, released hours are recomputed per task and rounded to 0.01 h, so a booking that summed several tasks can leave up to 0.01 h booked per task.
-- The `anon` read policy on `ai_recommended_tasks` lets anyone with the anon key read tasks. Acceptable for a prototype without login.
+- The `anon` read policies on `ai_recommended_tasks` and `pending_tasks` let anyone with the anon key read tasks and plans. Acceptable for a prototype without login.

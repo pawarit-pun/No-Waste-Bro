@@ -57,7 +57,7 @@ def get_pipeline_runs(limit: int = Query(10, ge=1, le=100, description="จำ�
 | `current_step` | SCAN / OPTIMIZE / TASKS (ขั้นที่กำลังทำ หรือขั้นสุดท้ายที่ทำ) |
 | `run_id` | รอบสแกน ใช้กับ `GET /optimization-decisions?run_id=` |
 | `at_risk_lots` / `decisions_created` / `tasks_created` | ผลของแต่ละขั้น |
-| `failed_batches` | batch ของ `POST /tasks` ที่ไม่ผ่าน (decision ยังเป็น PENDING ให้ผู้จัดการดู) |
+| `failed_batches` | batch ของ `POST /pending-tasks` ที่ไม่ผ่าน (decision ยังเป็น PENDING) |
 | `steps` | สรุปและ log ท้าย ๆ ของแต่ละขั้น ใช้ดูว่าพังตรงไหน |
 """,
     responses={404: {"description": "ไม่พบรอบนี้"}},

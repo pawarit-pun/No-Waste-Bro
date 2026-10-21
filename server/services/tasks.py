@@ -28,7 +28,7 @@ def _booking_date(due_by: str) -> date:
     return dt.astimezone(BKK).date()
 
 
-def _load_decisions(tasks: list[TaskCreate]) -> dict[str, dict]:
+def _load_decisions(tasks: list[TaskCreate], allowed_statuses: tuple[str, ...]) -> dict[str, dict]:
     ids = [str(t.decision_id) for t in tasks]
     if len(set(ids)) != len(ids):
         raise HTTPException(422, "Each decision_id can appear only once per request")
@@ -38,8 +38,10 @@ def _load_decisions(tasks: list[TaskCreate]) -> dict[str, dict]:
         d = decisions.get(decision_id)
         if d is None:
             raise HTTPException(422, f"tasks[{i}]: decision_id '{decision_id}' not found")
-        if d["status"] != DecisionStatus.PENDING.value:
-            raise HTTPException(409, f"tasks[{i}]: decision '{decision_id}' already has task '{d['task_id']}'")
+        if d["status"] not in allowed_statuses:
+            if d.get("task_id"):
+                raise HTTPException(409, f"tasks[{i}]: decision '{decision_id}' already has task '{d['task_id']}'")
+            raise HTTPException(409, f"tasks[{i}]: decision '{decision_id}' is {d['status']}")
     return decisions
 
 
@@ -116,10 +118,12 @@ def _release_all(bookings: list[dict]) -> None:
         release_hours(b["department_id"], date.fromisoformat(b["date"]), b["hours"])
 
 
-def create_tasks(tasks: list[TaskCreate]) -> dict:
+def insert_tasks(tasks: list[TaskCreate],
+                 allowed_statuses: tuple[str, ...] = (DecisionStatus.IN_REVIEW.value,)) -> dict:
     """เปลี่ยน decision เป็น task ถ้ามี task ครัวจะจองชั่วโมงครัวให้ก่อน
-    ถ้าจองไม่ได้หรือ insert ไม่สำเร็จ จะคืนชั่วโมงที่จองไปแล้วทั้งหมด และไม่มี task ไหนถูกสร้าง"""
-    decisions = _load_decisions(tasks)
+    ถ้าจองไม่ได้หรือ insert ไม่สำเร็จ จะคืนชั่วโมงที่จองไปแล้วทั้งหมด และไม่มี task ไหนถูกสร้าง
+    เรียกจากการอนุมัติใน Review queue เท่านั้น (decision ต้องเป็น IN_REVIEW) ไม่มี route ให้ LLM สร้าง task ตรงๆ แล้ว"""
+    decisions = _load_decisions(tasks, allowed_statuses)
     rows = _build_rows(tasks, decisions)
     _assign_staff(rows)   # ต้องอยู่ก่อน insert เพื่อให้ event Realtime แรกมี assigned_staff_id แล้ว
     hours_needed = _kitchen_hours_needed(list(decisions.values()))
@@ -140,6 +144,13 @@ def create_tasks(tasks: list[TaskCreate]) -> dict:
         raise HTTPException(400, f"Failed to create tasks: {e.message}")
 
     return {"created": len(res.data), "tasks": res.data, "kitchen_bookings": booked}
+
+
+def delete_tasks(task_ids: list[str], bookings: list[dict]) -> None:
+    """ย้อน insert_tasks: ลบ task ที่เพิ่งสร้างแล้วคืนชั่วโมงครัว (ใช้ตอนอนุมัติไม่สำเร็จครึ่งทาง)"""
+    if task_ids:
+        supabase.table("ai_recommended_tasks").delete().in_("task_id", task_ids).execute()
+    _release_all(bookings)
 
 
 # ---------- อ่าน task (คิวงานของ staff / ภาพรวมของ manager) ----------

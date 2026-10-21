@@ -44,7 +44,7 @@ router = APIRouter(prefix="/optimization-decisions", tags=["Optimization Decisio
   รับ category ของสินค้า และ lot ต้องเหลืออายุ ≥ `min_days_before_expiry` (ถ้าเป็น null ไม่เช็ค)
 
 1 assessment มีได้หลาย decision (เช่น ลดราคาบางส่วน + ส่งครัวบางส่วน)
-**ยังไม่จองครัวในขั้นนี้** จะจองตอน `POST /tasks`
+**ยังไม่จองครัวในขั้นนี้** จะจองตอนผู้จัดการอนุมัติ plan (`POST /pending-tasks/approve`)
 """,
     responses={
         400: {"description": "DB ปฏิเสธการบันทึก"},
@@ -73,11 +73,12 @@ def create_optimization_decisions(payload: DecisionBatchCreate):
 | `partner` | ชื่อ partner, ประเภท, วัน/เวลารับของ, ผู้ติดต่อ (งานที่มี `target_partner_id`) |
 
 - ไม่ส่ง `run_id` = รอบล่าสุดที่มี decision
-- `status=PENDING` = เฉพาะที่ยังไม่มี task (ใช้ค่านี้ตอนส่งให้ LLM)
+- `status=PENDING` = เฉพาะที่ LLM ยังไม่ได้เขียน plan (ใช้ค่านี้ตอนส่งให้ LLM)
+- `IN_REVIEW` = ส่ง plan เข้า `pending_tasks` แล้ว รอผู้จัดการ, `REJECTED` = ผู้จัดการปฏิเสธ, `TASK_CREATED` = อนุมัติและสร้าง task แล้ว
 """,
 )
 def get_optimization_decisions(
     run_id: Optional[UUID] = Query(None, description="รอบสแกน ไม่ส่ง = รอบล่าสุดที่มี decision"),
-    status: Optional[DecisionStatus] = Query(None, description="PENDING = ยังไม่มี task, TASK_CREATED = มี task แล้ว, ไม่ส่ง = ทั้งหมด"),
+    status: Optional[DecisionStatus] = Query(None, description="PENDING = LLM ยังไม่เขียน, IN_REVIEW = รออนุมัติ, REJECTED = ถูกปฏิเสธ, TASK_CREATED = มี task แล้ว, ไม่ส่ง = ทั้งหมด"),
 ):
     return list_decisions(str(run_id) if run_id else None, status)

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class PipelineStep(str, Enum):
     SCAN = "SCAN"          # 1) Risk Scanner + Forecaster → POST /risk-assessments
     OPTIMIZE = "OPTIMIZE"  # 2) Optimizer → POST /optimization-decisions
-    TASKS = "TASKS"        # 3) LLM Task Agent → POST /tasks
+    TASKS = "TASKS"        # 3) LLM Task Agent → POST /pending-tasks (รอผู้จัดการอนุมัติ)
 
 
 class PipelineStatus(str, Enum):
@@ -41,7 +41,7 @@ class PipelineRunUpdate(BaseModel):
     at_risk_lots: Optional[int] = Field(None, ge=0, description="lot HIGH / CRITICAL ที่ส่งต่อ Optimizer")
     decisions_created: Optional[int] = Field(None, ge=0)
     tasks_created: Optional[int] = Field(None, ge=0)
-    failed_batches: Optional[int] = Field(None, ge=0, description="batch ของ POST /tasks ที่ไม่ผ่าน (เช่น ครัวเต็ม)")
+    failed_batches: Optional[int] = Field(None, ge=0, description="batch ของ POST /pending-tasks ที่ไม่ผ่าน")
     message: Optional[str] = None
     error: Optional[str] = None
     steps: Optional[dict[str, Any]] = Field(None, description="สรุปผลและ log ท้าย ๆ ของแต่ละขั้น (แทนที่ทั้งก้อน)")

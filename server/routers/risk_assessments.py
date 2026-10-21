@@ -28,7 +28,7 @@ router = APIRouter(prefix="/risk-assessments", tags=["Risk Assessments"])
 - ส่งได้ทุก risk level แต่ `optimize-inputs` จะส่งต่อให้ Optimizer เฉพาะ HIGH / CRITICAL
 - `shelf`, `recipe_demand`, `sellable_hours`, `reference_date`, `run_metrics` ไม่บังคับ (payload แบบเดิมยังใช้ได้)
 
-**ต้องเก็บไว้ใช้ต่อ:** `run_id` (ส่งให้ `GET /ai/optimize-inputs`) และ `assessment_id` ของแต่ละ lot (ใส่ใน `POST /tasks`)
+**ต้องเก็บไว้ใช้ต่อ:** `run_id` (ส่งให้ `GET /ai/optimize-inputs`) และ `assessment_id` ของแต่ละ lot (ผูกกับ decision และ task)
 """,
     responses={
         400: {"description": "DB ปฏิเสธการบันทึกด้วยเหตุผลอื่น"},
