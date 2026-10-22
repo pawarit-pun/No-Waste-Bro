@@ -1,0 +1,591 @@
+{
+ "date": "2026-10-16",
+ "source": "demo",
+ "source_text": "demo: inventory_lots_demo.csv (ชุดเดียวกับ Supabase) · ลูกค้า = latent_demand เฉลี่ยวันศ 4 สัปดาห์ก่อน (ไม่มีข้อมูลจริงของวันนั้น) · Forecaster ตัวจริง",
+ "lots": 27,
+ "units": 1320,
+ "approve_rate": 1.0,
+ "policy1": {
+  "name": "policy1",
+  "net_profit": -516.77,
+  "waste_loss": 3432.96,
+  "revenue": 8696.0,
+  "revenue_markdown": 0,
+  "kitchen_value": 0,
+  "buyback": 0.0,
+  "trip_fee": 728.62,
+  "handling": 35.98,
+  "cogs_total": 8448.16,
+  "cogs_waste": 2668.35,
+  "units": {
+   "SELL_REGULAR": 175,
+   "LANDFILL": 78
+  },
+  "sold_units": 175,
+  "waste_units": 78,
+  "kg": {
+   "LANDFILL": 31.29
+  },
+  "waste_kg": 31.29,
+  "landfill_kg": 31.29,
+  "calls": {
+   "P-LDF-01": 1
+  },
+  "calls_below_min": 0,
+  "daily": [],
+  "notes": {},
+  "net_profit_cash": -516.77,
+  "expired_left_cost": 0,
+  "ending_units": 1067,
+  "ending_cost": 32141.8,
+  "ending_retail": 45762.0,
+  "ending_markdown_units": 0,
+  "expired_left_units": 0,
+  "expired_left_lots": 0,
+  "waiting_kg": 0
+ },
+ "policy2": {
+  "name": "policy2_ต่ำ",
+  "net_profit": -860.97,
+  "waste_loss": 1846.97,
+  "revenue": 7601.96,
+  "revenue_markdown": 7601.96,
+  "kitchen_value": 0,
+  "buyback": 0.0,
+  "trip_fee": 728.62,
+  "handling": 9.82,
+  "cogs_total": 7724.48,
+  "cogs_waste": 1108.52,
+  "units": {
+   "MARKDOWN": 201,
+   "LANDFILL": 28
+  },
+  "sold_units": 201,
+  "waste_units": 28,
+  "kg": {
+   "LANDFILL": 8.54
+  },
+  "waste_kg": 8.54,
+  "landfill_kg": 8.54,
+  "calls": {
+   "P-LDF-01": 1
+  },
+  "calls_below_min": 0,
+  "daily": [],
+  "notes": {},
+  "net_profit_cash": -860.97,
+  "expired_left_cost": 0,
+  "ending_units": 1091,
+  "ending_cost": 32865.48,
+  "ending_retail": 46932.0,
+  "ending_markdown_units": 521,
+  "expired_left_units": 0,
+  "expired_left_lots": 0,
+  "waiting_kg": 0
+ },
+ "policy2_variant": "ต่ำ",
+ "policy2_variants": {
+  "ต่ำ": {
+   "name": "policy2_ต่ำ",
+   "net_profit": -860.97,
+   "waste_loss": 1846.97,
+   "revenue": 7601.96,
+   "revenue_markdown": 7601.96,
+   "kitchen_value": 0,
+   "buyback": 0.0,
+   "trip_fee": 728.62,
+   "handling": 9.82,
+   "cogs_total": 7724.48,
+   "cogs_waste": 1108.52,
+   "units": {
+    "MARKDOWN": 201,
+    "LANDFILL": 28
+   },
+   "sold_units": 201,
+   "waste_units": 28,
+   "kg": {
+    "LANDFILL": 8.54
+   },
+   "waste_kg": 8.54,
+   "landfill_kg": 8.54,
+   "calls": {
+    "P-LDF-01": 1
+   },
+   "calls_below_min": 0,
+   "daily": [],
+   "notes": {},
+   "net_profit_cash": -860.97,
+   "expired_left_cost": 0,
+   "ending_units": 1091,
+   "ending_cost": 32865.48,
+   "ending_retail": 46932.0,
+   "ending_markdown_units": 521,
+   "expired_left_units": 0,
+   "expired_left_lots": 0,
+   "waiting_kg": 0
+  },
+  "กลาง": {
+   "name": "policy2_กลาง",
+   "net_profit": -1532.78,
+   "waste_loss": 1742.43,
+   "revenue": 7110.8,
+   "revenue_markdown": 7110.8,
+   "kitchen_value": 0,
+   "buyback": 0.0,
+   "trip_fee": 728.62,
+   "handling": 9.25,
+   "cogs_total": 7905.71,
+   "cogs_waste": 1004.56,
+   "units": {
+    "MARKDOWN": 211,
+    "LANDFILL": 26
+   },
+   "sold_units": 211,
+   "waste_units": 26,
+   "kg": {
+    "LANDFILL": 8.04
+   },
+   "waste_kg": 8.04,
+   "landfill_kg": 8.04,
+   "calls": {
+    "P-LDF-01": 1
+   },
+   "calls_below_min": 0,
+   "daily": [],
+   "notes": {},
+   "net_profit_cash": -1532.78,
+   "expired_left_cost": 0,
+   "ending_units": 1083,
+   "ending_cost": 32684.25,
+   "ending_retail": 46677.25,
+   "ending_markdown_units": 1083,
+   "expired_left_units": 0,
+   "expired_left_lots": 0,
+   "waiting_kg": 0
+  },
+  "สูง": {
+   "name": "policy2_สูง",
+   "net_profit": -2217.78,
+   "waste_loss": 1637.9,
+   "revenue": 6659.66,
+   "revenue_markdown": 6659.66,
+   "kitchen_value": 0,
+   "buyback": 0.0,
+   "trip_fee": 728.62,
+   "handling": 8.67,
+   "cogs_total": 8140.14,
+   "cogs_waste": 900.6,
+   "units": {
+    "MARKDOWN": 221,
+    "LANDFILL": 24
+   },
+   "sold_units": 221,
+   "waste_units": 24,
+   "kg": {
+    "LANDFILL": 7.54
+   },
+   "waste_kg": 7.54,
+   "landfill_kg": 7.54,
+   "calls": {
+    "P-LDF-01": 1
+   },
+   "calls_below_min": 0,
+   "daily": [],
+   "notes": {},
+   "net_profit_cash": -2217.78,
+   "expired_left_cost": 0,
+   "ending_units": 1075,
+   "ending_cost": 32449.82,
+   "ending_retail": 46278.5,
+   "ending_markdown_units": 1075,
+   "expired_left_units": 0,
+   "expired_left_lots": 0,
+   "waiting_kg": 0
+  }
+ },
+ "policy3": {
+  "name": "main",
+  "net_profit": 715.58,
+  "waste_loss": 989.04,
+  "revenue": 8345.1,
+  "revenue_markdown": 3927.6,
+  "kitchen_value": 2340.23,
+  "buyback": 0.0,
+  "trip_fee": 728.62,
+  "handling": 4.42,
+  "cogs_total": 7625.64,
+  "cogs_waste": 256.0,
+  "units": {
+   "LANDFILL": 8,
+   "KITCHEN": 30,
+   "SELL_REGULAR": 108,
+   "MARKDOWN": 76
+  },
+  "sold_units": 184,
+  "waste_units": 8,
+  "kg": {
+   "LANDFILL": 3.84
+  },
+  "waste_kg": 3.84,
+  "landfill_kg": 3.84,
+  "calls": {
+   "P-LDF-01": 1
+  },
+  "calls_below_min": 0,
+  "daily": [],
+  "notes": {
+   "kitchen_regular_stock_units": 7,
+   "lots_scanned": 27,
+   "lots_forwarded": 13,
+   "violation_days": 0,
+   "decision_LANDFILL": 1,
+   "tasks_approved": 14,
+   "partner_tasks": 1,
+   "partner_tasks_due_today": 1,
+   "decision_MARKDOWN": 9,
+   "decision_KITCHEN_REPURPOSE": 4,
+   "deferral_days": 12,
+   "stuck_processing": 0,
+   "expired_overnight_provisional": 4,
+   "expired_unit_days": 51,
+   "expired_overnight_not_forwarded": 2
+  },
+  "net_profit_cash": 2326.65,
+  "expired_left_cost": 1611.07,
+  "ending_units": 1091,
+  "ending_cost": 32803.27,
+  "ending_retail": 47379.25,
+  "ending_markdown_units": 208,
+  "expired_left_units": 51,
+  "expired_left_lots": 6,
+  "waiting_kg": 0,
+  "status_after_optimize": {
+   "IDLE": 17,
+   "CHECKED": 10
+  }
+ },
+ "optimizer": {
+  "levels": {
+   "CRITICAL": 3,
+   "HIGH": 10,
+   "MEDIUM": 5,
+   "LOW": 9
+  },
+  "decisions": [
+   {
+    "lot_id": "LOT-000013",
+    "name": "ขนมปังแซนวิช 480g",
+    "risk": "CRITICAL",
+    "days_to_expiry": -1,
+    "action": "LANDFILL",
+    "quantity": 8,
+    "lot_quantity": 8,
+    "price": null,
+    "partner": "P-LDF-01",
+    "due_by": "2026-10-16T22:00:00+07:00",
+    "expected_thb": -989.04
+   },
+   {
+    "lot_id": "LOT-000010",
+    "name": "เค้กกล้วยหอม 700g",
+    "risk": "CRITICAL",
+    "days_to_expiry": 1,
+    "action": "MARKDOWN",
+    "quantity": 12,
+    "lot_quantity": 22,
+    "price": 143.2,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": 436.38
+   },
+   {
+    "lot_id": "LOT-000008",
+    "name": "ผักกาดหอม 250g",
+    "risk": "HIGH",
+    "days_to_expiry": 2,
+    "action": "MARKDOWN",
+    "quantity": 45,
+    "lot_quantity": 90,
+    "price": 19.0,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": -18.51
+   },
+   {
+    "lot_id": "LOT-000007",
+    "name": "กล้วยหอม 1kg",
+    "risk": "HIGH",
+    "days_to_expiry": 1,
+    "action": "MARKDOWN",
+    "quantity": 39,
+    "lot_quantity": 50,
+    "price": 28.0,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": -127.82
+   },
+   {
+    "lot_id": "LOT-000006",
+    "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+    "risk": "CRITICAL",
+    "days_to_expiry": 0,
+    "action": "KITCHEN_REPURPOSE",
+    "quantity": 6,
+    "lot_quantity": 20,
+    "price": null,
+    "partner": null,
+    "due_by": "2026-10-16T10:00:00+07:00",
+    "expected_thb": 302.19
+   },
+   {
+    "lot_id": "LOT-000006",
+    "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+    "risk": "CRITICAL",
+    "days_to_expiry": 0,
+    "action": "MARKDOWN",
+    "quantity": 8,
+    "lot_quantity": 20,
+    "price": 92.4,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": 32.81
+   },
+   {
+    "lot_id": "LOT-000004",
+    "name": "อกไก่สด 500g",
+    "risk": "HIGH",
+    "days_to_expiry": 1,
+    "action": "KITCHEN_REPURPOSE",
+    "quantity": 2,
+    "lot_quantity": 58,
+    "price": null,
+    "partner": null,
+    "due_by": "2026-10-16T09:15:00+07:00",
+    "expected_thb": 24.14
+   },
+   {
+    "lot_id": "LOT-000004",
+    "name": "อกไก่สด 500g",
+    "risk": "HIGH",
+    "days_to_expiry": 1,
+    "action": "MARKDOWN",
+    "quantity": 45,
+    "lot_quantity": 58,
+    "price": 35.6,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": -5.95
+   },
+   {
+    "lot_id": "LOT-000005",
+    "name": "เนื้อวัวสันนอก สเต็ก 500g",
+    "risk": "HIGH",
+    "days_to_expiry": 1,
+    "action": "KITCHEN_REPURPOSE",
+    "quantity": 4,
+    "lot_quantity": 24,
+    "price": null,
+    "partner": null,
+    "due_by": "2026-10-16T09:30:00+07:00",
+    "expected_thb": 420.16
+   },
+   {
+    "lot_id": "LOT-000005",
+    "name": "เนื้อวัวสันนอก สเต็ก 500g",
+    "risk": "HIGH",
+    "days_to_expiry": 1,
+    "action": "MARKDOWN",
+    "quantity": 13,
+    "lot_quantity": 24,
+    "price": 104.0,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": 151.06
+   },
+   {
+    "lot_id": "LOT-000020",
+    "name": "กล้วยหอม 1kg",
+    "risk": "HIGH",
+    "days_to_expiry": 4,
+    "action": "KITCHEN_REPURPOSE",
+    "quantity": 2,
+    "lot_quantity": 205,
+    "price": null,
+    "partner": null,
+    "due_by": "2026-10-16T09:10:00+07:00",
+    "expected_thb": 398.78
+   },
+   {
+    "lot_id": "LOT-000020",
+    "name": "กล้วยหอม 1kg",
+    "risk": "HIGH",
+    "days_to_expiry": 4,
+    "action": "MARKDOWN",
+    "quantity": 100,
+    "lot_quantity": 205,
+    "price": 28.0,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": 104.44
+   },
+   {
+    "lot_id": "LOT-000021",
+    "name": "กล้วยหอม 1kg",
+    "risk": "HIGH",
+    "days_to_expiry": 0,
+    "action": "MARKDOWN",
+    "quantity": 18,
+    "lot_quantity": 22,
+    "price": 28.0,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": -6.09
+   },
+   {
+    "lot_id": "LOT-000026",
+    "name": "เค้กกล้วยหอม 700g",
+    "risk": "HIGH",
+    "days_to_expiry": 0,
+    "action": "MARKDOWN",
+    "quantity": 4,
+    "lot_quantity": 6,
+    "price": 143.2,
+    "partner": null,
+    "due_by": null,
+    "expected_thb": 406.55
+   }
+  ],
+  "provisional": [
+   {
+    "lot_id": "LOT-000010",
+    "name": "เค้กกล้วยหอม 700g",
+    "method": "ANIMAL_FEED",
+    "units": 10,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-20T16:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000008",
+    "name": "ผักกาดหอม 250g",
+    "method": "ANIMAL_FEED",
+    "units": 45,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-20T16:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000011",
+    "name": "ขนมปังพุดดิ้ง 150g",
+    "method": "ANIMAL_FEED",
+    "units": 43,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-20T16:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000007",
+    "name": "กล้วยหอม 1kg",
+    "method": "ANIMAL_FEED",
+    "units": 11,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-20T16:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000006",
+    "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+    "method": "ANAEROBIC_DIGESTION",
+    "units": 6,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-17T07:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000004",
+    "name": "อกไก่สด 500g",
+    "method": "ANAEROBIC_DIGESTION",
+    "units": 11,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-18T07:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000005",
+    "name": "เนื้อวัวสันนอก สเต็ก 500g",
+    "method": "ANAEROBIC_DIGESTION",
+    "units": 7,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-18T07:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000020",
+    "name": "กล้วยหอม 1kg",
+    "method": "ANIMAL_FEED",
+    "units": 90,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-21T16:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000020",
+    "name": "กล้วยหอม 1kg",
+    "method": "COMPOSTING",
+    "units": 13,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-22T13:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000012",
+    "name": "สลัดอกไก่ย่าง 200g",
+    "method": "ANAEROBIC_DIGESTION",
+    "units": 17,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-17T07:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000021",
+    "name": "กล้วยหอม 1kg",
+    "method": "ANAEROBIC_DIGESTION",
+    "units": 4,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-17T07:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000018",
+    "name": "โยเกิร์ต รสธรรมชาติ 125g",
+    "method": "ANAEROBIC_DIGESTION",
+    "units": 3,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-17T07:00:00+07:00"
+   },
+   {
+    "lot_id": "LOT-000026",
+    "name": "เค้กกล้วยหอม 700g",
+    "method": "ANAEROBIC_DIGESTION",
+    "units": 2,
+    "timing": "END_OF_LIFE",
+    "pickup_at": "2026-10-17T07:00:00+07:00"
+   }
+  ],
+  "baselines": {
+   "do_nothing_no_disposal_cost": {
+    "net_profit_thb": -8922.67
+   },
+   "regular_price_then_landfill": {
+    "net_profit_thb": -9953.12,
+    "unresolved_units": 0
+   },
+   "markdown_then_landfill": {
+    "net_profit_thb": -7204.92,
+    "unresolved_units": 0
+   },
+   "optimized": {
+    "net_profit_thb": -4823.45,
+    "unresolved_units": 0
+   },
+   "improvement_vs_regular_then_landfill_thb": 5129.67
+  },
+  "expected_net": -4823.44,
+  "released": [
+   "LOT-000011",
+   "LOT-000012",
+   "LOT-000018"
+  ],
+  "lots_forwarded": 13,
+  "warnings": []
+ }
+}

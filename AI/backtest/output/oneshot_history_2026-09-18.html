@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>One-shot 2026-09-18</title><style>
+:root{--bg:#fff6ec;--card:#fff;--ink:#3b2a1d;--muted:#7d6552;--accent:#e8853d;--accent-dark:#b35a1b;
+--soft:#ffe8d1;--soft2:#fff2e4;--line:#f4e3d2;--bad:#c0392b}
+body{margin:0;background:var(--bg);font-family:"Sarabun","Noto Sans Thai","Leelawadee UI",Tahoma,sans-serif;color:var(--ink)}
+.page{max-width:1280px;margin:0 auto;padding:32px 40px}
+h1{font-size:30px;margin:0 0 4px} h2{font-size:20px;margin:30px 0 12px;color:var(--accent-dark)}
+.meta{color:var(--muted);font-size:15px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:22px}
+.kpi,table,.note,.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(120,70,20,.14)}
+.kpi{padding:18px 20px;border-top:5px solid var(--accent)}
+.kpi.bad{border-top-color:var(--bad)} .kpi.bad .kpi-sub{color:var(--bad)}
+.kpi-label{font-size:14px;color:var(--muted)} .kpi-value{font-size:30px;font-weight:700;margin:6px 0 2px}
+.kpi-sub{font-size:14px;color:var(--accent-dark);font-weight:600}
+table{width:100%;border-collapse:collapse;overflow:hidden;font-size:15px}
+th{background:var(--accent-dark);color:#fff;font-weight:600;padding:10px 12px;text-align:right}
+td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line)}
+th.l,td.l{text-align:left} tr:last-child td{border-bottom:none} tr.ours td{background:var(--soft2);font-weight:700}
+tr.ref td{color:var(--muted);font-style:italic}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px} .three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.note,.card{padding:16px 20px;font-size:14px;line-height:1.65;color:#4a3828}
+.card h3{margin:0 0 10px;font-size:16px;color:var(--accent-dark)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:5px 14px} .kv .k{color:var(--muted)}
+table.mini{box-shadow:none;font-size:13px;margin-bottom:12px} table.mini th{padding:6px 8px}
+table.mini td{padding:5px 8px}
+ul.why{margin:0;padding-left:20px} ul.why li{margin:6px 0}
+@media (max-width:900px){.page{padding:20px 16px}.kpis,.two,.three{grid-template-columns:1fr}
+table{display:block;overflow-x:auto}}
+</style></head><body><div class="page">
+<h1>กดรันครั้งเดียว: 2026-09-18 · 26 lot · 506 ชิ้น</h1>
+<div class="meta">history: lot บนชั้นเช้าวันนั้นจาก lot_daily.csv · ลูกค้า = latent_demand จริง · Forecaster เทรนถึง 2026-09-17 · ผลของวันนี้วันเดียว ไม่มีของเข้าร้าน / ไม่มีรอบสแกนพรุ่งนี้ · หน่วยเงิน: บาท</div>
+
+<div class="kpis">
+<div class="kpi "><div class="kpi-label">กำไรสุทธิวันนี้ · main</div><div class="kpi-value">4,129</div><div class="kpi-sub">ร้านแบบเดิม 4,129 · กฎตายตัว 3,139</div></div>
+<div class="kpi "><div class="kpi-label">เทียบร้านแบบเดิม (บาท)</div><div class="kpi-value">0</div><div class="kpi-sub">+0.0%</div></div>
+<div class="kpi "><div class="kpi-label">เทียบลดราคาตามกฎ (บาท)</div><div class="kpi-value">+989</div><div class="kpi-sub">+31.5%</div></div>
+<div class="kpi "><div class="kpi-label">ของหมดอายุค้างในร้านคืนนี้ · main</div><div class="kpi-value">0 ชิ้น</div><div class="kpi-sub">0 lot ไม่มี task เอาออก (ร้านเดิมทิ้งเองตอนปิดร้าน)</div></div>
+</div>
+
+<h2>ผลของวันนี้</h2>
+<table><tr><th class="l">นโยบาย</th><th>กำไรสุทธิวันนี้</th><th>รายได้ขาย</th><th>ขายได้ (ชิ้น)</th><th>ทิ้ง / partner (ชิ้น)</th>
+<th>ค่ากำจัดสุทธิ</th><th>สต็อกเหลือ (ชิ้น)</th><th>มูลค่าราคาปกติของสต็อกเหลือ</th><th>หมดอายุค้างร้าน (ชิ้น)</th></tr><tr><td class='l'>1 · ร้านแบบเดิม</td><td>4,129</td><td>11,310</td><td>214</td><td>0</td><td>0</td><td>292</td><td>11,717</td><td>0</td></tr><tr><td class='l'>2 · ลดราคาตามกฎตายตัว (ช่วงต่ำ)</td><td>3,139</td><td>10,551</td><td>218</td><td>0</td><td>0</td><td>288</td><td>11,406</td><td>0</td></tr><tr class=ours><td class='l'>3 · Risk Scanner + Forecaster + Optimizer (main)</td><td>4,129</td><td>11,310</td><td>214</td><td>0</td><td>0</td><td>292</td><td>11,717</td><td>0</td></tr></table>
+
+<h2>สิ่งที่ Optimizer สั่ง (task วันนี้)</h2>
+<div class="note">สแกน 26 lot (LOW 26) · ส่งต่อ Optimizer 0 lot · มี task (CHECKED) 0 · คืน IDLE ทันที 0 · ค้าง PROCESSING 0 · task เอาของออก due วันนี้ 0/0</div>
+<table><tr><th class="l">lot</th><th class="l">สินค้า</th><th class="l">ความเสี่ยง</th><th>เหลือ (วัน)</th><th class="l">ทำอะไร</th>
+<th>จำนวน / lot</th><th class="l">ราคาใหม่ / partner</th><th class="l">ทำภายใน</th><th>กำไรที่คาด</th></tr><tr><td class='l' colspan=9>ไม่มี task</td></tr></table>
+
+<div class="two">
+<div><h2>แผนชั่วคราว (ไม่มี task วันนี้ · lot คืน IDLE)</h2>
+<table><tr><th class="l">lot</th><th class="l">สินค้า</th><th class="l">วิธี</th><th>ชิ้น</th><th class="l">ช่วง</th><th class="l">รถมารับ</th></tr><tr><td class='l' colspan=6>ไม่มี</td></tr></table></div>
+<div><h2>สินค้าไปทางไหนวันนี้ (ชิ้น)</h2>
+<table><tr><th class="l">วิธี</th><th>1 · เดิม</th><th>2 · กฎตายตัว</th><th>3 · main</th></tr><tr><td class='l'>ขายราคาปกติ</td><td>214</td><td>137</td><td>214</td></tr><tr><td class='l'>ขายลดราคา</td><td>0</td><td>81</td><td>0</td></tr><tr><td class='l'>เข้าครัว</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>บริจาค</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>อาหารสัตว์</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>ปุ๋ยหมัก</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>ก๊าซชีวภาพ</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>ฝังกลบ</td><td>0</td><td>0</td><td>0</td></tr></table></div>
+</div>
+
+<div class="two">
+<div><h2>Optimizer ประเมินเอง (ทั้งอายุที่เหลือของ lot เสี่ยง)</h2>
+<table><tr><th class="l">ทางเลือก</th><th>กำไรสุทธิที่คาด</th></tr></table>
+<div class="note">ตัวเลขนี้คิดยอดขายจนหมดอายุของ lot ที่ส่งต่อ (0 lot) ไม่ใช่ผลวันเดียวด้านบน</div></div>
+<div><h2>คำเตือนจาก Optimizer</h2><div class="note"><ul class="why"><li>ไม่มี</li></ul></div></div>
+</div>
+
+<h2>วิธีคิดและข้อจำกัด</h2>
+<div class="note">
+<b>กำไรสุทธิวันนี้</b> = รายได้ขาย + มูลค่าเมนูครัว + รับซื้อคืน − ค่ารถ − handling − ต้นทุนของทุกชิ้นที่ออกจากร้านวันนี้
+− ต้นทุนของหมดอายุที่ยังค้างในร้าน (ขายไม่ได้แล้ว แต่ค่ารถ / handling ของส่วนนี้ยังไม่เกิดจึงไม่รวม: main ได้เปรียบเล็กน้อย) ·
+สต็อกที่เหลือคิดที่ต้นทุน (ไม่กำไรไม่ขาดทุน) <b>ผลวันเดียวจึงเข้าข้างการลดราคา</b>: ของที่ลดราคาขายวันนี้อาจขายราคาเต็มได้พรุ่งนี้
+ให้ดู "มูลค่าราคาปกติของสต็อกเหลือ" ประกอบ ·
+รถ partner มาวันนี้ถ้ามีรอบรับ ของที่ต้องรอรถวันอื่น 0.0 kg (main) ยังไม่คิดค่าเที่ยว ·
+นโยบาย 1-2 ทิ้งของหมดอายุคืนนี้เองตอนปิดร้าน นโยบาย 3 ทิ้งเฉพาะที่มี task ·
+ข้ามขั้น LLM (decision 1 ตัว = task 1 ตัว อนุมัติ 1)
+</div>
+</div></body></html>

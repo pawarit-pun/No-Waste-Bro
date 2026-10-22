@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Backtest main dedicated</title><style>
+:root{--bg:#fff6ec;--card:#fff;--ink:#3b2a1d;--muted:#7d6552;--accent:#e8853d;--accent-dark:#b35a1b;
+--soft:#ffe8d1;--soft2:#fff2e4;--line:#f4e3d2;--bad:#c0392b}
+body{margin:0;background:var(--bg);font-family:"Sarabun","Noto Sans Thai","Leelawadee UI",Tahoma,sans-serif;color:var(--ink)}
+.page{max-width:1280px;margin:0 auto;padding:32px 40px}
+h1{font-size:30px;margin:0 0 4px} h2{font-size:20px;margin:30px 0 12px;color:var(--accent-dark)}
+.meta{color:var(--muted);font-size:15px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:22px}
+.kpi,table,.note,.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(120,70,20,.14)}
+.kpi{padding:18px 20px;border-top:5px solid var(--accent)}
+.kpi.bad{border-top-color:var(--bad)} .kpi.bad .kpi-sub{color:var(--bad)}
+.kpi-label{font-size:14px;color:var(--muted)} .kpi-value{font-size:30px;font-weight:700;margin:6px 0 2px}
+.kpi-sub{font-size:14px;color:var(--accent-dark);font-weight:600}
+table{width:100%;border-collapse:collapse;overflow:hidden;font-size:15px}
+th{background:var(--accent-dark);color:#fff;font-weight:600;padding:10px 12px;text-align:right}
+td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line)}
+th.l,td.l{text-align:left} tr:last-child td{border-bottom:none} tr.ours td{background:var(--soft2);font-weight:700}
+tr.ref td{color:var(--muted);font-style:italic}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px} .three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.note,.card{padding:16px 20px;font-size:14px;line-height:1.65;color:#4a3828}
+.card h3{margin:0 0 10px;font-size:16px;color:var(--accent-dark)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:5px 14px} .kv .k{color:var(--muted)}
+table.mini{box-shadow:none;font-size:13px;margin-bottom:12px} table.mini th{padding:6px 8px}
+table.mini td{padding:5px 8px}
+ul.why{margin:0;padding-left:20px} ul.why li{margin:6px 0}
+@media (max-width:900px){.page{padding:20px 16px}.kpis,.two,.three{grid-template-columns:1fr}
+table{display:block;overflow-x:auto}}
+</style></head><body><div class="page">
+<h1>Backtest 60 วัน: โค้ด AI บน main · กติการถรถมาเฉพาะ (dedicated)</h1>
+<div class="meta">ร้านจำลองจาก mock_v3 · 2026-08-17 ถึง 2026-10-15 (ช่วง test ของ Forecaster) · สินค้า 14 SKU ·
+lot เข้าร้าน 1,299 lot · ลูกค้าจริงจาก latent_demand · หน่วยเงิน: บาท</div>
+
+<div class="kpis">
+<div class="kpi "><div class="kpi-label">กำไรสุทธิ · นโยบาย 3 (main)</div><div class="kpi-value">240,734</div><div class="kpi-sub">ร้านแบบเดิม 246,272 · กฎตายตัว 175,019</div></div>
+<div class="kpi bad"><div class="kpi-label">กำไรสุทธิ เทียบร้านแบบเดิม (บาท)</div><div class="kpi-value">-5,538</div><div class="kpi-sub">-2.25%</div></div>
+<div class="kpi "><div class="kpi-label">กำไรสุทธิ เทียบลดราคาตามกฎ (บาท)</div><div class="kpi-value">+65,714</div><div class="kpi-sub">+37.55%</div></div>
+<div class="kpi "><div class="kpi-label">ความเสียหายจากของทิ้งลดลง เทียบร้านแบบเดิม</div><div class="kpi-value">3.8%</div><div class="kpi-sub">ฝังกลบ 188 → 152 kg (-19.0%)</div></div>
+</div>
+
+<h2>เทียบ 3 นโยบาย</h2>
+<table><tr><th class="l">นโยบาย</th><th>กำไรสุทธิ</th><th>รายได้ขาย</th><th>ต้นทุนของที่ทิ้ง</th>
+<th>ค่ากำจัดสุทธิ</th><th>ความเสียหายจากของทิ้ง</th><th>ของทิ้ง (kg)</th><th>เรียกรถ (ครั้ง)</th></tr><tr><td class='l'>1 · ร้านแบบเดิม</td><td>246,272</td><td>698,976</td><td>18,999</td><td>35,918</td><td>54,917</td><td>188</td><td>49</td></tr><tr><td class='l'>2 · ลดราคาตามกฎตายตัว (ช่วงต่ำ)</td><td>175,019</td><td>619,546</td><td>6,084</td><td>27,741</td><td>33,825</td><td>46</td><td>38</td></tr><tr class=ours><td class='l'>3 · Risk Scanner + Forecaster + Optimizer (main)</td><td>240,734</td><td>688,272</td><td>16,238</td><td>36,606</td><td>52,844</td><td>152</td><td>50</td></tr></table>
+
+<h2>วงจร lot แบบ main (decision เอาของออกเฉพาะวันนี้ · แผนวันอื่นเป็นแผนชั่วคราว)</h2>
+<div class="two"><div><table><tr><th class='l'>ตัวชี้วัด</th><th>ค่า</th><th class='l'>ความหมาย</th></tr><tr><td class='l'>task ทั้งหมด</td><td>381 (6.3/วัน)</td><td class='l'>อนุมัติ 381 · ปฏิเสธ 0 (approve_rate 1)</td></tr><tr><td class='l'>task เอาของออกที่ due วันนี้</td><td>100.0%</td><td class='l'>กติกาของ main ต้องได้ 100%</td></tr><tr><td class='l'>วันที่ lot ได้แผนชั่วคราว</td><td>56</td><td class='l'>ไม่มี decision แล้วสแกนใหม่ (56 lot ไม่ซ้ำ)</td></tr><tr><td class='l'>หน่วย x วัน ของหมดอายุค้างในร้าน</td><td>560</td><td class='l'>188 lot ข้ามคืนหลังหมดอายุ ไม่มี decision คืนนั้นเพราะ: Risk Scanner ให้ LOW / MEDIUM ในวันหมดอายุ 170 · แผนส่งเที่ยวพรุ่งนี้ (แผนชั่วคราว) 18 · แผนคาดว่าขายหมด 0 · มี decision แต่ของเหลือเกินแผน 0</td></tr><tr><td class='l'>… ค้างเกิน 1 คืน</td><td>164</td><td class='l'>24 lot สแกนเช้าแล้วยังไม่มีใครเอาออก เช่น วันที่ไม่มีรถรับ (ประกาศ สธ. 367 ห้ามวางขายหลังหมดอายุ)</td></tr><tr><td class='l'>ของหมดอายุที่ไม่เคยได้ decision</td><td>9 หน่วย</td><td class='l'>ทิ้ง landfill ตอนปิดรอบ ต้นทุน 486 บาท</td></tr><tr><td class='l'>lot ค้าง PROCESSING</td><td>1</td><td class='l'>ส่งต่อ Optimizer แล้วไม่ได้ decision และไม่ถูกคืน IDLE (ไม่ถูกสแกนอีก) · เพราะ portion 0 หน่วยที่ไม่ใช่แผนชั่วคราวขวาง lots_to_release 1</td></tr><tr><td class='l'>การสแกน</td><td>2,464 ครั้ง (1.9/lot)</td><td class='l'>ส่งต่อ Optimizer 408 ครั้ง · Optimizer error 0 วัน</td></tr></table></div><div class="card"><h3>อ่านผลอย่างไร</h3><ul class="why"><li><b>ค่าเรียกรถ:</b> ร้านแบบเดิม 35,703 บาท (49 ครั้ง) · ของเรา 36,431 บาท (50 ครั้ง) ภายใต้กติการถแบบรถมาเฉพาะ (dedicated)</li><li><b>Risk Scanner จับ lot ที่จะเหลือได้ราว 45%:</b> lot ที่หลุดการตรวจจับถูกทิ้งเหมือนร้านเดิม</li><li><b>แผนชั่วคราว 56 ครั้ง:</b> Optimizer ของ main คิดค่าเที่ยวของวันถัดไป 0 บาท (deferred_trip_cost_share = 0) จึงวางแผนส่งเที่ยวพรุ่งนี้ แต่พอถึงวันนั้นเที่ยวคิดเต็ม แผนจึงเปลี่ยน · รถที่เรียกจริงมีแค่ P-LDF-01</li><li><b>ไม่มีขั้นกำจัดตอนปิดร้าน:</b> lot ที่ไม่ได้ decision END_OF_LIFE คืนวันหมดอายุ (ส่วนใหญ่เพราะ Risk Scanner ให้ LOW / MEDIUM) ค้างในร้านจนรอบสแกนเช้า (560 หน่วย x วัน)</li><li><b>ร้านเล็ก ข้อมูล mock:</b> 14 SKU ผลจึงควรดูเป็น % มากกว่าจำนวนบาท</li></ul></div></div>
+
+<h2>สภาพแวดล้อมที่ใช้ทดสอบ</h2>
+<div class="three">
+<div class="card"><h3>ร้านจำลองและช่วงเวลา</h3><div class="kv"><div class="k">ข้อมูล</div><div>mock_v3 ร้านจำลอง (ยอดขายรายชั่วโมงจาก simulate.py)</div><div class="k">ข้อมูลทั้งหมด</div><div>2025-10-16 → 2026-10-15 (365 วัน)</div><div class="k">ช่วงที่ทดสอบ</div><div><b>2026-08-17 → 2026-10-15 (60 วัน)</b> อยู่ในช่วง test ของ Forecaster</div><div class="k">สินค้า</div><div>14 SKU · 6 หมวด (BAKERY, DAIRY, MEAT, PRODUCE, READY_TO_EAT, SEAFOOD)</div><div class="k">lot</div><div>สต็อกวันแรก + ของเข้าร้าน รวม 1,299 lot (ชุดเดียวกันทุกนโยบาย)</div><div class="k">ลูกค้า</div><div>latent_demand = ความต้องการจริงที่ราคาเต็ม (ไม่ใช่ค่าพยากรณ์)</div><div class="k">ร้านเปิด</div><div>08:00-22:00 · นโยบาย 3 สแกนและตัดสินใจทุกเช้า 08:00</div><div class="k">ลดราคาแล้วขายเพิ่ม</div><div>20% → ×1.12 / 30% → ×1.20 / 50% → ×1.35 (ค่าจริงของตัวสร้างข้อมูล)</div><div class="k">ลูกค้าหยิบ lot</div><div>ลดราคาก่อน · 40% หยิบ lot ใหม่สุด · ที่เหลือหมดอายุก่อนได้ก่อน</div></div></div>
+<div class="card"><h3>Forecaster + Risk Scanner</h3><div class="kv"><div class="k">โมเดลในเครื่อง</div><div>forecaster_v3.pkl · LightGBM 300 ต้นไม้ · 23 feature</div><div class="k">แบ่งข้อมูล</div><div>train 2025-10-16 → 2026-05-22<br>validation 2026-05-23 → 2026-08-03<br>test 2026-08-04 → 2026-10-15</div><div class="k">ใน backtest</div><div><b>เทรนใหม่ด้วยข้อมูลถึง 2026-08-03 เท่านั้น</b> ไม่เห็นยอดขายช่วงทดสอบ</div><div class="k">ความคลาดเคลื่อน (WAPE)</div><div>23.88% · ค่าเฉลี่ยวันเดียวกันของสัปดาห์ 26.63% (ดีกว่า 10.3%)</div><div class="k">ทายเกิน/ขาดรวม</div><div>-1.62%</div><div class="k">ยอดจริงตกในช่วงพยากรณ์ 80%</div><div>1 วัน 86.4% · 3 วัน 87.7% · 7 วัน 91.5%</div><div class="k">lift ที่โมเดลประมาณ</div><div>20% → ×1.14 / 30% → ×1.16 / 50% → ×1.31 (จากข้อมูลก่อน test)</div><div class="k">Risk Scanner</div><div>เกณฑ์ MEDIUM / HIGH / CRITICAL = 40 / 60 / 80 · ส่งต่อ HIGH + CRITICAL</div><div class="k">Risk Scanner ช่วง test</div><div>แม่น (precision) 47.4% · จับได้ (recall) 45.0%</div></div></div>
+<div class="card"><h3>การกำจัดและ partner</h3><table class='mini'><tr><th class='l'>partner (Supabase 22 ต.ค.)</th><th>บาท/ครั้ง</th><th class='l'>โหมด</th><th class='l'>วันรับ</th></tr><tr><td class='l'>ก๊าซชีวภาพ</td><td>1,851</td><td class='l'>เรียกเฉพาะ</td><td class='l'>ทุกวัน</td></tr><tr><td class='l'>อาหารสัตว์</td><td>1,038</td><td class='l'>เรียกเฉพาะ</td><td class='l'>อ พ พฤ ส</td></tr><tr><td class='l'>ปุ๋ยหมัก</td><td>1,653</td><td class='l'>เรียกเฉพาะ</td><td class='l'>จ อ พฤ ส</td></tr><tr><td class='l'>บริจาค</td><td>550</td><td class='l'>เรียกเฉพาะ</td><td class='l'>จ พ ศ ส อา</td></tr><tr><td class='l'>ฝังกลบ</td><td>729</td><td class='l'>เรียกเฉพาะ</td><td class='l'>จ อ พ พฤ ศ ส</td></tr></table><div class="kv"><div class="k">กติการถ</div><div><b>รถมาเฉพาะ (dedicated)</b>: รถมาทุกวันที่มีรอบรับและมีของรอ คิดค่าเที่ยวเต็มทุกครั้ง (วิธีที่ Optimizer บน main คิดต้นทุน) · เหมือนกันทุกนโยบาย</div><div class="k">นโยบาย 1-2</div><div>ของหมดอายุไปฝังกลบอย่างเดียว</div><div class="k">นโยบาย 3</div><div>เลือกได้ทุก partner + เข้าครัว + ลดราคา · ของหมดอายุที่ไม่มี decision ค้างในร้านรอรอบสแกนถัดไป</div><div class="k">ปิดรอบ</div><div>วันสุดท้ายเก็บถังที่เหลือ + ของหมดอายุที่ค้างในร้านไปฝังกลบ (ทุกนโยบาย)</div></div></div>
+</div>
+
+<div class="two">
+<div><h2>สินค้าไปทางไหน (หน่วย)</h2>
+<table><tr><th class="l">วิธี</th><th>1 · เดิม</th><th>2 · กฎตายตัว</th><th>3 · main</th></tr><tr><td class='l'>ขายราคาปกติ</td><td>11,993</td><td>6,068</td><td>11,300</td></tr><tr><td class='l'>ขายลดราคา</td><td>0</td><td>6,265</td><td>707</td></tr><tr><td class='l'>เข้าครัว</td><td>0</td><td>0</td><td>23</td></tr><tr><td class='l'>บริจาค</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>อาหารสัตว์</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>ปุ๋ยหมัก</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>ก๊าซชีวภาพ</td><td>0</td><td>0</td><td>0</td></tr><tr><td class='l'>ฝังกลบ</td><td>477</td><td>137</td><td>398</td></tr></table></div>
+<div><h2>เทียบกฎตายตัวทุกช่วงส่วนลด</h2>
+<table><tr><th class="l">ส่วนลด (≥3 / 2 / 1 วัน / วันสุดท้าย)</th><th>กำไรสุทธิ</th><th>ความเสียหาย</th>
+<th>main ดีกว่า (บาท)</th><th>%</th></tr><tr><td class='l'>ช่วงต่ำ (0% / 10% / 20% / 30%)</td><td>175,019</td><td>33,825</td><td>+65,714</td><td>+37.5%</td></tr><tr><td class='l'>ช่วงกลาง (5% / 15% / 25% / 40%)</td><td>137,067</td><td>30,650</td><td>+103,667</td><td>+75.6%</td></tr><tr><td class='l'>ช่วงสูง (10% / 20% / 30% / 50%)</td><td>99,775</td><td>25,056</td><td>+140,958</td><td>+141.3%</td></tr></table>
+<h2>ความสม่ำเสมอ</h2>
+<div class="note">กำไรของ main เทียบร้านแบบเดิม: 30 วันแรก <b>-1,035</b> บาท · 30 วันหลัง <b>-4,503</b> บาท ·
+decision ลดราคา 183 · เข้าครัว 10 · ฝังกลบ 188 ·
+ทิ้งเอง (DISCARD) 0</div></div>
+</div>
+
+<h2>วิธีคิดเงินและข้อจำกัด</h2>
+<div class="note">
+<b>กำไรสุทธิ</b> = รายได้ขาย + มูลค่าเมนูครัว + รับซื้อคืน − ค่าเรียกรถ − handling − ต้นทุนสินค้าทุกหน่วยที่ออกจากร้าน ·
+<b>ความเสียหายจากของทิ้ง</b> = ต้นทุนของที่ทิ้ง + ค่าเรียกรถ + handling − รับซื้อคืน ·
+<b>นโยบาย 2</b> เทียบกับช่วงส่วนลดที่ได้กำไรมากสุด ·
+<b>ข้อจำกัด:</b> ข้ามขั้น LLM (decision 1 ตัว = task 1 ตัว), ทุก task เสร็จในวันที่ออก (งานครัวของพรุ่งนี้ทำวันนี้),
+มูลค่าเมนูครัวใช้ค่าคาดหมายของแผน, ข้อมูลเป็น mock 14 SKU
+</div>
+</div></body></html>
