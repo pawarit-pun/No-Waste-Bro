@@ -2,10 +2,12 @@
 
   H1 จำนวนไม่สมดุล / ติดลบ                    H2 ใช้วิธีที่สินค้าไม่อนุญาต / partner ไม่รับหมวด
   H3 markdown: หลายราคาใน lot เดียว, ต่ำกว่า min_allowed_price, ขายเกินยอดที่คาด, ขายของหมดอายุ
-  H4 partner: วัน-เวลารับไม่ตรงกฎ, อายุคงเหลือ, น้ำหนักต่ำกว่าขั้นต่ำ / เกินความจุต่อเที่ยว (partner, วัน),
-              ของ end-of-life ต้องรับหลังหมดเวลาขาย
+  H4 partner: วัน-เวลารับไม่ตรงกฎ, อายุคงเหลือ, น้ำหนักต่ำกว่าขั้นต่ำต่อเที่ยว (partner โหมด DEDICATED, วัน),
+              ของ end-of-life ต้องรับหลังหมดเวลาขาย (เกินความจุไม่ผิดกฎ = รอบขนเพิ่มของเที่ยวเดียวกัน)
   H5 ครัว: ชั่วโมงเกิน, lot หลักไม่พอ batch, lot หมดอายุก่อนงานเสร็จ, ผลิตเกินความต้องการเมนู
   H6 FEFO: จำลองการตัดสต็อกของ DB (หมดอายุก่อนตัดก่อน) แล้วต้องตรงกับแผน และสต็อกต้องพอ
+  H7 แผนชั่วคราว (provisional) ได้เฉพาะ lot ที่ไม่มี decision อื่นเลย (lot ที่มี decision จะไม่ถูกสแกนซ้ำ
+     ของที่เหลือจะไม่มีใครจัดการ และเที่ยวนั้นไม่ได้ถูกคิดค่าเที่ยวเต็ม)
 """
 from __future__ import annotations
 
@@ -13,7 +15,6 @@ import math
 from collections import defaultdict
 from datetime import datetime
 
-from ai_engine.optimizer.context import trip_min_kg
 from ai_engine.optimizer.rules import EPS, expiry_dt, is_expired, kitchen_due, partner_reasons, sell_end, tier_price
 
 
@@ -34,6 +35,10 @@ def validate_plan(plan: dict, ctx) -> list:
             out.append(_v("H1_MASS_BALANCE", lid, f"จัดสรร {sum(units)} หน่วย แต่มี {lot.quantity}"))
         if sum(1 for p in lo["portions"] if p["method"] in ("SELL_REGULAR", "MARKDOWN")) > 1:
             out.append(_v("H3_MULTIPLE_PRICES", lid, "1 lot ต้องมีราคาเดียว"))
+        if any(p["details"].get("provisional") for p in lo["portions"]) and not all(
+                p["method"] == "SELL_REGULAR" or p["details"].get("provisional") or p["units"] == 0
+                for p in lo["portions"]):
+            out.append(_v("H7_PROVISIONAL_WITH_DECISION", lid, "แผนชั่วคราวใน lot ที่มี decision อื่น"))
         for p in lo["portions"]:
             m, d = p["method"], p["details"]
             if m in ("SELL_REGULAR", "MARKDOWN"):
@@ -68,12 +73,11 @@ def validate_plan(plan: dict, ctx) -> list:
                     out.append(_v("H4_EOL_BEFORE_SELL_END", lid, f"{pid} รับ {pickup} ก่อนหมดเวลาขาย"))
                 for reason in partner_reasons(lot, product, pc.partner, pickup, pc.cap_kg, cfg, now):
                     out.append(_v(("H2_" if reason[:2] in ("P1", "P2") else "H4_") + reason, lid, pid))
-                kg_by_trip[(pid, pickup.date())] += p["weight_kg"]
+                # ขั้นต่ำต่อรอบเฉพาะรถ DEDICATED (BIN สะสมในถังแล้วเรียกเมื่อถึงขั้นต่ำ) แผนชั่วคราวไม่ใช่ของรอบนี้
+                if pc.mode == "DEDICATED" and not d.get("provisional"):
+                    kg_by_trip[(pid, pickup.date())] += p["weight_kg"]
     for (pid, day), kg in kg_by_trip.items():
-        pc = ctx.partners[pid]
-        if kg > pc.cap_kg + 1e-3:
-            out.append(_v("H4_PARTNER_CAPACITY", None, f"{pid}@{day}: {kg:.2f} > {pc.cap_kg:.2f} kg"))
-        min_kg = trip_min_kg(ctx, pid, day)
+        min_kg = ctx.partners[pid].min_kg
         if kg < min_kg - 1e-2:
             out.append(_v("H4_BELOW_MIN_KG", None, f"{pid}@{day}: {kg:.2f} < {min_kg:g} kg"))
 

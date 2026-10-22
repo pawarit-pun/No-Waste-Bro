@@ -942,16 +942,16 @@
     "pickup_time_start": "07:00:00",
     "pickup_time_end": "10:00:00",
     "min_days_before_expiry": null,
-    "max_capacity_kg_per_pickup": 950,
+    "max_capacity_kg_per_pickup": 60.0,
     "contact_name": "คุณนภา แสงทอง",
     "contact_phone": "02-555-0103",
     "is_active": true,
     "created_at": "2026-10-15T08:08:12.1594+00:00",
-    "fixed_cost_per_trip": 1750,
+    "fixed_cost_per_trip": 1750.0,
     "travel_cost_per_trip": 100.64,
     "handling_fee_per_kg": 0.9,
     "buyback_price_per_kg": 0.0,
-    "min_kg_per_pickup": 100
+    "min_kg_per_pickup": 5.0
    },
    {
     "partner_id": "P-ANI-01",
@@ -971,16 +971,16 @@
     "pickup_time_start": "16:00:00",
     "pickup_time_end": "18:00:00",
     "min_days_before_expiry": null,
-    "max_capacity_kg_per_pickup": 1000,
+    "max_capacity_kg_per_pickup": 90.0,
     "contact_name": "คุณมาลี ทองแท้",
     "contact_phone": "02-555-0105",
     "is_active": true,
     "created_at": "2026-10-15T08:08:12.1594+00:00",
-    "fixed_cost_per_trip": 1000,
+    "fixed_cost_per_trip": 1000.0,
     "travel_cost_per_trip": 37.74,
     "handling_fee_per_kg": 0.3,
     "buyback_price_per_kg": 0.92,
-    "min_kg_per_pickup": 0
+    "min_kg_per_pickup": 5.0
    },
    {
     "partner_id": "P-CMP-01",
@@ -1000,16 +1000,16 @@
     "pickup_time_start": "13:00:00",
     "pickup_time_end": "16:00:00",
     "min_days_before_expiry": null,
-    "max_capacity_kg_per_pickup": 1000,
+    "max_capacity_kg_per_pickup": 90.0,
     "contact_name": "คุณประเสริฐ ดินดี",
     "contact_phone": "02-555-0104",
     "is_active": true,
     "created_at": "2026-10-15T08:08:12.1594+00:00",
-    "fixed_cost_per_trip": 1600,
+    "fixed_cost_per_trip": 1600.0,
     "travel_cost_per_trip": 53.465,
     "handling_fee_per_kg": 0.6,
     "buyback_price_per_kg": 0.0,
-    "min_kg_per_pickup": 100
+    "min_kg_per_pickup": 4.0
    },
    {
     "partner_id": "P-DON-01",
@@ -1030,20 +1030,20 @@
     "pickup_time_start": "09:00:00",
     "pickup_time_end": "11:00:00",
     "min_days_before_expiry": 2,
-    "max_capacity_kg_per_pickup": 800,
+    "max_capacity_kg_per_pickup": 50.0,
     "contact_name": "คุณสมศรี ใจดี",
     "contact_phone": "02-555-0101",
     "is_active": true,
     "created_at": "2026-10-15T08:08:12.1594+00:00",
-    "fixed_cost_per_trip": 550,
+    "fixed_cost_per_trip": 550.0,
     "travel_cost_per_trip": 0.0,
     "handling_fee_per_kg": 0.0,
     "buyback_price_per_kg": 0.0,
-    "min_kg_per_pickup": 100
+    "min_kg_per_pickup": 4.0
    },
    {
     "partner_id": "P-LDF-01",
-    "name": "บริษัท กรีนเมย์ ดังกอน จำกัด",
+    "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
     "partner_type": "LANDFILL",
     "accepted_categories": [
      "DAIRY",
@@ -1064,18 +1064,32 @@
     "pickup_time_start": "20:00:00",
     "pickup_time_end": "22:00:00",
     "min_days_before_expiry": null,
-    "max_capacity_kg_per_pickup": 1000,
+    "max_capacity_kg_per_pickup": 90.0,
     "contact_name": "คุณวิชัย มั่นคง",
     "contact_phone": "02-555-0102",
     "is_active": true,
     "created_at": "2026-10-15T08:08:12.1594+00:00",
-    "fixed_cost_per_trip": 650,
+    "fixed_cost_per_trip": 650.0,
     "travel_cost_per_trip": 78.625,
     "handling_fee_per_kg": 1.15,
     "buyback_price_per_kg": 0.0,
-    "min_kg_per_pickup": 0
+    "min_kg_per_pickup": 1.0
    }
-  ]
+  ],
+  "waste_history": {
+   "from": "2026-09-18",
+   "to": "2026-10-15",
+   "days": 28,
+   "kg_per_day": {
+    "BAKERY": 0.7836,
+    "DAIRY": 0.1498,
+    "MEAT": 0.4643,
+    "PRODUCE": 0.4286,
+    "READY_TO_EAT": 1.6214,
+    "SEAFOOD": 0.0964
+   }
+  },
+  "partner_bins": []
  },
  "products": [
   {

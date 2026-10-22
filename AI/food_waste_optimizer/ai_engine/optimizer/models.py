@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time
 from typing import Any, Optional
 
+from ai_engine.optimizer.config import BKK
+
 # ประเภท partner -> คอลัมน์ flag ในตาราง products
 FLAG_BY_TYPE = {
     "DONATION": "allow_donation",
@@ -48,6 +50,12 @@ def as_date(v: Any) -> date:
     return date.fromisoformat(str(v)[:10])
 
 
+def as_datetime(v: Any) -> datetime:
+    """timestamptz ของ Supabase (UTC หรือ +07:00) -> datetime เวลาไทย (ไม่มี timezone = เวลาไทย)"""
+    dt = v if isinstance(v, datetime) else datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    return dt.replace(tzinfo=BKK) if dt.tzinfo is None else dt.astimezone(BKK)
+
+
 def as_time(v: Any) -> Optional[time]:
     if v is None:
         return None
@@ -79,10 +87,6 @@ class Product:
     def weight_kg(self) -> Optional[float]:
         """น้ำหนักจริงต่อหน่วย (kg) จากปริมาณสุทธิ  ASSUMPTION: ML / L ใช้ความหนาแน่น 1 kg/L"""
         return self.content / 1000.0 if self.content else None
-
-    @property
-    def margin(self) -> float:
-        return max(0.0, self.regular_price - self.base_cost)
 
     @classmethod
     def from_json(cls, d: dict, extra: Optional[dict] = None) -> "Product":
@@ -248,6 +252,10 @@ class Inputs:
     kitchen: dict                      # (department_id, date) -> KitchenDay
     stock: dict                        # product_id -> [StockLot] เรียงหมดอายุก่อน (ลำดับที่ DB ตัดจริง)
     warnings: list = field(default_factory=list)
+    waste_kg_per_day: dict = field(default_factory=dict)   # หมวดสินค้า -> ของทิ้งเฉลี่ย kg/วัน (product_daily.waste_qty)
+    waste_history_days: int = 0                            # จำนวนวันย้อนหลังที่ใช้เฉลี่ย (0 = ไม่มีข้อมูล)
+    partner_bins: dict = field(default_factory=dict)       # partner_id -> kg ที่รออยู่ในถังแล้ว (decision ที่ยังไม่ส่งมอบ)
+    partner_bin_since: dict = field(default_factory=dict)  # partner_id -> ของในถังชิ้นที่รอนานสุดเข้าถังเมื่อไร
 
     @classmethod
     def from_json(cls, d: dict, products_catalog: Optional[list] = None) -> "Inputs":
@@ -296,9 +304,15 @@ class Inputs:
             rows = [StockLot(x["lot_id"], s["product_id"], int(x["current_quantity"]), as_date(x["expiration_date"]))
                     for x in s.get("lots") or []]
             stock[s["product_id"]] = sorted(rows, key=lambda x: (x.expiration_date, x.lot_id))
+        history = d.get("waste_history") or {}
         return cls(
             reference_date=as_date(d["reference_date"]), run_id=d.get("run_id"), lots=lots, products=products,
             partners={p["partner_id"]: Partner.from_json(p) for p in d.get("donation_partners") or []},
             recipes={r["recipe_id"]: Recipe.from_json(r) for r in d.get("recipes") or []},
             recipe_demand=demand, kitchen=kitchen, stock=stock, warnings=warnings,
+            waste_kg_per_day={c: float(v) for c, v in (history.get("kg_per_day") or {}).items()},
+            waste_history_days=int(history.get("days") or 0),
+            partner_bins={b["partner_id"]: _f(b.get("open_kg")) for b in d.get("partner_bins") or []},
+            partner_bin_since={b["partner_id"]: as_datetime(b["oldest_at"]) for b in d.get("partner_bins") or []
+                               if b.get("oldest_at")},
         )

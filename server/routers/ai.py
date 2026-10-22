@@ -1,18 +1,23 @@
-from datetime import timedelta
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Query
 
-from core.dates import today_bkk
-from db.helpers import fetch_all
+from core.dates import BKK, today_bkk
+from db.helpers import fetch_all, fetch_by_ids
 from db.supabase import supabase
-from schemas.enums import LotAIStatus
+from schemas.enums import DecisionStatus, LotAIStatus, TaskStatus
 from schemas.responses import OptimizeInputsResponse, ScanInputsResponse
+from services.decisions import STATUS_VIEW
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
 CONTEXT_DAYS_AHEAD = 7  # daily_context ใน scan-inputs: วันนี้ถึงวันนี้ + 7 (ยืดถึงวันหมดอายุล่าสุดถ้าเกิน)
+WASTE_HISTORY_DAYS = 28  # optimize-inputs: ของทิ้งเฉลี่ยต่อวันย้อนหลังกี่วัน (ค่าเที่ยว partner เฉลี่ยต่อ kg)
+OPEN_DECISIONS = (DecisionStatus.PENDING.value, DecisionStatus.IN_REVIEW.value, DecisionStatus.TASK_CREATED.value)
+CLOSED_TASKS = (TaskStatus.COMPLETED.value, TaskStatus.REJECTED.value)
 
 
 @router.get(
@@ -117,6 +122,8 @@ AT_RISK_LEVELS = ["HIGH", "CRITICAL"]   # LOW / MEDIUM ไม่ส่งต่�
 | `kitchen_capacity` | ครัวยังว่างกี่ชั่วโมงในแต่ละวัน |
 | `donation_partners` | บริจาคให้ใครได้ รับสินค้าประเภทไหน ต้องเหลืออายุกี่วัน |
 | `ingredient_stock` | **วัตถุดิบของทุกสูตรเหลือเท่าไหร่** (เฉพาะ lot ที่ยังไม่หมดอายุ เรียงหมดอายุก่อน = ลำดับที่ระบบจะตัดจริงตอน complete) |
+| `waste_history` | ของทิ้งเฉลี่ย kg/วัน แยกหมวด จาก `product_daily.waste_qty` ย้อนหลัง `waste_history_days` วันถึงเมื่อวาน (ใช้คิดว่าเที่ยวรถของ partner แต่ละรายน่าจะขนกี่ kg -> ค่าเที่ยวเฉลี่ยต่อ kg) |
+| `partner_bins` | ของที่รอ partner มารับอยู่แล้ว (decision ที่มี `target_partner_id` ยังไม่ถูกปฏิเสธ task ยังไม่เสร็จ และ `due_by` ยังไม่ผ่าน) kg ต่อ partner + `oldest_at` ของที่รอนานสุด (ถังถึงปริมาณที่คุ้มหรือใกล้เกินเพดานเวลาหรือยัง) |
 
 - **งานครัวที่ใช้วัตถุดิบเดียวกันหลายงาน:** Optimizer ต้องรวมความต้องการเองแล้วเทียบกับ `ingredient_stock` (วัตถุดิบต่อ batch = `required_quantity` ในหน่วย G/ML เทียบกับ `total_content`)
 - ไม่ส่ง `run_id` = ใช้รอบสแกนล่าสุด ถ้ายังไม่เคยสแกนหรือ `run_id` ไม่มีอยู่จริง `at_risk_lots` และ `recipe_demand` จะเป็น `[]`
@@ -127,6 +134,8 @@ AT_RISK_LEVELS = ["HIGH", "CRITICAL"]   # LOW / MEDIUM ไม่ส่งต่�
 def get_optimize_inputs(
     run_id: Optional[UUID] = Query(None, description="รอบสแกนที่ต้องการ ไม่ส่ง = รอบล่าสุด"),
     days_ahead: int = Query(1, ge=0, le=30, description="ดูความจุครัวตั้งแต่วันนี้ถึงกี่วันข้างหน้า (0–30)"),
+    waste_history_days: int = Query(WASTE_HISTORY_DAYS, ge=1, le=365,
+                                    description="ของทิ้งเฉลี่ยต่อวันย้อนหลังกี่วัน (1–365)"),
 ):
     """ข้อมูล input สำหรับ Optimizer: lot ที่เสี่ยง + กฎสินค้า + สูตร + ครัว + partner บริจาค"""
     if run_id is None:
@@ -188,7 +197,67 @@ def get_optimize_inputs(
         "recipes": recipes,
         "kitchen_capacity": kitchen_capacity,
         "donation_partners": donation_partners,
+        "waste_history": _waste_history(products, start, waste_history_days),
+        "partner_bins": _partner_bins(products, start),
     }
+
+
+def _kg_per_unit(product: dict) -> float:
+    """น้ำหนักสุทธิต่อหน่วย (kg) KG / L คูณ 1000 เป็น G / ML, ML ถือว่า 1 g (เหมือน Optimizer)"""
+    size, unit = product.get("net_content_value"), str(product.get("net_content_unit") or "").upper()
+    if size is None:
+        return 0.0
+    return float(size) * (1000 if unit in ("KG", "L") else 1) / 1000
+
+
+def _waste_history(products: list[dict], today: date, days: int) -> dict:
+    """ของทิ้งเฉลี่ยต่อวันแยกหมวด (kg) จาก product_daily.waste_qty ย้อนหลัง days วันถึงเมื่อวาน
+    เฉลี่ยด้วยจำนวนวันที่มีข้อมูลจริง"""
+    since = today - timedelta(days=days)
+    rows = fetch_all("product_daily", "product_id, sale_date, waste_qty", order_by=("product_id", "sale_date"),
+                     filters=[("gte", "sale_date", since.isoformat()), ("lt", "sale_date", today.isoformat())])
+    by_id = {p["product_id"]: p for p in products}
+    total, dates = defaultdict(float), set()
+    for r in rows:
+        product = by_id.get(r["product_id"])
+        if product is None:
+            continue
+        dates.add(r["sale_date"])
+        total[product["category"]] += (r["waste_qty"] or 0) * _kg_per_unit(product)
+    n = len(dates)
+    return {"from": since.isoformat(), "to": (today - timedelta(days=1)).isoformat(), "days": n,
+            "kg_per_day": {c: round(v / n, 4) for c, v in sorted(total.items())} if n else {}}
+
+
+def _partner_bins(products: list[dict], today: date) -> list[dict]:
+    """ของที่รอ partner มารับอยู่แล้ว: decision ที่มี target_partner_id สถานะยังเปิด (ไม่ถูกปฏิเสธ)
+    task ยังไม่ COMPLETED / REJECTED (staff กด complete ตอนส่งมอบให้ partner) และ due_by ยังไม่ผ่าน (ของเก่าค้างไม่นับ)"""
+    rows = [r for r in fetch_all(STATUS_VIEW, "decision_id, lot_id, target_partner_id, action_quantity, due_by, task_id, "
+                                 "created_at", in_filter=("status", list(OPEN_DECISIONS)), order_by=("decision_id",))
+            if r.get("target_partner_id") and r.get("due_by")
+            and datetime.fromisoformat(str(r["due_by"])).astimezone(BKK).date() >= today]
+    if not rows:
+        return []
+    tasks = fetch_by_ids("ai_recommended_tasks", "task_id", {r.get("task_id") for r in rows}, "task_id, task_status")
+    lots = fetch_by_ids("inventory_lots", "lot_id", {r["lot_id"] for r in rows}, "lot_id, product_id")
+    by_id = {p["product_id"]: p for p in products}
+    bins = defaultdict(lambda: {"open_kg": 0.0, "decisions": 0, "oldest_at": None})
+    for r in rows:
+        task = tasks.get(str(r.get("task_id")))
+        if task and task["task_status"] in CLOSED_TASKS:
+            continue
+        product = by_id.get((lots.get(r["lot_id"]) or {}).get("product_id"))
+        if product is None:
+            continue
+        b = bins[r["target_partner_id"]]
+        b["open_kg"] += r["action_quantity"] * _kg_per_unit(product)
+        b["decisions"] += 1
+        created = datetime.fromisoformat(str(r["created_at"])) if r.get("created_at") else None
+        if created and (b["oldest_at"] is None or created < b["oldest_at"]):
+            b["oldest_at"] = created               # ของชิ้นที่รอนานสุด (Optimizer ใช้คุมเพดานเวลาของถัง)
+    return [{"partner_id": pid, "open_kg": round(b["open_kg"], 3), "decisions": b["decisions"],
+             "oldest_at": b["oldest_at"].isoformat() if b["oldest_at"] else None}
+            for pid, b in sorted(bins.items())]
 
 
 def _ingredient_stock(recipes: list[dict], products: list[dict], today) -> list[dict]:

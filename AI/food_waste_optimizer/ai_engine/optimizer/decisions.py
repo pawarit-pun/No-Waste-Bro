@@ -7,13 +7,16 @@
                  ส่งต่อให้ส่วนอื่นใช้ (dashboard / RAG / รายงาน) ผูกกับ decision ด้วย decision_index -> decision_id
 
 กติกา
-  - 1 lot มีราคาเดียว: MARKDOWN ได้ 1 decision ต่อ lot (action_quantity = จำนวนที่คาดว่าขายได้ที่ราคานั้น ปัดลง)
+  - 1 lot มีราคาเดียว: MARKDOWN ได้ 1 decision ต่อ lot
+    action_quantity = ทุกหน่วยที่ solver ให้วางบนชั้นที่ราคานั้น (staff ติดป้ายทุกชิ้น) ราคา = ราคาระดับที่ forecaster พยากรณ์
+    ของที่ขายไม่หมดไม่มี decision รอบนี้: server แยกหน่วยที่ติดป้ายเป็น lot ใหม่ (IDLE) รอบถัดไปวางแผนกำจัดใหม่
+    (ค่าประมาณอยู่ใน alternatives[0] timing = END_OF_LIFE, handled_by = NEXT_RUN)
   - ขายราคาปกติ (SELL_REGULAR) ไม่ต้องมี decision
-  - ของที่วางขายแล้วคาดว่าเหลือ (END_OF_LIFE) = decision ของ partner นั้น due_by = เวลารับหลังหมดเวลาขาย
+  - ของที่วางขายราคาปกติแล้วคาดว่าเหลือ (END_OF_LIFE) = decision ของ partner นั้น due_by = เวลารับหลังหมดเวลาขาย
     action_quantity = จำนวนที่คาดว่าเหลือ (ปัดขึ้น) staff กำจัดตามจำนวนที่เหลือจริงตอนนั้น
     ไม่มี partner รับ -> DISCARD (ทิ้งเองในร้าน) ให้ผู้จัดการดู
-  - การเอาของออก (ทุก partner / DISCARD) ออก decision เฉพาะเที่ยวที่รับวันนี้ (task ตรงกับวันที่ลงมือจริง)
-    เที่ยววันอื่น = แผนชั่วคราว (provisional) ไม่มี decision lot ถูกสแกนใหม่แล้วตัดสินใจในวันนั้น
+    เที่ยววันถัดไปของ lot ที่ไม่มี decision อื่น = แผนชั่วคราว (provisional) ไม่มี decision รอบนี้
+    lot ถูกคืน IDLE (pipeline.lots_to_release) ให้รอบสแกนวันถัดไปตัดสินใจใหม่ เช่น บริจาคขณะยังเข้าเกณฑ์
   - ครัว: 1 งาน (สูตร, วัน, lot หลัก) = 1 decision (batch_count ของงานนั้น server ใช้จองชั่วโมงครัวตอน POST /tasks)
     lot อื่นที่ DB จะตัดเป็นวัตถุดิบแบบ FEFO ไม่มี decision ของตัวเอง แต่มีใน allocations (covered_by_decision_index)
   - partner อื่นที่ไม่ใช่ DONATION ใช้ action_type ตาม config.action_mode
@@ -51,15 +54,23 @@ def _alternatives(ctx, lc, units: int, chosen: str, amap: dict, price_options=()
     for pid in lc.partner_ok:
         pc = ctx.partners[pid]
         kg = units * lc.weight_kg
-        if chosen == f"PARTNER:{pid}" or kg > pc.cap_kg or kg < pc.min_kg:
+        if chosen == f"PARTNER:{pid}":
             continue
-        profit = (pc.partner.buyback - pc.handling) * kg - pc.trip_cost - cogs
+        if pc.mode == "BIN":                                   # เข้าถัง ค่าเที่ยวเฉลี่ยต่อ kg ไม่เกินเรียกรถ 1 ครั้ง
+            fee = min(pc.fee_per_kg * kg, pc.trip_cost)
+            profit = -fee - (pc.handling - pc.partner.buyback) * kg - cogs
+            note = ("ของถึงปริมาณที่คุ้ม เรียกรถเต็มเที่ยวจ่ายครั้งเดียว" if pc.fee_per_kg * kg >= pc.trip_cost
+                    else "ใส่ถังของ partner เรียกรถเมื่อถังถึงปริมาณที่คุ้ม (ค่าเที่ยวเฉลี่ยต่อ kg)")
+        elif kg < pc.min_kg:                                   # เกินความจุ = รอบขนเพิ่มฟรี ไม่ตัดทิ้ง
+            continue
+        else:
+            profit, note = -pc.cost_per_kg * kg - pc.trip_cost - cogs, "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว"
         if best is None or profit > best[0]:
-            best = (profit, pc.partner)
+            best = (profit, pc.partner, note)
     if best:
         alts.append({"action_type": amap[best[1].partner_type], "disposal_method": best[1].partner_type,
                      "partner_id": best[1].partner_id, "expected_profit_impact": round(best[0], 2),
-                     "note": "เรียก partner มารับเฉพาะส่วนนี้ 1 เที่ยว"})
+                     "note": best[2]})
     if chosen in ("KITCHEN",) or chosen.startswith("MARKDOWN"):
         best_md = None
         for t in lc.tiers:
@@ -68,9 +79,9 @@ def _alternatives(ctx, lc, units: int, chosen: str, amap: dict, price_options=()
             sold = expected_sold(t["segments"], units)
             profit = sold * t["price"] - t["lost_sales_cost"] - cogs
             if best_md is None or profit > best_md[0]:
-                best_md = (profit, t)
+                best_md = (profit, t, sold)
         if best_md:
-            t = best_md[1]
+            _, t, sold = best_md
             alts.append({"action_type": "MARKDOWN", "discount_pct": t["discount_pct"],
                          "new_recommended_price": t["price"], "expected_profit_impact": round(best_md[0], 2),
                          "note": f"คาดว่าขายได้ {sold:.1f} จาก {units} หน่วย (P10/P50/P90 ของ forecaster) ที่เหลือทิ้ง"})
@@ -121,6 +132,16 @@ def build_decisions(plan: dict, ctx) -> dict:
                 idx = add(lo, p, action, p["net_profit_thb"], p["cogs_thb"],
                           _alternatives(ctx, lc, p["units"], f"MARKDOWN:{det['discount_pct']}", amap),
                           discount_pct=det["discount_pct"], new_recommended_price=det["unit_price"])
+                plan_left = det["leftover_plan"]
+                # feasible = False: ข้อมูลประกอบ ไม่ใช่ทางเลือกให้เทียบ (Task Agent แสดงเป็นค่าอ้างอิง)
+                decisions[idx]["alternatives"].insert(0, {
+                    "timing": "END_OF_LIFE", "handled_by": plan_left["handled_by"], "feasible": False,
+                    "expected_sold": det["expected_sold"], "expected_units": det["expected_leftover"],
+                    "expected_profit_impact": plan_left["estimated_net_thb"],
+                    "estimated_routes": [{k: r[k] for k in ("partner_id", "partner_type", "pickup_at_estimate",
+                                                             "expected_units")} for r in plan_left["routes"]],
+                    "note": f"ติดป้ายลดราคาทุกชิ้นที่วางขาย คาดว่าเหลือ {det['expected_leftover']:g} ชิ้นอยู่ใน lot ราคาลด "
+                            "รอบถัดไปวางแผนกำจัดใหม่ เงินที่นี่เป็นค่าประมาณค่ากำจัด"})
             elif m == "KITCHEN":
                 j = jobs[det["job_id"]]
                 action = amap["KITCHEN"]
@@ -213,8 +234,6 @@ def validate_payload(payload: dict, ctx) -> list:
                 if product.category not in partner.categories:
                     bad(f"partner ไม่รับหมวด {product.category}")
                 on = date.fromisoformat(str(d["due_by"])[:10]) if d.get("due_by") else inp.reference_date
-                if on != inp.reference_date:
-                    bad(f"due_by {on} ไม่ใช่วันนี้ ({inp.reference_date}): task เอาของออกต้องสร้างในวันที่ลงมือจริง")
                 left = (lot.expiration_date - on).days         # อายุคงเหลือ ณ วันรับ (ตรงกับ rules P4)
                 if partner.min_days and left < partner.min_days:
                     bad(f"lot เหลืออายุ {left} วัน partner ต้องการ >= {partner.min_days}")

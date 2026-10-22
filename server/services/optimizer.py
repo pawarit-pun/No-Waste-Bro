@@ -24,7 +24,7 @@ from fastapi import HTTPException
 from configs.config import db_env
 from core.dates import now_bkk, today_bkk
 from db.supabase import supabase
-from routers.ai import get_optimize_inputs
+from routers.ai import WASTE_HISTORY_DAYS, get_optimize_inputs
 from routers.inventory_lots import update_lots_ai_status
 from schemas.decision import DecisionCreate
 from schemas.enums import LotAIStatus
@@ -60,7 +60,7 @@ def load_engine():
 
 # ---------------------------------------------------------------- PART 2
 def read_inputs(run_id: Optional[str], days_ahead: int) -> tuple[dict, list, set]:
-    inputs = get_optimize_inputs(run_id=run_id, days_ahead=days_ahead)
+    inputs = get_optimize_inputs(run_id=run_id, days_ahead=days_ahead, waste_history_days=WASTE_HISTORY_DAYS)
     flags = supabase.table("products").select(PRODUCT_FLAGS).execute().data
     decided = set()
     if inputs["run_id"]:

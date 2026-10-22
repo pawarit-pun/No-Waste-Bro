@@ -3,7 +3,9 @@
 shelf (ต่อล็อต HIGH / CRITICAL ที่ยังไม่หมดอายุ):
   "ลด x% ตั้งแต่เปิดร้านวันนี้จนหมดอายุ" (ตรงกับ server ที่ย้ายของที่ลดราคาไปเป็นล็อตใหม่ราคาลดค้างไว้)
   คำนวณทีละวัน: ล็อตที่ลดราคาได้ลูกค้าก่อน (ป้ายลดราคาชนะความชอบของใหม่) ยอดเพิ่มขึ้น x lift ของส่วนลด
-  expected_qty / low_qty / high_qty  = ยอดที่ล็อตนี้ขายได้ (low-high = ช่วง 10-90% ของ Negative Binomial)
+  expected_qty / low_qty / high_qty  = ยอดที่ล็อตนี้ขายได้ เมื่อความต้องการของสินค้า (ช่วงอายุล็อต) = ค่าเฉลี่ย / P10 / P90
+                                       ของ Negative Binomial แล้วแบ่งผ่านคิวเดียวกัน (ลดราคาก่อน -> ใหม่สุด -> FIFO)
+                                       ล็อตที่อยู่ท้ายคิวจึงยังมีโอกาสขายเมื่อลูกค้ามาเกินคาด (ไม่ใช่ 0 ทั้งช่วง)
   lost_sales_other_lots              = ล็อตอื่นของสินค้าเดียวกันขายได้น้อยลงเท่าไร (Optimizer ควรหักออก)
   ล็อตหมดอายุ: shelf = [] (เหลือแค่ช่องทางกำจัด)
 
@@ -21,15 +23,19 @@ def shelf_curve(result, product, lifts, demand, ref, phi_for, newest_share=confi
     if result["expired"]:
         return []
     lot = result["lot"]
-    lot_id = lot["lot_id"]
+    lot_id, pid = lot["lot_id"], lot["product_id"]
     qty = int(lot["current_quantity"])
     exp = date.fromisoformat(str(lot["expiration_date"])[:10])
     days = (exp - ref).days + 1
     plots = sellable_lots(result["plots"], ref)
-    base_sold, base_dir = allocate(plots, demand, ref, newest_share)
+    base_sold, _ = allocate(plots, demand, ref, newest_share)
     others_base = sum(v for k, v in base_sold.items() if k != lot_id)
-    total = sum(demand.get((lot["product_id"], ref + timedelta(days=i)), 0.0) for i in range(days))
+    total = sum(demand.get((pid, ref + timedelta(days=i)), 0.0) for i in range(days))
     phi_k = phi_for(days)
+    # ความต้องการของสินค้าที่ P10 / P90 (ยอดรวมช่วงอายุล็อต) -> คูณทุกวันด้วยอัตราส่วนเดียวกัน แล้วแบ่งผ่านคิวเดิม
+    product_demand = {k: v for k, v in demand.items() if k[0] == pid}
+    scaled = {prob: {k: v * nb.quantile(prob, total, phi_k) / total for k, v in product_demand.items()}
+              for prob in (0.10, 0.90)} if total > 0 else {0.10: {}, 0.90: {}}
     price_now = float(lot["current_selling_price"])
     curve = []
     for pct in config.DISCOUNT_LEVELS:
@@ -38,19 +44,17 @@ def shelf_curve(result, product, lifts, demand, ref, phi_for, newest_share=confi
         price = round(price_now * (1 - pct / 100), 2)
         if pct and product["min_allowed_price"] is not None and price < float(product["min_allowed_price"]) - 1e-9:
             continue
-        if pct == 0:
-            sold, directed, lost = base_sold, base_dir, 0.0
-        else:
-            sold, directed = allocate(plots, demand, ref, newest_share, priority=lot_id, lift=lifts.get(pct, 1.0))
-            lost = max(0.0, others_base - sum(v for k, v in sold.items() if k != lot_id))
-        mean = directed.get(lot_id, 0.0)
-        phi_lot = phi_k * total * lifts.get(pct, 1.0) / mean if mean > 0 else phi_k
+        queue = {"priority": lot_id, "lift": lifts.get(pct, 1.0)} if pct else {}
+        sold, _ = allocate(plots, demand, ref, newest_share, **queue)
+        lost = max(0.0, others_base - sum(v for k, v in sold.items() if k != lot_id)) if pct else 0.0
+        low, high = (min(qty, round(allocate(plots, scaled[prob], ref, newest_share, **queue)[0].get(lot_id, 0.0)))
+                     for prob in (0.10, 0.90))
         curve.append({
             "discount_pct": pct,
             "price": price,
             "expected_qty": round(min(qty, sold.get(lot_id, 0.0)), 1),
-            "low_qty": nb.quantile(0.10, mean, phi_lot, cap=qty),
-            "high_qty": nb.quantile(0.90, mean, phi_lot, cap=qty),
+            "low_qty": low,
+            "high_qty": high,
             "applies_from": ref.isoformat(),
             "applies_until": exp.isoformat(),
             "lost_sales_other_lots": round(lost, 1),

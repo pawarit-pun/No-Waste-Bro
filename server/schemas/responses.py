@@ -247,6 +247,24 @@ class OptimizeInputsResponse(BaseModel):
     kitchen_capacity: list[KitchenCapacityDay] = Field(..., description="ความจุครัวตั้งแต่วันนี้ถึง +days_ahead")
     donation_partners: list[DonationPartnerRow] = Field(..., description="partner ที่ active")
     ingredient_stock: list["IngredientStock"] = Field(..., description="สต็อกที่ใช้ได้ของวัตถุดิบทุกสูตร (lot ยังไม่หมดอายุ เรียงหมดอายุก่อน)")
+    waste_history: Optional["WasteHistory"] = Field(None, description="ของทิ้งเฉลี่ย kg/วัน แยกหมวด จาก product_daily.waste_qty")
+    partner_bins: list["PartnerBin"] = Field(default_factory=list, description="ของที่รอ partner มารับอยู่แล้ว (kg ต่อ partner)")
+
+
+class WasteHistory(BaseModel):
+    from_: date = Field(..., alias="from", description="วันแรกที่ใช้เฉลี่ย")
+    to: date = Field(..., description="วันสุดท้ายที่ใช้เฉลี่ย (เมื่อวาน)")
+    days: int = Field(..., description="จำนวนวันที่มีข้อมูลจริง")
+    kg_per_day: dict[str, float] = Field(default_factory=dict, description="หมวดสินค้า -> ของทิ้งเฉลี่ย kg/วัน")
+
+    model_config = {"populate_by_name": True, "serialize_by_alias": True}
+
+
+class PartnerBin(BaseModel):
+    partner_id: str
+    open_kg: float = Field(..., description="kg ที่รอ partner มารับ (decision ที่ยังไม่ส่งมอบ)")
+    decisions: int = Field(..., description="จำนวน decision ที่รออยู่")
+    oldest_at: Optional[datetime] = Field(None, description="decision เก่าสุดที่ยังรอ (ของรอในถังนานสุดตั้งแต่เมื่อไร)")
 
 
 class AssessmentRef(BaseModel):

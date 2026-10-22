@@ -12,15 +12,17 @@ PART 4  Kitchen      U*  (ประกอบใน context.py) ใช้ helper 
   A0_UNKNOWN_PRODUCT   ไม่พบสินค้าใน products
   A1_STALE_*           จำนวน / วันหมดอายุ / ราคา เปลี่ยนไปหลัง Risk Scanner สแกน (เตือน ใช้ค่าปัจจุบัน)
   K0 หมดอายุแล้ว  K1 สินค้าห้ามลดราคา  K2 ราคาหลังลด < min_allowed_price  K3 ระดับไม่อยู่ในนโยบาย / forecaster ไม่ได้พยากรณ์
-  K4 ราคาใน shelf ไม่ตรงราคาปัจจุบัน (คำนวณใหม่)  K5 ไม่เหลือเวลาขาย / คาดว่าขายไม่ได้  K6 ลดมากขึ้นแต่ยอดขายที่คาดไม่เพิ่ม
+  K4 ราคาใน shelf ไม่ตรงราคาปัจจุบัน (คำนวณใหม่)  K5 ไม่เหลือเวลาขาย / ลดแล้วคาดว่าขายไม่ได้ (0% เก็บไว้ถ้ายังมีเวลาขาย)  K6 ลดมากขึ้นแต่ยอดขายที่คาดไม่เพิ่ม
   P1 flag allow_* ของสินค้า  P2 partner ไม่รับหมวดนี้  P3 ไม่ active / ไม่มีรอบรับใน max_pickup_wait_days
   P4 อายุคงเหลือ ณ วันรับ < min_days_before_expiry  P5 ของหมดอายุ (ห้ามบริจาคให้คนกิน)  P6 ความจุ partner ไม่พอ 1 หน่วย
-  P7 รวมทุก lot ที่เข้าเกณฑ์ยังไม่ถึง min_kg_per_pickup  P8 ไม่มีน้ำหนักสินค้า
+  P7 (partner โหมด DEDICATED) รวมทุก lot ที่เข้าเกณฑ์ยังไม่ถึง min_kg_per_pickup  P8 ไม่มีน้ำหนักสินค้า
+  P3/P4/P5 ของ partner โหมด BIN ตรวจที่เวลารับที่รวมเวลารอถังเต็มแล้ว (ช้าสุดที่คาด)
 """
 from __future__ import annotations
 
+import itertools
 import math
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
@@ -112,7 +114,9 @@ def markdown_tiers(lot, product, rows: list, now: datetime, cfg) -> tuple[list, 
             reasons.append("K2_BELOW_MIN_PRICE")
         segments = survival_segments(row["expected"], row["low"], row["high"], limit=float(lot.quantity))
         sold = expected_sold(segments, lot.quantity)
-        if sold < 0.05:
+        # ราคาปัจจุบัน (0%) ไม่ตัดทิ้งตราบที่ยังมีเวลาขาย: วางไว้บนชั้นไม่มีต้นทุนเพิ่ม ของเหลือไปทาง end-of-life
+        # ไม่งั้น solver ไม่มีทางเลือก "วางขายต่อ" ต้องดึงของออกตอนเช้าทั้งที่ยังขายเกินที่คาดได้ (หรือถูกบังคับให้ลดราคา)
+        if sold < 0.05 and (d > 0 or now >= sell_end(lot, cfg)):
             reasons.append("K5_NO_SALES_EXPECTED")
         if reasons:
             excluded[key] = reasons
@@ -121,10 +125,12 @@ def markdown_tiers(lot, product, rows: list, now: datetime, cfg) -> tuple[list, 
             excluded[key] = [f"K6_NO_EXTRA_SALES expected {sold:.2f} <= {best:.2f}"]
             continue
         best = sold
-        lost_cost = row["lost_sales"] * product.margin * cfg.lost_sales_margin_factor if d > 0 else 0.0
+        # รายได้ที่ล็อตอื่นเสีย (เต็มราคา: ต้นทุนจมแล้ว) ค่ากำจัดของที่เหลือเพิ่มบวกใน context เมื่อรู้ทาง end-of-life
+        lost = row["lost_sales"] if d > 0 else 0.0
         tiers.append({"discount_pct": d, "price": price, "segments": segments, "expected_sold": round(sold, 3),
                       "expected": round(row["expected"], 2), "low": round(row["low"], 2), "high": round(row["high"], 2),
-                      "lost_sales_cost": round(lost_cost, 2)})
+                      "lost_units": round(lost, 3),
+                      "lost_sales_cost": round(lost * product.regular_price * cfg.lost_sales_factor, 2)})
     for d in cfg.allowed_discounts:
         if f"MARKDOWN:{d}" not in excluded and all(t["discount_pct"] != d for t in tiers):
             excluded[f"MARKDOWN:{d}"] = ["K3_NOT_FORECAST"]
@@ -132,16 +138,67 @@ def markdown_tiers(lot, product, rows: list, now: datetime, cfg) -> tuple[list, 
 
 
 # ---------------------------------------------------------------- PART 3: Partner
-def next_pickup(partner, now: datetime, cfg) -> Optional[datetime]:
-    """รอบรับของเร็วสุดสำหรับของที่ดึงออกตอนนี้: ต้องเตรียมของ lead_time_minutes ก่อน"""
-    return first_slot(partner, now + timedelta(minutes=cfg.lead_time_minutes), cfg)
+def next_pickup(partner, now: datetime, cfg, wait_days: float = 0.0,
+                max_wait_days: Optional[float] = None) -> Optional[datetime]:
+    """รอบรับของเร็วสุดสำหรับของที่ดึงออกตอนนี้: ต้องเตรียมของ lead_time_minutes ก่อน
+    partner โหมด BIN: รอถังถึงปริมาณที่คุ้ม (wait_days) แต่ไม่เกินเพดานเวลา (max_wait_days) ดู bin_pickup"""
+    return bin_pickup(partner, now + timedelta(minutes=cfg.lead_time_minutes), wait_days, max_wait_days, cfg)
 
 
-def eol_pickup(partner, lot, now: datetime, cfg) -> Optional[datetime]:
-    """รอบรับของที่ขายไม่หมด: รอบแรกที่เริ่มได้หลังหมดเวลาขาย (sell_end + eol_lead_minutes) และไม่ก่อนรอบเตรียมของตอนนี้"""
+def ceil_minute(t: datetime) -> datetime:
+    """ปัดขึ้นเป็นนาทีเต็ม (เวลารอถังเต็มเป็นเศษวัน)"""
+    exact = t.replace(second=0, microsecond=0)
+    return exact if exact == t else exact + timedelta(minutes=1)
+
+
+def eol_pickup(partner, lot, now: datetime, cfg, wait_days: float = 0.0,
+               max_wait_days: Optional[float] = None) -> Optional[datetime]:
+    """รอบรับของที่ขายไม่หมด: รอบแรกที่เริ่มได้หลังหมดเวลาขาย (sell_end + eol_lead_minutes) และไม่ก่อนรอบเตรียมของตอนนี้
+    (โหมด BIN: + รอถังถึงปริมาณที่คุ้ม ไม่เกินเพดานเวลา)"""
     ready = max(sell_end(lot, cfg) + timedelta(minutes=cfg.eol_lead_minutes),
                 now + timedelta(minutes=cfg.lead_time_minutes))
-    return first_slot(partner, ready, cfg)
+    return bin_pickup(partner, ready, wait_days, max_wait_days, cfg)
+
+
+def bin_pickup(partner, ready: datetime, wait_days: float, max_wait_days: Optional[float], cfg) -> Optional[datetime]:
+    """รอบรับของที่เข้าถังเวลา ready: รอบแรกหลังรอ wait_days (ถังถึงปริมาณที่คุ้ม)
+    ถ้ารอบนั้นเกินเพดานเวลา (ready + max_wait_days) ใช้รอบสุดท้ายที่ยังไม่เกินเพดานแทน (เรียกรถก่อนของเกินเพดาน)"""
+    slot = first_slot(partner, ceil_minute(ready + timedelta(days=wait_days)), cfg)
+    if max_wait_days is None or not math.isfinite(max_wait_days):
+        return slot
+    deadline = ready + timedelta(days=max_wait_days)
+    if slot is None or slot > deadline:
+        slot = last_slot_by(partner, ready, deadline, cfg) or slot
+    return slot
+
+
+def last_slot_by(partner, ready: datetime, deadline: datetime, cfg) -> Optional[datetime]:
+    """รอบรับช้าสุดที่ไม่ก่อน ready และไม่เกิน deadline (ไม่มี = None)"""
+    best, slot = None, first_slot(partner, ready, cfg)
+    while slot is not None and slot <= deadline:
+        best = slot
+        next_day = datetime.combine(slot.date() + timedelta(days=1), time(0, 0), tzinfo=BKK)
+        slot = first_slot(partner, next_day, cfg)
+    return best
+
+
+def calls_per_week(pickup_days, max_gap_days: float) -> int:
+    """จำนวนครั้งที่ต้องเรียกรถต่อสัปดาห์น้อยที่สุด: เรียกได้เฉพาะวันที่ partner มารับ และระยะห่างระหว่างวันที่เรียก
+    (วนรอบสัปดาห์) ต้องไม่เกิน max_gap_days ถ้าตารางรับของ partner ห่างกว่านั้นอยู่แล้ว ใช้ระยะของตารางแทน"""
+    days = sorted(pickup_days)
+    if not days:
+        return 0
+    limit = max(max_gap_days, max_pickup_gap(days))
+    for n in range(1, len(days) + 1):
+        if any(max_pickup_gap(combo) <= limit + EPS for combo in itertools.combinations(days, n)):
+            return n
+    return len(days)
+
+
+def max_pickup_gap(days) -> int:
+    """ระยะห่างมากสุด (วัน) ระหว่างวันที่เรียงกันแบบวนสัปดาห์ (1 = จันทร์ .. 7 = อาทิตย์)"""
+    days = list(days)
+    return max((b - a) % 7 or 7 for a, b in zip(days, days[1:] + days[:1]))
 
 
 def first_slot(partner, ready: datetime, cfg) -> Optional[datetime]:

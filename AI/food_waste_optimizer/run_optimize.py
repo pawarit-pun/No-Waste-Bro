@@ -54,6 +54,11 @@ def format_report(plan: dict, decisions: list) -> str:
     lines += ["", "เที่ยวรับของ:"] + [
         f"  {t['trip_id']} {t['partner_type']:20s} {t['kg']:8.2f} kg รับ {t['pickup_at']} ค่าเที่ยว {t['trip_cost_thb']:.2f} "
         f"+ handling {t['handling_thb']:.2f} - รับซื้อ {t['buyback_revenue_thb']:.2f}" for t in plan["trips"]]
+    lines += ["ถังของ partner (on-call):"] + [
+        f"  {b['partner_id']} {b['mode']:9s} ของทิ้ง {b['waste_kg_per_day']:.2f} kg/วัน | เรียก {b['calls_per_week']} ครั้ง/สัปดาห์ "
+        f"ครั้งละ {b['economic_call_kg']:.1f} kg | ต้นทุน {b['cost_per_kg_thb']:.2f} บาท/kg | ถัง {b['bin_after_kg']:.2f} kg "
+        f"{'เรียกรถได้' if b['call_now'] else 'รอ'} ({b['call_reason'] or '-'}) {b['expected_call_at'] or '-'}"
+        for b in plan["partner_bins"]]
     lines += ["งานครัว:"] + [
         f"  {j['job_id']} {j['name']} {j['batches']} batch ใช้ {j['anchor_units']} หน่วยจาก {j['anchor_lot_id']} "
         f"ได้ {j['output_units']:g} ชิ้น คาดขาย {j['expected_sold_units']} | กำไร {j['net_profit_thb']:.2f}"
@@ -92,7 +97,8 @@ def run_local_file(path: Path) -> dict:
     """รันซ้ำจาก optimize_inputs.json ที่รอบก่อนบันทึกไว้ (ข้อมูลจริง) ใช้ products.json ในโฟลเดอร์เดียวกันถ้ามี"""
     data = json.loads(path.read_text(encoding="utf-8"))
     inputs = data.get("optimize_inputs", data)
-    products = data.get("products")
+    # products ของ optimize_inputs ไม่มี flag การกำจัด: ใช้ GET /products (คู่กับ optimize_inputs หรือ products.json)
+    products = data.get("products") if "optimize_inputs" in data else None
     if products is None and (path.parent / "products.json").exists():
         products = json.loads((path.parent / "products.json").read_text(encoding="utf-8"))
     result = run_optimizer(inputs, products_catalog=products)

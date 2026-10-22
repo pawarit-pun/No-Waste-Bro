@@ -19,6 +19,9 @@ Partner 2 จังหวะ (ต่อ lot ต่อ partner):
   NOW          ดึงของออกจากชั้นตอนนี้ ส่งรอบรับเร็วสุด (next_pickup) - partner_ok
   END_OF_LIFE  ของที่วางขายแล้วขายไม่หมด ส่งรอบแรกหลังหมดเวลาขาย (eol_pickup) - eol (เฉพาะ lot ที่ยังขายได้)
   เที่ยวรถ = (partner, วันที่รับ) 1 เที่ยว; ถ้าหลายจังหวะตกวันเดียวกัน ใช้เวลารับที่ช้าสุดของวันนั้น แล้วตรวจกฎซ้ำที่เวลานั้น
+  partner โหมด BIN (ดู config): เวลารับ = รอบรับหลังถังน่าจะถึงปริมาณที่คุ้มที่สุด แต่ไม่เกินเพดานเวลา (max_wait_days)
+    NOW รอ (ปริมาณที่คุ้ม - ของในถังแล้ว) / ของทิ้งต่อวัน, END_OF_LIFE รอเต็ม 1 รอบ (ไม่รู้ว่าถังมีของเท่าไรตอนนั้น)
+    รอบนั้นเกินเพดานเวลา -> รอบสุดท้ายก่อนเพดาน (rules.bin_pickup)
   รหัส U0 สูตรไม่ active  U1 ไม่มีแผนก/เวลาทำ หรือแผนกไม่มีในตารางครัว  U2 สินค้าห้ามเข้าครัว / ไม่ใช่วัตถุดิบหลัก
        U3 ชั่วโมงครัวไม่พอ  U4 lot หมดอายุก่อนงานเสร็จ  U5 ไม่มีความต้องการเมนูในช่วงนั้น  U6 หน่วยไม่ตรง
        U7 ไม่รู้จักสินค้าผลผลิต  U8 วัตถุดิบตัวอื่นในสต็อกไม่พอ 1 batch
@@ -34,10 +37,10 @@ from typing import Optional
 from ai_engine.optimizer.config import OptimizerConfig, simulated_now
 from ai_engine.optimizer.demand import lot_curve, menu_segments
 from ai_engine.optimizer.models import Inputs
-from ai_engine.optimizer.rules import (EPS, eol_pickup, expiry_dt, is_expired, kitchen_due, kitchen_hours_budget,
-                                       kitchen_start, lot_skip_reasons, markdown_tiers, next_pickup,
-                                       partner_handling_per_kg, partner_min_kg, partner_reasons, partner_trip_cost,
-                                       sell_end, stale_notes)
+from ai_engine.optimizer.rules import (EPS, calls_per_week, eol_pickup, expiry_dt, is_expired, kitchen_due,
+                                       kitchen_hours_budget, kitchen_start, lot_skip_reasons, markdown_tiers,
+                                       max_pickup_gap, next_pickup, partner_handling_per_kg, partner_min_kg,
+                                       partner_reasons, partner_trip_cost, sell_end, stale_notes)
 
 
 @dataclass
@@ -59,11 +62,28 @@ class LotCtx:
 @dataclass
 class PartnerCtx:
     partner: object
-    pickup: Optional[datetime]                     # รอบรับเร็วสุดของของที่ดึงออกตอนนี้ (ก่อนรวมเที่ยว)
+    pickup: Optional[datetime]                     # รอบรับของของที่ดึงออกตอนนี้ (ก่อนรวมเที่ยว, BIN = รวมเวลารอถังเต็มแล้ว)
     cap_kg: float
-    trip_cost: float
+    trip_cost: float                               # ค่าเรียกรถ 1 ครั้ง (on-call)
     handling: float
     min_kg: float = 0.0
+    mode: str = "DEDICATED"                        # BIN = สะสมของในถังแล้วเรียกรถเมื่อถึง min_kg | DEDICATED = เรียกเฉพาะรอบนี้
+    daily_kg: float = 0.0                          # ของทิ้งเฉลี่ยต่อวันของหมวดที่ partner รับ (waste_history)
+    gap_days: float = math.inf                     # วันระหว่างรอบรับเฉลี่ย = 7 / จำนวนวันรับต่อสัปดาห์
+    calls_per_week: int = 0                        # BIN: เรียกรถน้อยสุดกี่ครั้งต่อสัปดาห์โดยของไม่รอเกินเพดานเวลา
+    call_interval_days: float = math.inf           # BIN: เรียกรถห่างกันเฉลี่ย = 7 / calls_per_week
+    max_wait_days: float = math.inf                # BIN: เพดานเวลาที่ของรอในถังได้ = max(max_hold_days, ช่องว่างตารางรับ)
+    expected_kg: float = 0.0                       # kg ที่คาดว่าเที่ยวนั้นขน (BIN = ปริมาณที่คุ้มที่สุดภายในเพดานเวลา)
+    fee_per_kg: float = 0.0                        # BIN: ค่าเที่ยวเฉลี่ยต่อ kg = trip_cost / expected_kg
+    bin_kg: float = 0.0                            # ของที่รออยู่ในถังแล้ว (decision ที่ยังไม่ส่งมอบ)
+    bin_since: Optional[datetime] = None           # ของในถังชิ้นที่รอนานสุดเข้าถังเมื่อไร (decision เก่าสุด)
+    cycle_days: float = math.inf                   # BIN: ถังว่างจนถึงปริมาณที่คุ้มใช้กี่วัน (ไม่เกินเพดานเวลา)
+    wait_now_days: float = 0.0                     # BIN: ของที่เข้าถังตอนนี้รอเรียกรถอีกกี่วัน (นับของในถังแล้ว)
+
+    @property
+    def cost_per_kg(self) -> float:
+        """ต้นทุนสุทธิต่อ kg (ไม่รวมต้นทุนสินค้า) = ค่าเที่ยวเฉลี่ย + handling - buyback (DEDICATED ไม่รวมค่าเที่ยว)"""
+        return self.fee_per_kg + self.handling - self.partner.buyback
 
 
 @dataclass
@@ -160,11 +180,20 @@ def build_context(inputs: Inputs, now: Optional[datetime] = None, cfg: Optional[
         warnings.append("W0_DISPOSAL_FLAGS_MISSING: ไม่มี allow_animal_feed / composting / anaerobic_digestion / landfill "
                         f"ของบางสินค้า (นโยบาย {cfg.missing_flag_policy}) ส่ง products จาก GET /products มาด้วย")
 
-    # ---- 4.2 partner (NOW / END_OF_LIFE)
+    # ---- 4.2 partner (NOW / END_OF_LIFE) กฎตรวจที่เวลารับช้าสุดที่คาด (BIN รวมเวลารอถังเต็ม) จึงปลอดภัยถ้ารถมาเร็วกว่า
     partners = {}
     for p in inputs.partners.values():
-        partners[p.partner_id] = PartnerCtx(p, next_pickup(p, now, cfg), p.max_kg, partner_trip_cost(p, cfg),
-                                            partner_handling_per_kg(p), partner_min_kg(p, cfg))
+        pc = PartnerCtx(p, None, p.max_kg, partner_trip_cost(p, cfg), partner_handling_per_kg(p), partner_min_kg(p, cfg))
+        _partner_mode(pc, inputs, cfg)
+        pc.pickup = next_pickup(p, now, cfg, pc.wait_now_days, pc.max_wait_days)
+        partners[p.partner_id] = pc
+        if pc.mode == "DEDICATED" and pc.min_kg > 0 and pc.trip_cost > 0:
+            warnings.append(f"W2_PARTNER_DEDICATED {p.partner_id}: ของทิ้ง {pc.daily_kg:.2f} kg/วัน ภายในเพดานเวลา "
+                            f"{cfg.max_hold_days:g} วัน สะสมได้ {pc.expected_kg:.2f} kg < ขั้นต่ำ {pc.min_kg:g} kg "
+                            "-> เรียกรถเฉพาะรอบนี้")
+        if pc.mode == "BIN" and pc.max_wait_days > cfg.max_hold_days + EPS:
+            warnings.append(f"W3_PICKUP_GAP_OVER_HOLD {p.partner_id}: ตารางรับห่างสุด {pc.max_wait_days:g} วัน "
+                            f"> max_hold_days {cfg.max_hold_days:g} ของอาจรอในถังนานกว่าเพดานเวลา")
     possible_kg = defaultdict(float)
     for lc in lots.values():
         for pid, pc in partners.items():
@@ -175,7 +204,8 @@ def build_context(inputs: Inputs, now: Optional[datetime] = None, cfg: Optional[
             else:
                 lc.partner_ok.append(pid)
             if lc.tiers:
-                when = eol_pickup(pc.partner, lc.lot, now, cfg)
+                # ของเหลือเข้าถังหลังหมดเวลาขาย ไม่รู้ว่าถังมีของเท่าไร -> รอเต็ม 1 รอบ (ปลอดภัยสุด)
+                when = eol_pickup(pc.partner, lc.lot, now, cfg, pc.cycle_days, pc.max_wait_days)
                 eol_reasons = partner_reasons(lc.lot, lc.product, pc.partner, when, pc.cap_kg, cfg, now)
                 if eol_reasons:
                     lc.excluded[f"EOL:{key}"] = eol_reasons
@@ -183,8 +213,8 @@ def build_context(inputs: Inputs, now: Optional[datetime] = None, cfg: Optional[
                     lc.eol[pid] = when
             if pid in lc.partner_ok or pid in lc.eol:
                 possible_kg[pid] += lc.lot.quantity * lc.weight_kg
-    for pid, pc in partners.items():       # P7: ต่อให้ส่งทุก lot ที่เข้าเกณฑ์ยังไม่ถึงขั้นต่ำต่อรอบ
-        if pid in possible_kg and pc.min_kg > possible_kg[pid] + EPS:
+    for pid, pc in partners.items():       # P7 (DEDICATED): ต่อให้ส่งทุก lot ที่เข้าเกณฑ์ยังไม่ถึงขั้นต่ำต่อรอบ
+        if pc.mode == "DEDICATED" and pid in possible_kg and pc.min_kg > possible_kg[pid] + EPS:
             reason = [f"P7_BELOW_MIN_KG {possible_kg[pid]:.2f} kg < {pc.min_kg:g} kg"]
             for lc in lots.values():
                 if pid in lc.partner_ok:
@@ -192,6 +222,8 @@ def build_context(inputs: Inputs, now: Optional[datetime] = None, cfg: Optional[
                     lc.excluded[f"{pc.partner.partner_type}:{pid}"] = reason
                 if lc.eol.pop(pid, None) is not None:
                     lc.excluded[f"EOL:{pc.partner.partner_type}:{pid}"] = reason
+    for lc in lots.values():
+        _lost_sales_disposal(lc, partners, cfg)
     slots = _merge_slots(lots, partners, cfg, now)
 
     # ---- 4.3 ชั่วโมงครัวต่อ (แผนก, วัน)
@@ -204,6 +236,15 @@ def build_context(inputs: Inputs, now: Optional[datetime] = None, cfg: Optional[
     ctx = Context(inputs, cfg, now, lots, skipped, partners, hours, [], {}, {}, {}, {}, warnings, slots)
     _build_kitchen(ctx)
     return ctx
+
+
+def _lost_sales_disposal(lc: LotCtx, partners: dict, cfg) -> None:
+    """ลดราคา lot นี้แล้วล็อตอื่นของสินค้าเดียวกันขายได้น้อยลง (lost_units) -> ของที่เหลือเพิ่มต้องกำจัดด้วย
+    ค่ากำจัดต่อหน่วย = ทาง end-of-life ที่ถูกสุดของ lot นี้ (สินค้าเดียวกัน กฎ partner เดียวกัน) ไม่มีทาง = 0"""
+    per_unit = min((partners[pid].cost_per_kg * (lc.weight_kg or 0.0) for pid in lc.eol), default=0.0)
+    for t in lc.tiers:
+        if t["lost_units"] > 0:
+            t["lost_sales_cost"] = round(t["lost_sales_cost"] + t["lost_units"] * per_unit * cfg.lost_sales_factor, 2)
 
 
 def _merge_slots(lots: dict, partners: dict, cfg, now: datetime) -> dict:
@@ -240,18 +281,32 @@ def _merge_slots(lots: dict, partners: dict, cfg, now: datetime) -> dict:
     return {k: v for k, v in slots.items() if k in used}
 
 
-def trip_cost(ctx, pid: str, day: date) -> float:
-    """ค่าเที่ยวของ (partner, วัน): วันรับรอบแรกของ partner = เต็ม, วันถัดไป = x deferred_trip_cost_share"""
-    pc = ctx.partners[pid]
-    first = pc.pickup.date() if pc.pickup else None
-    return pc.trip_cost if day == first else pc.trip_cost * ctx.cfg.deferred_trip_cost_share
-
-
-def trip_min_kg(ctx, pid: str, day: date) -> float:
-    """ขั้นต่ำต่อเที่ยว: เที่ยววันถัดไปที่ไม่คิดค่าเที่ยว (share = 0) ถือว่ารวมกับของรอบหน้า ไม่บังคับขั้นต่ำ"""
-    pc = ctx.partners[pid]
-    first = pc.pickup.date() if pc.pickup else None
-    return pc.min_kg if day == first or ctx.cfg.deferred_trip_cost_share > 0 else 0.0
+def _partner_mode(pc: PartnerCtx, inputs: Inputs, cfg) -> None:
+    """partner แบบเรียกรถเฉพาะ (on-call): ปริมาณที่คุ้มที่สุดภายในเพดานเวลา -> โหมด BIN / DEDICATED + ค่าเที่ยวเฉลี่ยต่อ kg
+    (ดู config) DEDICATED ไม่ต้องรอถัง: cycle_days = wait_now_days = 0"""
+    p = pc.partner
+    pc.daily_kg = sum(inputs.waste_kg_per_day.get(c, 0.0) for c in p.categories)
+    pc.gap_days = 7.0 / len(p.pickup_days) if p.pickup_days else math.inf
+    pc.bin_kg = inputs.partner_bins.get(p.partner_id, 0.0)
+    pc.bin_since = inputs.partner_bin_since.get(p.partner_id)
+    pc.cycle_days = 0.0
+    if not p.pickup_days or pc.daily_kg <= 0:
+        return                                                    # ไม่มีตารางรับ / ไม่มีประวัติของทิ้ง -> DEDICATED
+    # ค่าเที่ยว 0 (scheduled) ไม่ต้องรอให้คุ้ม เรียกทุกรอบรับ; ไม่งั้นเรียกน้อยครั้งที่สุดภายในเพดานเวลา
+    calls = calls_per_week(p.pickup_days, cfg.max_hold_days) if pc.trip_cost > 0 else len(p.pickup_days)
+    interval = 7.0 / calls
+    override = cfg.expected_kg_per_trip_override.get(p.partner_id)
+    economic_kg = float(override) if override else min(pc.cap_kg, pc.daily_kg * interval)
+    if economic_kg <= 0 or economic_kg + EPS < pc.min_kg:
+        pc.expected_kg = economic_kg                              # ถังไม่ถึงขั้นต่ำภายในเพดานเวลา -> DEDICATED
+        return
+    pc.mode = "BIN"
+    pc.calls_per_week, pc.call_interval_days, pc.expected_kg = calls, interval, economic_kg
+    pc.max_wait_days = max(cfg.max_hold_days, float(max_pickup_gap(sorted(p.pickup_days))))
+    pc.fee_per_kg = pc.trip_cost / economic_kg
+    if pc.trip_cost > 0:
+        pc.cycle_days = min(economic_kg / pc.daily_kg, pc.max_wait_days)
+        pc.wait_now_days = min(max(0.0, economic_kg - pc.bin_kg) / pc.daily_kg, pc.max_wait_days)
 
 
 def trip_key(ctx, lid: str, pid: str, timing: str):

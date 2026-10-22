@@ -3,7 +3,7 @@ from postgrest.exceptions import APIError
 
 from core.dates import today_bkk
 from db.supabase import supabase
-from schemas.enums import ActionType, TaskStatus
+from schemas.enums import ActionType, LotAIStatus, TaskStatus
 from services.kitchen import release_hours
 from services.tasks import RECIPE_BOOKING_COLUMNS, get_task, kitchen_booking_of
 
@@ -70,4 +70,21 @@ def complete_task(task_id: str, staff_id: str, actual_quantity: int) -> dict:
         }).execute()
     except APIError as e:
         raise HTTPException(DB_ERROR_STATUS.get(e.code, 400), e.message)
+    _release_markdown_split(res.data)
     return {"task": get_task(task_id), "effects": res.data}
+
+
+def _release_markdown_split(effects: dict) -> None:
+    """MARKDOWN: lot ราคาลดที่แยกออกมา (ติดป้ายทุกชิ้นที่วางขาย) -> IDLE ให้รอบสแกนถัดไปวางแผนกำจัดของที่ขายไม่หมด
+    ด้วยจำนวนจริง (Optimizer ไม่ออก decision กำจัดล่วงหน้าให้ของส่วนนี้) ทำหลัง transaction ของ complete_task"""
+    split = [lot for lot in (effects or {}).get("lots_created") or [] if lot.get("reason") == "MARKDOWN_SPLIT"]
+    if not split:
+        return
+    try:
+        (supabase.table("inventory_lots").update({"ai_status": LotAIStatus.IDLE.value})
+           .in_("lot_id", [lot["lot_id"] for lot in split]).execute())
+    except APIError as e:
+        raise HTTPException(502, f"task completed, but the markdown lot was not set to IDLE ({e.message}): "
+                                 f"set it with PATCH /inventory-lots/ai-status")
+    for lot in split:
+        lot["ai_status"] = LotAIStatus.IDLE.value

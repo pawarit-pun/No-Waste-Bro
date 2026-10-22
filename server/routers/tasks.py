@@ -104,7 +104,7 @@ def reject(task_id: UUID, payload: TaskReject):
 
 | `action_type` | ผลต่อสต็อก |
 | --- | --- |
-| `MARKDOWN` | ตัด lot เดิมตามจำนวนที่ติดป้ายลด แล้ว **แยกเป็น lot ใหม่** ราคา `new_recommended_price` (วันหมดอายุ/ตำแหน่งเดิม, `ai_status = CHECKED`) |
+| `MARKDOWN` | ตัด lot เดิมตามจำนวนที่ติดป้ายลด แล้ว **แยกเป็น lot ใหม่** ราคา `new_recommended_price` (วันหมดอายุ/ตำแหน่งเดิม, `ai_status = IDLE` ให้รอบสแกนถัดไปวางแผนกำจัดของที่ขายไม่หมด) |
 | `KITCHEN_REPURPOSE` | ตัด lot ของ task ตามจำนวนจริง + **ตัดวัตถุดิบอื่นของสูตร** แล้ว **สร้าง lot ผลผลิต** |
 | `DONATE` / `ANIMAL_FEED` / `COMPOST` / `ANAEROBIC_DIGESTION` / `LANDFILL` / `DISCARD` | ตัด lot ของ task ตามจำนวนจริง |
 

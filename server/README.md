@@ -409,7 +409,7 @@ Every action sends `staff_id` in the body (there is no login), and only the assi
 
 | `action_type` | Stock effect |
 | --- | --- |
-| `MARKDOWN` | The task lot loses `actual_quantity_handled` units, which become a **new lot** at `new_recommended_price` (same product, dates, cost, and location; `ai_status = CHECKED`) |
+| `MARKDOWN` | The task lot loses `actual_quantity_handled` units, which become a **new lot** at `new_recommended_price` (same product, dates, cost, and location). The server then sets the new lot to `ai_status = IDLE`, so the next scan plans what to do with the units that did not sell (the Optimizer labels every unit it puts on the shelf and does not create a disposal decision for them in advance) |
 | `KITCHEN_REPURPOSE` | The task lot loses `actual_quantity_handled` units; **every other recipe ingredient** is deducted; a **new output lot** is created |
 | `DONATE` / `ANIMAL_FEED` / `COMPOST` / `ANAEROBIC_DIGESTION` / `LANDFILL` / `DISCARD` | The task lot loses `actual_quantity_handled` units |
 
