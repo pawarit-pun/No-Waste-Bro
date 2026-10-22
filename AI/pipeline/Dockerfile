@@ -8,11 +8,13 @@ RUN dnf install -y libgomp && dnf clean all
 COPY pipeline/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# โค้ดของทั้ง 3 ส่วน (ไม่เอา .venv / output / .env ดู .dockerignore)
+# โค้ดของทั้ง 3 ส่วน + Manager Agent (ไม่เอา .venv / output / .env ดู .dockerignore)
 COPY risk_forecaster      ${LAMBDA_TASK_ROOT}/risk_forecaster
 COPY food_waste_optimizer ${LAMBDA_TASK_ROOT}/food_waste_optimizer
 COPY llm-task-agent       ${LAMBDA_TASK_ROOT}/llm-task-agent
 COPY pipeline/worker.py   ${LAMBDA_TASK_ROOT}/worker.py
+# Manager Agent (Lambda อีกตัวที่ใช้ image นี้: ImageConfig.Command = manager_agent.handler.lambda_handler)
+COPY manager_agent        ${LAMBDA_TASK_ROOT}/manager_agent
 RUN chmod -R a+rX ${LAMBDA_TASK_ROOT}
 # เทรน Forecaster ใน image (models/*.pkl ไม่เข้า git และต้องตรงกับเวอร์ชัน library ใน image)
 # ใช้ cutoff จาก models/risk_thresholds.json ที่ commit ไว้ (ไม่รัน calibrate_risk.py)

@@ -46,6 +46,9 @@ STAGE = {
 }
 OPTIMIZE_EXIT = {1: "server ตอบ error หรือต่อ server ไม่ได้", 2: "แผนไม่ผ่านการตรวจกฎ (ไม่ได้บันทึกอะไร)",
                  3: "ไม่มีรอบสแกนที่พร้อมตัดสินใจ (วันที่สแกนไม่ตรงกับ DEMO_DATE ของ server?)"}
+# ข้อความใน log ที่บอกว่าสคริปต์ไม่ได้รันเลย / crash: Python ใช้ exit code 1-2 ซ้ำกับรหัสของ run_optimize.py
+# (22 ต.ค. ไฟล์ใน image สิทธิ์ 600 -> "can't open file ... [Errno 13]" exit 2 แต่ error บอกว่า "แผนไม่ผ่านกฎ")
+OPEN_FAILED_MARKERS = ("can't open file", "[Errno 13]", "Permission denied")
 
 
 class PipelineError(Exception):
@@ -132,7 +135,8 @@ def _read_json(path: Path):
 def step_scan(work_dir, reporter) -> dict:
     code, out_dir, output = run_stage("SCAN", None, work_dir, reporter)
     if code != 0:
-        raise PipelineError(f"SCAN ล้ม (exit {code}) ถ้าพังระหว่างประเมิน run_scan.py คืนล็อตเป็น IDLE ให้เอง ดู steps.SCAN.log_tail")
+        raise PipelineError(f"SCAN ล้ม (exit {code}): {explain_exit(code, output, {})} "
+                            "(ถ้าพังระหว่างประเมิน run_scan.py คืนล็อตเป็น IDLE ให้เอง)")
     result_dir = _only_subdir(out_dir)
     if "ไม่มีล็อต IDLE ให้สแกน" in output or result_dir is None:
         return {"done": True, "message": "ไม่มี lot IDLE ให้สแกน"}
@@ -151,10 +155,50 @@ def step_scan(work_dir, reporter) -> dict:
     return summary
 
 
+def api(method: str, route: str, body=None, timeout: float = 20):
+    req = urllib.request.Request(f"{API_BASE_URL}/{route.lstrip('/')}", method=method,
+                                 data=json.dumps(body, ensure_ascii=False).encode() if body is not None else None,
+                                 headers={"Content-Type": "application/json", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        text = res.read().decode()
+    return json.loads(text) if text else None
+
+
+def explain_exit(code: int, output: str, known: dict) -> str:
+    """exit code -> สาเหตุ โดยดู log ก่อน (Python เองก็ใช้ exit 1 / 2 ตอน crash หรือเปิดไฟล์ไม่ได้)"""
+    if code == -1:
+        return "หมดเวลา (ดู steps.*.log_tail)"
+    if any(m in output for m in OPEN_FAILED_MARKERS):
+        return "เปิดสคริปต์หรือไฟล์ไม่ได้ (ไฟล์ไม่อยู่ใน image หรือสิทธิ์ไฟล์ผิด: ตรวจ COPY และ RUN chmod -R a+rX ใน Dockerfile)"
+    if "Traceback (most recent call last)" in output:
+        last = next((l.strip() for l in reversed(output.strip().splitlines()) if l.strip()), "")
+        return f"สคริปต์ crash: {last[:300]}"
+    return known.get(code, "ดู steps.*.log_tail")
+
+
+def release_stuck_lots(run_id) -> list:
+    """OPTIMIZE ล้ม: lot ของรอบนี้ที่ยัง PROCESSING และไม่มี decision -> IDLE ให้รอบหน้าสแกนใหม่ (ไม่งั้นค้างตลอด)
+    lot ที่มี decision แล้วไม่แตะ (ไปต่อที่ขั้น TASKS / คิว review ได้)"""
+    inputs = api("GET", f"ai/optimize-inputs?run_id={run_id}")
+    decided = {d["lot_id"] for d in (api("GET", f"optimization-decisions?run_id={run_id}") or {}).get("decisions") or []}
+    stuck = sorted({a["lot_id"] for a in inputs.get("at_risk_lots") or []
+                    if (a.get("lot") or {}).get("ai_status") == "PROCESSING" and a["lot_id"] not in decided})
+    if stuck:
+        api("PATCH", "inventory-lots/ai-status", {"lot_ids": stuck, "ai_status": "IDLE"})
+    return stuck
+
+
 def step_optimize(run_id, work_dir, reporter) -> dict:
-    code, out_dir, _ = run_stage("OPTIMIZE", run_id, work_dir, reporter)
+    code, out_dir, output = run_stage("OPTIMIZE", run_id, work_dir, reporter)
     if code != 0:
-        raise PipelineError(f"OPTIMIZE ล้ม (exit {code}): {OPTIMIZE_EXIT.get(code, 'ดู steps.OPTIMIZE.log_tail')}")
+        reason = explain_exit(code, output, OPTIMIZE_EXIT)
+        try:
+            released = release_stuck_lots(run_id)
+            reporter.steps["OPTIMIZE"]["released_lots"] = released
+            note = f" คืน {len(released)} lot เป็น IDLE แล้ว" if released else ""
+        except Exception as e:  # noqa: BLE001  คืน lot ไม่ได้ก็ต้องรายงานสาเหตุที่ OPTIMIZE ล้มอยู่ดี
+            note = f" คืน lot เป็น IDLE ไม่สำเร็จ ({type(e).__name__}: {e}) ใช้ PATCH /inventory-lots/ai-status เอง"
+        raise PipelineError(f"OPTIMIZE ล้ม (exit {code}): {reason}{note}")
     result_dir = _only_subdir(out_dir)
     saved = _read_json(result_dir / "decisions_response.json") if result_dir else None
     request = _read_json(result_dir / "decisions_request.json") if result_dir else None
@@ -171,9 +215,10 @@ def step_optimize(run_id, work_dir, reporter) -> dict:
 
 
 def step_tasks(run_id, work_dir, reporter) -> dict:
-    code, out_dir, _ = run_stage("TASKS", run_id, work_dir, reporter)
+    code, out_dir, output = run_stage("TASKS", run_id, work_dir, reporter)
     if code != 0:
-        raise PipelineError(f"TASKS ล้ม (exit {code}) ดู steps.TASKS.log_tail")
+        raise PipelineError(f"TASKS ล้ม (exit {code}): {explain_exit(code, output, {})} "
+                            "decision ที่ยังไม่มี plan ยังเป็น PENDING")
     reports = sorted(out_dir.glob("task_agent_*.json"))
     if not reports:
         raise PipelineError("TASKS ไม่มี report (task_agent_*.json)")

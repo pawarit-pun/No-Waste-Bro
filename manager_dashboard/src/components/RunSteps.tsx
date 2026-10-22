@@ -6,7 +6,7 @@ import type { RiskLevel } from '../types/review'
 import { CheckIcon, XIcon } from './ui/icons'
 import { SeverityBadge } from './ui/SeverityBadge'
 
-// ไทม์ไลน์ 3 ขั้นของ AI pipeline ใช้ร่วมกันในหน้า Agent log (drawer) และหน้า Run demo (live)
+// ไทม์ไลน์ 3 ขั้นของ AI pipeline ใช้ร่วมกันในหน้า Pipeline runs (drawer) และหน้า Run demo (live)
 
 export const STEPS: { key: StepName; label: string }[] = [
   { key: 'SCAN', label: 'Risk scan' },

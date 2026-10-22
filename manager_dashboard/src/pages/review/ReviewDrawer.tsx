@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { AskAgentButton } from '../../components/agent/AskAgentButton'
 import { Button } from '../../components/ui/Button'
 import { Drawer } from '../../components/ui/Drawer'
 import { CheckIcon, MapPinIcon } from '../../components/ui/icons'
@@ -175,6 +176,10 @@ export function ReviewDrawer({ group, now, onClose, onApprove, onReject }: {
             <SeverityBadge severity={group.severity} />
           </div>
           <p className="text-[15px] text-slate-700">{group.productName}</p>
+          <div className="mt-2">
+            <AskAgentButton lotId={group.lotId} label="ถาม AI เรื่อง lot นี้"
+              question={`ทำไม ${group.lotId} ถึงได้แผนนี้ มีทางเลือกอื่นไหม`} />
+          </div>
         </div>
       }
       subtitle={

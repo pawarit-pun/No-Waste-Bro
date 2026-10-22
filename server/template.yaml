@@ -56,9 +56,12 @@ Resources:
           DEMO_DATE: !Ref DemoDate
           CORS_ORIGINS: !Ref CorsOrigins
           PIPELINE_FUNCTION_NAME: !Ref PipelineWorkerFunction
+          AGENT_FUNCTION_NAME: !Ref ManagerAgentFunction
       Policies:
         - LambdaInvokePolicy:          # POST /ai/pipeline-runs starts the worker (async)
             FunctionName: !Ref PipelineWorkerFunction
+        - LambdaInvokePolicy:          # POST /agent/ask waits for the Manager Agent (sync)
+            FunctionName: !Ref ManagerAgentFunction
       Events:
         AllRoutes:                    # every method and path goes to FastAPI, which picks the route
           Type: HttpApi
@@ -113,6 +116,44 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${PipelineWorkerFunction}
       RetentionInDays: 14
 
+  # Manager Agent: chat for the web dashboard (read-only tools + Optimizer what-if), same image as the worker
+  ManagerAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: No-Waste-Bro Manager Agent (invoked sync by POST /agent/ask)
+      PackageType: Image
+      ImageUri: !Ref WorkerImageUri
+      ImageConfig:
+        Command: ["manager_agent.handler.lambda_handler"]
+      Architectures:
+        - arm64
+      MemorySize: 2048
+      Timeout: 30                     # the agent stops itself at 25 s; the API waits 27 s
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0       # only the warm-up ping is async
+      Environment:
+        Variables:
+          API_BASE_URL: !Ref WorkerApiBaseUrl
+          DEMO_DATE: !Ref DemoDate
+          BEDROCK_REGION: !Ref BedrockRegion
+          BEDROCK_KB_ID: !Ref BedrockKnowledgeBaseId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:aws:bedrock:${BedrockRegion}::foundation-model/amazon.nova-lite-v1:0
+                - !Sub arn:aws:bedrock:${BedrockRegion}::foundation-model/qwen.qwen3-next-80b-a3b
+            - Effect: Allow
+              Action: bedrock:Retrieve
+              Resource: !Sub arn:aws:bedrock:${BedrockRegion}:${AWS::AccountId}:knowledge-base/${BedrockKnowledgeBaseId}
+
+  ManagerAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ManagerAgentFunction}
+      RetentionInDays: 14
+
 Outputs:
   ApiUrl:
     Description: Base URL of the API (stays the same across sam deploy; changes after sam delete)
@@ -129,3 +170,6 @@ Outputs:
   PipelineWorkerName:
     Description: AI pipeline worker Lambda (logs in CloudWatch under /aws/lambda/<name>)
     Value: !Ref PipelineWorkerFunction
+  ManagerAgentName:
+    Description: Manager Agent Lambda (logs in CloudWatch under /aws/lambda/<name>)
+    Value: !Ref ManagerAgentFunction

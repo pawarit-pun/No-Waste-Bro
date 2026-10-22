@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { AskAgentButton } from '../../components/agent/AskAgentButton'
 import { formatDay } from '../../lib/format'
 import { aiStatusLabels, categoryLabels, formatQuantity, originLabels } from '../../lib/labels'
 import type { InventoryLot, LotAIStatus } from '../../types/inventory'
@@ -83,6 +84,12 @@ function PriceCell({ lot }: { lot: InventoryLot }) {
   )
 }
 
+/** คำถามของปุ่ม "ถาม AI": lot ที่เสี่ยง = ถามเหตุผลของแผน, lot อื่น = ถามสถานะ */
+const lotQuestion = (lot: InventoryLot) =>
+  lot.latest_assessment && ['HIGH', 'CRITICAL'].includes(lot.latest_assessment.risk_level)
+    ? `ทำไม ${lot.lot_id} ถึงได้แผนนี้ มีทางเลือกอื่นไหม`
+    : `${lot.lot_id} เป็นยังไงบ้าง ต้องทำอะไรไหม`
+
 export function InventoryTable({ lots, sort, onSort }: { lots: InventoryLot[]; sort: InvSort; onSort: (c: InvSortColumn) => void }) {
   return (
     <div className="overflow-x-auto">
@@ -111,6 +118,11 @@ export function InventoryTable({ lots, sort, onSort }: { lots: InventoryLot[]; s
                     <span className="mt-0.5 inline-block rounded bg-orange-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand">
                       {originLabels[lot.origin] ?? lot.origin}
                     </span>
+                  )}
+                  {!empty && (
+                    <div className="-ml-1.5 mt-0.5">
+                      <AskAgentButton compact lotId={lot.lot_id} question={lotQuestion(lot)} />
+                    </div>
                   )}
                 </td>
                 <td className={TD}>

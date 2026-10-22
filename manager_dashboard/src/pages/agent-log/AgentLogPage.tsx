@@ -22,7 +22,7 @@ export function AgentLogPage() {
 
   return (
     <div className="px-8 py-7">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Agent log</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Pipeline runs</h1>
       <p className="mt-1 text-[15px] text-slate-600">Every AI run, from scan to the plans sent for review.</p>
 
       <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -31,12 +31,12 @@ export function AgentLogPage() {
             {[0, 1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-lg bg-slate-100" />)}
           </div>
         ) : error && runs === null ? (
-          <EmptyState title="Could not load agent runs">
+          <EmptyState title="Could not load pipeline runs">
             <p>{error}</p>
             <Button className="mt-3" size="sm" onClick={() => void reload()}>Try again</Button>
           </EmptyState>
         ) : runs && runs.length === 0 ? (
-          <EmptyState title="No agent runs yet">Runs appear here as soon as the AI pipeline starts.</EmptyState>
+          <EmptyState title="No pipeline runs yet">Runs appear here as soon as the AI pipeline starts.</EmptyState>
         ) : (
           <RunTable runs={runs ?? []} onOpen={(r) => setOpenId(r.pipeline_run_id)} />
         )}

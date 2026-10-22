@@ -20,7 +20,8 @@ function AppRoutes() {
         <Route path="/risk-monitor" element={<ComingSoonPage title="Risk monitor" />} />
         <Route path="/review-queue" element={<ReviewQueuePage />} />
         <Route path="/run-demo" element={<RunDemoPage />} />
-        <Route path="/agent-log" element={<AgentLogPage />} />
+        <Route path="/pipeline-runs" element={<AgentLogPage />} />
+        <Route path="/agent-log" element={<Navigate to="/pipeline-runs" replace />} />
         <Route path="*" element={<Navigate to="/review-queue" replace />} />
       </Route>
     </Routes>

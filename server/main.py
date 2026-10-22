@@ -4,7 +4,7 @@ from mangum import Mangum
 
 from configs.config import db_env
 from core.openapi import APP_DESCRIPTION, APP_TITLE, APP_VERSION, TAGS_METADATA
-from routers import (ai, demo, inventory_lots, kitchen, optimization_decisions, optimizer, pending_tasks, pipeline,
+from routers import (agent, ai, demo, inventory_lots, kitchen, optimization_decisions, optimizer, pending_tasks, pipeline,
                     products, risk_assessments, staff, tasks)
 
 API_PREFIX = "/api/v1"
@@ -24,7 +24,7 @@ app.add_middleware(
 )
 
 for module in (products, inventory_lots, kitchen, ai, pipeline, optimizer, risk_assessments,
-            optimization_decisions, pending_tasks, tasks, staff, demo):
+            optimization_decisions, pending_tasks, tasks, staff, demo, agent):
     app.include_router(module.router, prefix=API_PREFIX)
 
 # Entry point for AWS Lambda (API Gateway → Lambda → Mangum → FastAPI), see template.yaml

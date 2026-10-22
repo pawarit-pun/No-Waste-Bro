@@ -132,7 +132,7 @@ cd server
   WorkerImageUri="$(cat ../AI/pipeline/.last_image_uri)"
 ```
 
-`samconfig.toml` sets `image_repositories` (the ECR repository of `PipelineWorkerFunction`). SAM requires it for any container-image function, even though the image itself comes from `WorkerImageUri`. If the repository or account changes, update that line.
+`samconfig.toml` sets `image_repositories` (the ECR repository of `PipelineWorkerFunction` and `ManagerAgentFunction`, both use the same image). SAM requires it for any container-image function, even though the image itself comes from `WorkerImageUri`. If the repository or account changes, update that line.
 
 Optional parameters (add them to `--parameter-overrides`; any parameter left out goes back to its default on that deploy):
 
@@ -190,6 +190,19 @@ worker: SCAN (risk_forecaster/run_scan.py) ─► OPTIMIZE (food_waste_optimizer
 
 Rules: one run at a time (`409` otherwise); a run stuck in `QUEUED` / `RUNNING` for 20 minutes is marked `FAILED` on the next start; the worker never retries automatically (a retry would scan and post twice). Running locally with `fastapi dev`, `POST /ai/pipeline-runs` answers `503`; use `python AI/pipeline/worker.py` instead. Build and debug steps: `AI/pipeline/README.md`.
 
+## Manager Agent (chat)
+
+`POST /api/v1/agent/ask` answers the manager's questions in Thai from the web dashboard. It is **read-only**: it never approves, creates tasks or changes prices. The API waits for a separate Lambda, `ManagerAgentFunction` (same container image as the pipeline worker, command `manager_agent.handler.lambda_handler`, code in `AI/manager_agent/`).
+
+```
+dashboard ─► POST /agent/ask ─► ManagerAgentFunction (sync, ≤ 25 s)
+                                   ├─ Bedrock Converse + tools (Nova Lite, fallback Qwen3 Next)
+                                   ├─ tools read this API (GET only) / run the Optimizer dry-run (what-if)
+                                   └─ guard: numbers, dates, times, lot IDs must come from tool results
+```
+
+Tools: store snapshot, at-risk lots, one lot, tasks, Optimizer plan summary, explain a lot's decision, what-if (no markdown / force a discount level / partner unavailable / kitchen hours / demand × 0.5–1.5) and SOP search (Knowledge Base). Answers that fail the guard are revised once, then retried on the fallback model, then replaced by a short template with the data cards (`model_used = TEMPLATE`). Locally (`fastapi dev`) the route answers `503`; run `python -m manager_agent "คำถาม"` from the `AI` folder instead.
+
 ## API Endpoints
 
 All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group them by the same tags (descriptions there are in Thai for the AI team).
@@ -230,6 +243,13 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | `GET` | `/api/v1/ai/pipeline-runs?limit=10` | Latest runs |
 | `GET` | `/api/v1/ai/pipeline-runs/{pipeline_run_id}` | Status of one run (also on Supabase Realtime, table `pipeline_runs`) |
 | `PATCH` | `/api/v1/ai/pipeline-runs/{pipeline_run_id}` | Internal: the worker reports its progress |
+
+### Manager Agent
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/agent/ask` | Ask the AI assistant (Thai). Body `{"question", "history": [{"role", "text"}], "context": {"page", "lot_id"}}`. Returns `answer`, `model_used`, `tool_calls`, `artifacts` (cards), `warnings`, `latency_ms`. `503` when `AGENT_FUNCTION_NAME` is empty, `504` when the agent runs out of time |
+| `POST` | `/api/v1/agent/warmup` | Wake the agent Lambda (async, no wait). Call it when the chat panel opens |
 
 ### AI
 
@@ -505,6 +525,7 @@ server/
 │   ├── inventory_lots.py
 │   ├── kitchen.py
 │   ├── ai.py                   # scan-inputs, optimize-inputs
+│   ├── agent.py                # Manager Agent chat (calls ManagerAgentFunction)
 │   ├── risk_assessments.py
 │   ├── optimization_decisions.py
 │   ├── pending_tasks.py        # Review queue: LLM plans → manager approve / reject
@@ -524,7 +545,8 @@ server/
 │   ├── decisions.py            # Decision checks against real data, listing with context
 │   ├── pending_tasks.py        # Review queue: save plans, list with context, approve (creates tasks) / reject (resets lots)
 │   ├── tasks.py                # Task creation on approval (auto-assign, kitchen booking, rollback), task queue and detail
-│   └── task_actions.py         # Accept, reject (releases kitchen hours), complete (calls the complete_task DB function)
+│   ├── task_actions.py         # Accept, reject (releases kitchen hours), complete (calls the complete_task DB function)
+│   └── agent.py                # Invoke the Manager Agent Lambda (sync ask, async warm-up)
 └── requirements.txt
 ```
 

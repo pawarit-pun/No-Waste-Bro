@@ -75,15 +75,15 @@ export function Sidebar() {
 }
 
 const STATUS_STYLE: Record<PipelineStatus['status'], { dot: string; label: string }> = {
-  QUEUED: { dot: 'bg-amber-300', label: 'Agent queued' },
-  RUNNING: { dot: 'bg-white animate-pulse', label: 'Agent running' },
+  QUEUED: { dot: 'bg-amber-300', label: 'Pipeline queued' },
+  RUNNING: { dot: 'bg-white animate-pulse', label: 'Pipeline running' },
   SUCCEEDED: { dot: 'bg-emerald-400', label: 'Last run succeeded' },
   FAILED: { dot: 'bg-red-500', label: 'Last run failed' },
 }
 
 function PipelineCard({ pipeline }: { pipeline: PipelineStatus | null }) {
   if (!pipeline) {
-    return <div className="border-t border-white/20 px-5 py-4 text-[13px] text-white/75">No agent runs yet</div>
+    return <div className="border-t border-white/20 px-5 py-4 text-[13px] text-white/75">No pipeline runs yet</div>
   }
   const s = STATUS_STYLE[pipeline.status]
   const when = pipeline.finished_at ?? pipeline.requested_at

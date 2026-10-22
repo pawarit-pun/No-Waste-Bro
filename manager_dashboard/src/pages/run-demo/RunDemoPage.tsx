@@ -197,7 +197,7 @@ export function RunDemoPage() {
                 </div>
               )}
 
-              <Link to="/agent-log" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">View all runs in Agent log →</Link>
+              <Link to="/pipeline-runs" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">View all runs in Pipeline runs →</Link>
             </div>
           )}
         </Card>

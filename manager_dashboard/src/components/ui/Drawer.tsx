@@ -19,7 +19,8 @@ export function Drawer({ open, onClose, title, subtitle, footer, children }: {
 
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
+    // right = ความกว้างแผงผู้ช่วย AI (AppShell ตั้ง --agent-panel-w) ให้ drawer เปิดข้างแผงแชท
+    <div className="fixed inset-y-0 left-0 z-40 flex justify-end" style={{ right: 'var(--agent-panel-w, 0px)' }}>
       <div className="absolute inset-0 bg-slate-900/30" onClick={onClose} aria-hidden="true" />
       <aside role="dialog" aria-modal="true"
         className="relative flex h-full w-full max-w-[600px] flex-col bg-white shadow-2xl">

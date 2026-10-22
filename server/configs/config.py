@@ -7,5 +7,6 @@ class Settings(BaseSettings):
     cors_origins: str = "*"  # comma-separated เช่น http://localhost:3000,http://localhost:5173
     optimizer_path: Optional[str] = None
     pipeline_function_name: Optional[str] = None  # Lambda ของ AI pipeline worker (ว่าง = POST /ai/pipeline-runs ตอบ 503)
+    agent_function_name: Optional[str] = None  # Lambda ของ Manager Agent (ว่าง = POST /agent/ask ตอบ 503)
     model_config=SettingsConfigDict(env_file=".env") # selected .env file from root
 db_env = Settings()

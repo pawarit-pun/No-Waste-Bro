@@ -58,6 +58,11 @@ staff ทำงานตามลำดับ: `POST /tasks/{id}/accept` → `PO
 
 TAGS_METADATA = [
     {
+        "name": "Manager Agent",
+        "description": "ผู้ช่วย AI ของผู้จัดการ (แชทภาษาไทย) อ่านข้อมูลอย่างเดียว อธิบายเหตุผลของ Optimizer "
+                       "และจำลอง what-if แบบไม่บันทึก",
+    },
+    {
         "name": "AI Pipeline",
         "description": "สั่งรัน AI ทั้ง 3 ขั้น (Risk Scanner → Optimizer → LLM Task Agent) บน worker แบบไม่รอผล "
                        "แล้วติดตามสถานะของแต่ละรอบ",
