@@ -260,6 +260,12 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | `POST` | `/api/v1/pending-tasks/approve` | Manager approves one or more plans: creates the staff tasks, assigns staff, and books kitchen hours (all or nothing) |
 | `POST` | `/api/v1/pending-tasks/reject` | Manager rejects one or more plans with a reason (all or nothing) |
 
+### Demo
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/demo/reset` | Same as `python -m scripts.demo reset`: `demo_reset` for the system date, so every lot is `IDLE` and ready for the AI pipeline (no `demo_seed`, which would mark every lot `CHECKED`). Deletes **all** plans, tasks, decisions and scan results. `409` while an AI pipeline run is active |
+
 ### Tasks
 
 | Method | Path | Description |

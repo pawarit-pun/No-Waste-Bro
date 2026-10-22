@@ -53,7 +53,7 @@ function PlanCard({ item, alternatives }: { item: ReviewItem; alternatives: Alte
     <article className="rounded-xl border border-slate-200 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-slate-900">{d ? actionHeadline(d) : '—'}</p>
+          <p className="font-semibold text-slate-900">{d ? actionHeadline(d, item.product?.unit_of_measure) : '—'}</p>
           {actionDetail(item) && <p className="text-sm text-slate-500">{actionDetail(item)}</p>}
         </div>
         {d?.expected_profit_impact != null && (

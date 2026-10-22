@@ -7,6 +7,10 @@
   cogs    = จำนวน x unit_cost ของ lot (ต้นทุนสินค้า; ในครัวคือ Cost_Primary)
 net_recovery = revenue - cost  = เงินที่ได้กลับคืนจริง (ไม่นับต้นทุนสินค้าที่จ่ายไปแล้ว)
 
+การเอาของออก (partner ทุกประเภท) ออก decision เฉพาะเที่ยวที่รับ "วันนี้" (วันเดียวกับ task ที่จะสร้าง)
+  เที่ยววันอื่น = แผนชั่วคราว (details.provisional) ไว้คิดต้นทุน/อธิบายเท่านั้น lot จะถูกสแกนใหม่แล้วตัดสินใจในวันนั้น:
+  ไม่มี decision อื่น -> คืน IDLE ทันที (pipeline.lots_to_release), มี decision อื่น -> DB คืน IDLE ตอน task เสร็จ/ถูกปฏิเสธ
+
 ของที่วางบนชั้น (shelf_units) แบ่งเป็น 2 portion ที่รวมกันเท่ากับจำนวนบนชั้น:
   SELL_REGULAR / MARKDOWN  units = floor(ยอดที่คาดว่าขายได้)  เงิน = ยอดคาด x ราคา (ค่าคาดหมาย)
   END_OF_LIFE (partner)    units = ที่เหลือ (ปัดขึ้น) แบ่งตาม y ของ solver   kg / เงิน = ค่าคาดหมายจาก solver
@@ -250,6 +254,7 @@ def build_plan(ctx, sol: Solution, baselines: Optional[dict] = None) -> dict:
                 if key[0] == "rese":
                     portions.append(_portion(lc, "UNRESOLVED", units, 0.0, 0.0, units * c, {
                         "timing": "END_OF_LIFE", "expected_units": _r(exp_units, 3),
+                        "provisional": lc.sell_end.date() != ctx.now.date(),
                         "reason": "ของที่ขายไม่หมดไม่มี partner รับหลังหมดเวลาขาย ต้องทิ้งเองในร้าน / ให้ผู้จัดการตัดสินใจ"},
                         weight_kg=exp_units * (lc.weight_kg or 0.0)))
                     warnings.append(f"A2_EOL_NO_ROUTE: {lid} คาดว่าเหลือ {exp_units:.1f} หน่วยหลังหมดเวลาขาย ไม่มี partner รับ")
@@ -259,8 +264,7 @@ def build_plan(ctx, sol: Solution, baselines: Optional[dict] = None) -> dict:
                 trip = trips[f"{pid}@{lc.eol[pid].date().isoformat()}"]
                 kg = exp_units * lc.weight_kg
                 alloc = trip["_cost"] * kg / trip["_kg"]
-                # เที่ยววันถัดไปที่ไม่ได้คิดค่าเที่ยวเต็ม = แผนชั่วคราว (rolling horizon) ไม่ออก decision รอบนี้
-                provisional = trip["deferred"] and ctx.cfg.deferred_trip_cost_share < 1.0
+                provisional = lc.eol[pid].date() != ctx.now.date()      # รับวันอื่น = แผนชั่วคราว ไม่ออก decision
                 portions.append(_portion(lc, trip["partner_type"], units, pc.partner.buyback * kg, alloc + pc.handling * kg,
                                          units * c, {"timing": "END_OF_LIFE", "expected_units": _r(exp_units, 3),
                                                      "provisional": provisional,
@@ -290,18 +294,11 @@ def build_plan(ctx, sol: Solution, baselines: Optional[dict] = None) -> dict:
             kg = u * lc.weight_kg
             alloc = trip["_cost"] * kg / trip["_kg"]
             portions.append(_portion(lc, trip["partner_type"], u, pc.partner.buyback * kg, alloc + pc.handling * kg,
-                                     u * c, {"timing": "NOW", "partner_id": pid, "partner_name": trip["name"],
+                                     u * c, {"timing": "NOW", "provisional": pc.pickup.date() != ctx.now.date(),
+                                             "partner_id": pid, "partner_name": trip["name"],
                                              "trip_id": trip["trip_id"], "pickup_at": trip["pickup_at"], "kg": _r(kg, 3),
                                              "trip_allocated_thb": _r(alloc), "handling_thb": _r(pc.handling * kg),
                                              "buyback_thb": _r(pc.partner.buyback * kg)}))
-        # แผนกำจัดวันถัดไปเป็น "ชั่วคราว" ได้ก็ต่อเมื่อทั้ง lot ถูกคืน IDLE ให้สแกนใหม่ (ไม่มีทางอื่นที่ออก decision)
-        # ถ้า lot มี decision อื่น (ลดราคา / ครัว / partner วันนี้) lot จะไม่ถูกสแกนอีก -> ต้องออก decision กำจัดเลย
-        if any(p["details"].get("provisional") for p in portions) and not all(
-                p["method"] == "SELL_REGULAR" or p["details"].get("provisional") for p in portions):
-            for p in portions:
-                if p["details"].get("provisional"):
-                    p["details"]["provisional"] = False
-                    p["details"]["committed_because"] = "lot มี decision อื่นแล้ว จะไม่ถูกสแกนซ้ำ"
         r_units = sol.count(("res", lid))
         if r_units:
             portions.append(_portion(lc, "UNRESOLVED", r_units, 0.0, 0.0, r_units * c,

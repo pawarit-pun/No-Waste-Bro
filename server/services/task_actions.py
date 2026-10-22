@@ -54,6 +54,8 @@ def reject_task(task_id: str, staff_id: str, reason: str) -> dict:
                     .eq("recipe_id", task["target_recipe_id"]).execute().data)
         department_id, on, hours = kitchen_booking_of(task, recipe[0] if recipe else None)
         release_hours(department_id, on, round(hours, 2))
+    # lot ที่ยังมีของและไม่มีงานค้างแล้ว -> IDLE ให้ pipeline รอบหน้าวางแผนใหม่ (ฟังก์ชันจาก scripts/lot_lifecycle.sql)
+    supabase.rpc("release_lot_if_idle", {"p_lot_id": task["lot_id"]}).execute()
     return get_task(task_id)
 
 

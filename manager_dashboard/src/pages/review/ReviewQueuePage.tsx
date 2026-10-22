@@ -10,7 +10,7 @@ import { formatImpact, systemNow } from '../../lib/format'
 import { ACTION_ORDER, SEVERITY_ORDER, actionLabels } from '../../lib/labels'
 import { useSession } from '../../lib/session'
 import type { ActionType, ReviewStatus, Severity } from '../../types/review'
-import { groupReviews, sortGroups, type ReviewGroup, type SortKey } from './groups'
+import { groupReviews, sortGroups, type ReviewGroup, type SortColumn, type SortState } from './groups'
 import { ReviewDrawer } from './ReviewDrawer'
 import { ReviewTable } from './ReviewTable'
 import { useReviewQueue } from './useReviewQueue'
@@ -26,7 +26,8 @@ export function ReviewQueuePage() {
 
   const [severity, setSeverity] = useState<Severity | 'ALL'>('ALL')
   const [action, setAction] = useState<ActionType | 'ALL'>('ALL')
-  const [sort, setSort] = useState<SortKey>('oldest')
+  // ค่าเริ่มต้น: Severity มากไปน้อย (รุนแรงสุดก่อน)
+  const [sort, setSort] = useState<SortState | null>({ column: 'severity', dir: 'desc' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
@@ -42,7 +43,13 @@ export function ReviewQueuePage() {
   useEffect(() => {
     setSelected(new Set())
     setOpenKey(null)
+    // แท็บอื่นไม่มีคอลัมน์ Deadline → กลับไปค่าเริ่มต้น
+    if (tab !== 'WAITING') setSort((s) => (s?.column === 'deadline' ? { column: 'severity', dir: 'desc' } : s))
   }, [tab])
+
+  // กดหัวคอลัมน์อื่น: เริ่มที่น้อยไปมาก, กดคอลัมน์เดิม: สลับ น้อยไปมาก ⇄ มากไปน้อย
+  const cycleSort = (column: SortColumn) =>
+    setSort((s) => (s?.column === column && s.dir === 'asc' ? { column, dir: 'desc' } : { column, dir: 'asc' }))
 
   const referenceDate = data?.reference_date ?? ''
   const now = useMemo(() => (referenceDate ? systemNow(referenceDate) : new Date()), [referenceDate, tick])
@@ -140,11 +147,6 @@ export function ReviewQueuePage() {
                 {bulkBusy ? 'Approving…' : `Approve selected (${selectedIds.length} plan${selectedIds.length > 1 ? 's' : ''})`}
               </Button>
             )}
-            <Select label="Sort" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="border-transparent">
-              <option value="oldest">Oldest first</option>
-              <option value="deadline">Deadline soonest</option>
-              <option value="severity">Severity</option>
-            </Select>
           </div>
         </div>
 
@@ -172,6 +174,8 @@ export function ReviewQueuePage() {
             referenceDate={referenceDate}
             now={now}
             selected={selected}
+            sort={sort}
+            onSort={cycleSort}
             onToggle={toggle}
             onToggleAll={toggleAll}
             onReview={(g) => setOpenKey(g.key)}

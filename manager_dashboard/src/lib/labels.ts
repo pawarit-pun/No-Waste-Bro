@@ -46,11 +46,30 @@ export const ACTION_ORDER: ActionType[] = [
 
 export const SEVERITY_ORDER: Severity[] = ['EXPIRED', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 
-/** ข้อความสั้นของ action เช่น "Markdown −20% · 13" */
-export function actionHeadline(d: PendingDecision): string {
+// หน่วยนับของ lot (products.unit_of_measure) → [เอกพจน์, พหูพจน์]
+const UNIT_LABELS: Record<string, [string, string]> = {
+  PIECE: ['piece', 'pieces'],
+  PACK: ['pack', 'packs'],
+  G: ['g', 'g'],
+  KG: ['kg', 'kg'],
+  ML: ['ml', 'ml'],
+  L: ['L', 'L'],
+}
+
+/** "13 pieces" / "1 pack" (ไม่รู้หน่วย = ตัวเลขอย่างเดียว) */
+export function formatQuantity(qty: number, unit?: string | null): string {
+  if (!unit) return `${qty}`
+  const label = UNIT_LABELS[unit]
+  if (!label) return `${qty} ${unit.toLowerCase()}`
+  return `${qty} ${qty === 1 ? label[0] : label[1]}`
+}
+
+/** ข้อความสั้นของ action เช่น "Markdown −20% · 13 pieces" */
+export function actionHeadline(d: PendingDecision, unit?: string | null): string {
   const label = actionLabels[d.action_type] ?? d.action_type
-  if (d.action_type === 'MARKDOWN' && d.discount_pct != null) return `${label} −${Math.round(d.discount_pct)}% · ${d.action_quantity}`
-  return `${label} · ${d.action_quantity}`
+  const qty = formatQuantity(d.action_quantity, unit)
+  if (d.action_type === 'MARKDOWN' && d.discount_pct != null) return `${label} −${Math.round(d.discount_pct)}% · ${qty}`
+  return `${label} · ${qty}`
 }
 
 /** รายละเอียดรองของ action (สูตร / partner / ราคาใหม่) */

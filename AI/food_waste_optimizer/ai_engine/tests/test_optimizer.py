@@ -457,17 +457,30 @@ class MockV4(unittest.TestCase):
 
     def test_covers_several_action_types(self):
         actions = {d["action_type"] for d in self._run("09:00")["payload"]["decisions"]}
-        self.assertLessEqual({"MARKDOWN", "KITCHEN_REPURPOSE", "LANDFILL", "ANIMAL_FEED"}, actions)
+        self.assertLessEqual({"MARKDOWN", "KITCHEN_REPURPOSE", "LANDFILL"}, actions)
+        # ศุกร์ 16 ต.ค. ฟาร์มอาหารสัตว์ไม่มีรอบรับ (อ. พ. พฤ. ส.) -> ไม่มี task อาหารสัตว์วันนี้ (เป็นแผนชั่วคราวแทน)
+        self.assertNotIn("ANIMAL_FEED", actions)
 
-    def test_no_orphan_provisional_disposal(self):
-        # แผนกำจัดชั่วคราวได้เฉพาะ lot ที่ถูกคืน IDLE ทั้ง lot; lot ที่มี decision อื่นต้องได้ decision กำจัดด้วย
-        for hhmm in ("09:00", "13:00"):
+    def test_disposal_tasks_only_for_today(self):
+        # task เอาของออกต้องตรงกับวันที่ลงมือจริง: ไม่มี decision ของ partner ที่ due_by เป็นวันอื่น
+        disposal = {"DONATE", "ANIMAL_FEED", "COMPOST", "ANAEROBIC_DIGESTION", "LANDFILL", "DISCARD"}
+        for hhmm in ("07:00", "09:00", "13:00", "19:00", "21:30"):
             r = self._run(hhmm)
-            released = set(r["lots_to_release"])
-            for lo in r["plan"]["lots"]:
-                if any(p["details"].get("provisional") for p in lo["portions"]):
-                    self.assertIn(lo["lot_id"], released, hhmm)
+            for d in r["payload"]["decisions"]:
+                if d["action_type"] in disposal and d.get("due_by"):
+                    self.assertEqual(d["due_by"][:10], "2026-10-16", (hhmm, d["action_type"], d["due_by"]))
+            # แผนวันอื่นยังอยู่ในแผน (คิดต้นทุน/อธิบาย) แต่ไม่ออก decision
+            prov = [p for lo in r["plan"]["lots"] for p in lo["portions"] if p["details"].get("provisional")]
+            self.assertTrue(all(p["details"].get("pickup_at", "2026-10-16")[:10] != "2026-10-16"
+                                for p in prov if p["method"] != "UNRESOLVED"), hhmm)
 
+    def test_lot_without_own_decision_is_released(self):
+        # lot ที่ไม่มี decision ของตัวเอง (ขายปกติ / วัตถุดิบรองของครัว / แผนวันอื่น) ต้องคืน IDLE ไม่งั้นค้าง PROCESSING
+        r = self._run("09:00")
+        decided = {d["assessment_id"] for d in r["payload"]["decisions"]}
+        for lo in r["plan"]["lots"]:
+            if lo["assessment_id"] not in decided:
+                self.assertIn(lo["lot_id"], r["lots_to_release"])
 
 if __name__ == "__main__":
     unittest.main()

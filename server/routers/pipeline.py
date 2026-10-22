@@ -20,12 +20,12 @@ router = APIRouter(prefix="/ai/pipeline-runs", tags=["AI Pipeline"])
 | --- | --- | --- |
 | `SCAN` | Risk Scanner + Forecaster (`AI/risk_forecaster/run_scan.py`) | `lot_risk_assessments` ได้ `run_id` |
 | `OPTIMIZE` | Optimizer กับรอบสแกนนั้น (`AI/food_waste_optimizer/run_optimize.py`) | `optimization_decisions` |
-| `TASKS` | LLM Task Agent (`AI/llm-task-agent/main.py`) | `ai_recommended_tasks` → mobile app เด้งผ่าน Realtime |
+| `TASKS` | LLM Task Agent (`AI/llm-task-agent/main.py`) | `pending_tasks` (plan รอผู้จัดการอนุมัติ) → อนุมัติแล้วจึงเป็น `ai_recommended_tasks` ที่ mobile app เห็นผ่าน Realtime |
 
 - ติดตามผลด้วย `GET /ai/pipeline-runs/{pipeline_run_id}` หรือ Supabase Realtime ตาราง `pipeline_runs`
 - จบก่อนครบ 3 ขั้นได้ ถ้าไม่มีอะไรต้องทำต่อ (ไม่มี lot IDLE / ไม่มี lot HIGH / CRITICAL / ได้ 0 decision) → `SUCCEEDED` + `message`
 - ทั้ง pipeline รันได้ทีละรอบ รอบที่ค้าง `QUEUED` / `RUNNING` เกิน 20 นาทีจะถูกตั้งเป็น `FAILED` อัตโนมัติ
-- ⚠ เขียนข้อมูลจริง: สถานะ lot, ผลสแกน, decision, task และ **จองชั่วโมงครัว**
+- ⚠ เขียนข้อมูลจริง: สถานะ lot, ผลสแกน, decision และ plan ในคิวรออนุมัติ (ครัวถูกจองตอนผู้จัดการอนุมัติ)
 """,
     responses={
         409: {"description": "มีรอบที่ยังรันอยู่"},

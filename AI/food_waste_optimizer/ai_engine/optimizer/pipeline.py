@@ -42,11 +42,15 @@ def check_scan_date(data: Inputs) -> list:
     return out
 
 
+RELEASE_METHODS = ("SELL_REGULAR", "KITCHEN_INGREDIENT")
+
+
 def lots_to_release(plan: dict) -> list:
-    """lot ที่ไม่ต้องทำอะไรวันนี้ -> คืน IDLE ให้สแกนใหม่พรุ่งนี้: วางขายราคาปกติ และของที่คาดว่าเหลือ (ถ้ามี) เป็นแผน
-    กำจัดวันถัดไปแบบชั่วคราว (provisional) เท่านั้น ไม่มี decision และไม่ถูกใช้ในครัว"""
+    """lot ที่ไม่มี decision ของตัวเองรอบนี้ -> คืน IDLE ให้สแกนใหม่: วางขายราคาปกติ, ถูก DB ตัดเป็นวัตถุดิบรองของงานครัว
+    (decision อยู่ที่ lot หลักของงาน) และ/หรือแผนกำจัดวันอื่นแบบชั่วคราว (provisional)
+    ไม่คืน lot เหล่านี้ = ค้าง PROCESSING ตลอดไป (ขั้น TASKS ตั้ง CHECKED เฉพาะ lot ที่มี decision)"""
     return [lo["lot_id"] for lo in plan["lots"]
-            if lo["portions"] and all(p["method"] == "SELL_REGULAR" or p["details"].get("provisional")
+            if lo["portions"] and all(p["method"] in RELEASE_METHODS or p["details"].get("provisional")
                                       for p in lo["portions"])]
 
 

@@ -55,6 +55,10 @@ run_full_pipeline(dry_run=True)                       # dry_run=False = PATCH PR
   (ร้านปิดของวันหมดอายุ) solver เลือกเองว่าวางขายต่อคุ้มกว่าดึงออกตอนนี้ไหม
   decision ของ END_OF_LIFE มี `due_by` = เวลารับ, `action_quantity` = จำนวนที่คาดว่าเหลือ (ปัดขึ้น) staff กำจัดตามที่เหลือจริง
   เงินในแผนเป็นค่าคาดหมาย ส่วนจำนวนหน่วยปัดเป็นจำนวนเต็มให้รวมเท่ากับ lot (H1)
+- **task เอาของออกตรงกับวันที่ลงมือจริง**: decision ของ partner / ทิ้ง ออกเฉพาะเที่ยวที่รับ "วันนี้" เที่ยววันอื่นเป็น
+  แผนชั่วคราว (`details.provisional`) ไม่มี decision แล้ว lot ถูกสแกนใหม่และตัดสินใจในวันนั้น: lot ที่ไม่มี decision อื่น
+  คืน IDLE ทันที (`lots_to_release`), lot ที่มี task อื่นคืน IDLE ตอน task เสร็จ / ถูกปฏิเสธ (`release_lot_if_idle` ใน
+  `server/scripts/lot_lifecycle.sql`) server ตรวจซ้ำใน `validate_payload` (due_by ต้องเป็นวันนี้)
 - **Partner**: Total Cost = `fixed_cost_per_trip` + `travel_cost_per_trip` (ต่อเที่ยว แบ่งตาม kg ระหว่าง lot ที่ไปเที่ยวเดียวกัน)
   + kg × `handling_fee_per_kg`; **DONATION คิดแค่ fixed**; ANIMAL_FEED มีรายได้ kg × `buyback_price_per_kg` (0.92)
   1 เที่ยว = (partner, วันที่รับ) ต้อง ≥ `min_kg_per_pickup` (0 = ไม่มีเกณฑ์) และ ≤ ความจุ; weight = น้ำหนักสุทธิจริงจาก `net_content_*`

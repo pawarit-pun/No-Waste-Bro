@@ -102,6 +102,10 @@ TAGS_METADATA = [
         "description": "พนักงาน 2 role: MANAGER (web dashboard) และ STAFF (mobile app) ใช้กับหน้าเลือกผู้ใช้ (ยังไม่มี login)",
     },
     {
+        "name": "Demo",
+        "description": "เตรียมข้อมูล demo จาก dashboard (reset + seed) ⚠ ลบข้อมูลของรอบก่อนทั้งหมด",
+    },
+    {
         "name": "Products",
         "description": "ข้อมูลหลักของสินค้า",
     },

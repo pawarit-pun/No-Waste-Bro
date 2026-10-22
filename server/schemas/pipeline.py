@@ -27,7 +27,7 @@ class PipelineRunCreate(BaseModel):
     stop_after: PipelineStep = Field(
         PipelineStep.TASKS,
         description="หยุดหลังขั้นไหน: SCAN = สแกนอย่างเดียว, OPTIMIZE = สแกน + บันทึก decision, "
-                    "TASKS = ครบ 3 ขั้นจนสร้าง task ให้ staff (ค่าเริ่มต้น)",
+                    "TASKS = ครบ 3 ขั้นจนส่ง plan เข้าคิวรอผู้จัดการอนุมัติ (ค่าเริ่มต้น)",
     )
 
     model_config = {"json_schema_extra": {"examples": [{"stop_after": "TASKS"}]}}

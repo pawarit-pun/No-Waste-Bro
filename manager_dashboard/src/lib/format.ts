@@ -35,3 +35,20 @@ export const formatThb = (n: number) => `฿${thbFmt.format(Math.abs(n))}`
 
 /** "+฿1,234" / "−฿358" */
 export const formatImpact = (n: number) => (Math.round(n) === 0 ? '฿0' : `${n > 0 ? '+' : '−'}${formatThb(n)}`)
+
+/** "Today 14:39" ถ้าเป็นวันนี้ตามปฏิทิน (นาฬิกาจริง) ไม่งั้น "21 Oct 14:39" */
+export const formatWhen = (iso: string) =>
+  `${bkkDate(new Date(iso)) === bkkDate() ? 'Today' : formatDay(iso)} ${formatTime(iso)}`
+
+/** ระยะเวลาเป็นวินาที → "45s" / "2m 21s" / "1h 5m" */
+export function formatDuration(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds))
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ${s % 60}s`
+  return `${Math.floor(m / 60)}h ${m % 60}m`
+}
+
+/** วินาทีระหว่าง 2 เวลา (ไม่มีเวลาจบ = ถึงตอนนี้) */
+export const secondsBetween = (from: string, to?: string | null) =>
+  ((to ? new Date(to) : new Date()).getTime() - new Date(from).getTime()) / 1000

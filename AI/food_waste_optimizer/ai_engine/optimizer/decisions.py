@@ -12,8 +12,8 @@
   - ของที่วางขายแล้วคาดว่าเหลือ (END_OF_LIFE) = decision ของ partner นั้น due_by = เวลารับหลังหมดเวลาขาย
     action_quantity = จำนวนที่คาดว่าเหลือ (ปัดขึ้น) staff กำจัดตามจำนวนที่เหลือจริงตอนนั้น
     ไม่มี partner รับ -> DISCARD (ทิ้งเองในร้าน) ให้ผู้จัดการดู
-    ถ้าเที่ยวนั้นเป็นวันถัดไปและ deferred_trip_cost_share < 1 = แผนชั่วคราว (provisional) ไม่มี decision รอบนี้
-    lot ถูกคืน IDLE (pipeline.lots_to_release) ให้รอบสแกนวันถัดไปตัดสินใจใหม่ เช่น บริจาคขณะยังเข้าเกณฑ์
+  - การเอาของออก (ทุก partner / DISCARD) ออก decision เฉพาะเที่ยวที่รับวันนี้ (task ตรงกับวันที่ลงมือจริง)
+    เที่ยววันอื่น = แผนชั่วคราว (provisional) ไม่มี decision lot ถูกสแกนใหม่แล้วตัดสินใจในวันนั้น
   - ครัว: 1 งาน (สูตร, วัน, lot หลัก) = 1 decision (batch_count ของงานนั้น server ใช้จองชั่วโมงครัวตอน POST /tasks)
     lot อื่นที่ DB จะตัดเป็นวัตถุดิบแบบ FEFO ไม่มี decision ของตัวเอง แต่มีใน allocations (covered_by_decision_index)
   - partner อื่นที่ไม่ใช่ DONATION ใช้ action_type ตาม config.action_mode
@@ -213,6 +213,8 @@ def validate_payload(payload: dict, ctx) -> list:
                 if product.category not in partner.categories:
                     bad(f"partner ไม่รับหมวด {product.category}")
                 on = date.fromisoformat(str(d["due_by"])[:10]) if d.get("due_by") else inp.reference_date
+                if on != inp.reference_date:
+                    bad(f"due_by {on} ไม่ใช่วันนี้ ({inp.reference_date}): task เอาของออกต้องสร้างในวันที่ลงมือจริง")
                 left = (lot.expiration_date - on).days         # อายุคงเหลือ ณ วันรับ (ตรงกับ rules P4)
                 if partner.min_days and left < partner.min_days:
                     bad(f"lot เหลืออายุ {left} วัน partner ต้องการ >= {partner.min_days}")

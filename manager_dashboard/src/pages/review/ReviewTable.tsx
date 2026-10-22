@@ -3,14 +3,37 @@ import { SeverityBadge } from '../../components/ui/SeverityBadge'
 import { bkkDate, formatDay, formatImpact, formatTime } from '../../lib/format'
 import { actionDetail, actionHeadline } from '../../lib/labels'
 import type { ReviewStatus } from '../../types/review'
-import { deadlineState, type ReviewGroup } from './groups'
+import { deadlineState, type ReviewGroup, type SortColumn, type SortState } from './groups'
 
 const TH = 'px-4 py-3 text-left text-[13px] font-semibold text-slate-600 whitespace-nowrap'
 const TD = 'px-4 py-4 align-top'
 
-/** "22:00" ถ้าเป็นวันเดียวกับวันของระบบ ไม่งั้น "17 Oct 08:45" */
+/** "Today 22:00" ถ้าเป็นวันเดียวกับวันของระบบ (reference_date) ไม่งั้น "17 Oct 08:45" */
 function formatDeadline(iso: string, referenceDate: string) {
-  return bkkDate(new Date(iso)) === referenceDate ? formatTime(iso) : `${formatDay(iso)} ${formatTime(iso)}`
+  return `${bkkDate(new Date(iso)) === referenceDate ? 'Today' : formatDay(iso)} ${formatTime(iso)}`
+}
+
+/** หัวคอลัมน์ที่กดเรียงได้ (▲ น้อยไปมาก / ▼ มากไปน้อย) ลูกศรแสดงเฉพาะคอลัมน์ที่กำลังใช้เรียง */
+function SortableTh({ label, column, sort, onSort, align = 'left' }: {
+  label: string
+  column: SortColumn
+  sort: SortState | null
+  onSort: (column: SortColumn) => void
+  align?: 'left' | 'right'
+}) {
+  const active = sort?.column === column
+  return (
+    <th className={`${TH} ${align === 'right' ? 'text-right' : ''}`}
+      aria-sort={active ? (sort?.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" onClick={() => onSort(column)}
+        className={`inline-flex items-center gap-1 hover:text-slate-900 ${active ? 'text-slate-900' : ''}`}>
+        {label}
+        {active && (
+          <span className="text-[10px] text-slate-900" aria-hidden="true">{sort?.dir === 'asc' ? '▲' : '▼'}</span>
+        )}
+      </button>
+    </th>
+  )
 }
 
 function ImpactCell({ value }: { value: number }) {
@@ -35,7 +58,9 @@ function ActionsCell({ group }: { group: ReviewGroup }) {
     <div className="min-w-44 space-y-1">
       {group.items.map((item) => (
         <div key={item.review_id} className="leading-tight">
-          <p className="text-sm font-medium text-slate-900">{item.decision ? actionHeadline(item.decision) : '—'}</p>
+          <p className="text-sm font-medium text-slate-900">
+            {item.decision ? actionHeadline(item.decision, item.product?.unit_of_measure) : '—'}
+          </p>
           {actionDetail(item) && <p className="truncate text-xs text-slate-500">{actionDetail(item)}</p>}
         </div>
       ))}
@@ -43,8 +68,10 @@ function ActionsCell({ group }: { group: ReviewGroup }) {
   )
 }
 
-export function ReviewTable({ tab, groups, referenceDate, now, selected, onToggle, onToggleAll, onReview }: {
+export function ReviewTable({ tab, groups, referenceDate, now, selected, sort, onSort, onToggle, onToggleAll, onReview }: {
   tab: ReviewStatus
+  sort: SortState | null
+  onSort: (column: SortColumn) => void
   groups: ReviewGroup[]
   referenceDate: string
   now: Date
@@ -68,21 +95,18 @@ export function ReviewTable({ tab, groups, referenceDate, now, selected, onToggl
               </th>
             )}
             <th className={TH}>{waiting ? 'Received' : 'Reviewed'}</th>
-            <th className={TH}>Severity</th>
+            <SortableTh label="Severity" column="severity" sort={sort} onSort={onSort} />
             <th className={TH}>Lot · Product</th>
-            {waiting && <th className={TH}>AI reasoning</th>}
             <th className={TH}>Proposed action</th>
-            <th className={`${TH} text-right`}>Exp. impact</th>
-            {waiting ? <th className={TH}>Deadline</th> : <th className={TH}>By</th>}
+            <SortableTh label="Exp. impact" column="impact" sort={sort} onSort={onSort} align="right" />
+            {waiting ? <SortableTh label="Deadline" column="deadline" sort={sort} onSort={onSort} /> : <th className={TH}>By</th>}
             {waiting ? <th className="w-28" /> : <th className={TH}>{tab === 'REJECTED' ? 'Reason' : 'Note'}</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {groups.map((g) => {
             const first = g.items[0]
-            const template = g.items.some((i) => i.model_used === 'TEMPLATE')
             const state = deadlineState(g.deadline, now)
-            const urgent = g.severity === 'EXPIRED' || g.severity === 'CRITICAL'
             return (
               <tr key={g.key} className={`transition-colors hover:bg-orange-50/40 ${selected.has(g.key) ? 'bg-orange-50/60' : ''}`}>
                 {waiting && (
@@ -96,24 +120,6 @@ export function ReviewTable({ tab, groups, referenceDate, now, selected, onToggl
                 </td>
                 <td className={TD}><SeverityBadge severity={g.severity} /></td>
                 <td className={TD}><LotCell group={g} /></td>
-                {waiting && (
-                  <td className={TD}>
-                    <div className="min-w-56 max-w-80">
-                      <p className="line-clamp-2 text-sm text-slate-700">{first.ai_reasoning ?? '—'}</p>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {template && (
-                          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200"
-                            title="The LLM answer failed validation, so standard template text is used">
-                            TEMPLATE TEXT
-                          </span>
-                        )}
-                        {g.items.length > 1 && (
-                          <span className="text-[11px] font-medium text-slate-500">{g.items.length} plans for this lot</span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                )}
                 <td className={TD}><ActionsCell group={g} /></td>
                 <td className={`${TD} text-right`}><ImpactCell value={g.impact} /></td>
                 {waiting ? (
@@ -126,7 +132,7 @@ export function ReviewTable({ tab, groups, referenceDate, now, selected, onToggl
                 )}
                 {waiting ? (
                   <td className="py-4 pr-5 text-right align-top">
-                    <Button size="sm" variant={urgent ? 'primary' : 'outline'} onClick={() => onReview(g)}>Review</Button>
+                    <Button size="sm" variant="neutral" onClick={() => onReview(g)}>Review</Button>
                   </td>
                 ) : (
                   <td className={`${TD} max-w-72 text-sm text-slate-600`}>
