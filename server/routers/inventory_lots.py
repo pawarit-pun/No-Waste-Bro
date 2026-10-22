@@ -1,10 +1,32 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from db.supabase import supabase
 from schemas.inventory_lot import InventoryLotCreate, InventoryLotUpdate, LotAIStatusUpdate
-from schemas.responses import LotAIStatusResponse
+from schemas.responses import InventoryLotListResponse, LotAIStatusResponse
+from services.inventory_lots import list_lots
 
 router = APIRouter(prefix="/inventory-lots", tags=["Inventory Lots"])
+
+
+@router.get(
+    "",
+    response_model=InventoryLotListResponse,
+    summary="รายการ lot ปัจจุบัน (หน้า Inventory)",
+    description="""
+ใช้กับหน้า **Inventory** ของ web dashboard (อ่านอย่างเดียว) เรียงตามวันหมดอายุ ใกล้ก่อน
+
+แต่ละ lot แนบ:
+- `product` ชื่อ หมวด หน่วย ราคาปกติ
+- `days_left` วันที่เหลือเทียบกับวันของระบบ (`DEMO_DATE` ถ้าตั้งไว้) ติดลบ = หมดอายุแล้ว
+- `origin` ที่มาของ lot: `SUPPLIER` / `MARKDOWN_SPLIT` / `KITCHEN_OUTPUT`
+- `latest_assessment` ผลสแกนล่าสุด (ระดับความเสี่ยง) null = ยังไม่เคยสแกน
+- `waiting_plans` plan ที่รออนุมัติ, `open_tasks` task ที่ยังไม่เสร็จ
+""",
+)
+def get_inventory_lots(
+    include_empty: bool = Query(False, description="true = รวม lot ที่เหลือ 0 ด้วย"),
+):
+    return list_lots(include_empty)
 
 
 @router.post("", status_code=201, summary="สร้าง lot ใหม่")

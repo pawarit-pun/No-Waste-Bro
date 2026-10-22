@@ -3,12 +3,13 @@ import { NavLink } from 'react-router-dom'
 import { formatTime } from '../../lib/format'
 import { STORE_LABEL } from '../../lib/labels'
 import { LogoMark } from '../Logo'
-import { AlertIcon, GridIcon, ListIcon, PlayIcon, ShieldIcon } from '../ui/icons'
+import { AlertIcon, BoxIcon, GridIcon, ListIcon, PlayIcon, ShieldIcon } from '../ui/icons'
 import { NAV_ITEMS, SECTIONS, type NavItem } from './nav'
 import { useSidebarStatus, type PipelineStatus } from './useSidebarStatus'
 
 const ICONS: Record<NavItem['icon'], (p: { className?: string }) => JSX.Element> = {
   grid: GridIcon,
+  box: BoxIcon,
   alert: AlertIcon,
   shield: ShieldIcon,
   play: PlayIcon,

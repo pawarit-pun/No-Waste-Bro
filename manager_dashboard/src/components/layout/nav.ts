@@ -4,11 +4,12 @@ export interface NavItem {
   label: string
   section: 'MONITOR' | 'ACTIONS' | 'AUDIT'
   crumb: string
-  icon: 'grid' | 'alert' | 'shield' | 'play' | 'list'
+  icon: 'grid' | 'box' | 'alert' | 'shield' | 'play' | 'list'
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { path: '/overview', label: 'Overview', section: 'MONITOR', crumb: 'Dashboard', icon: 'grid' },
+  { path: '/inventory', label: 'Inventory', section: 'MONITOR', crumb: 'Monitor', icon: 'box' },
   { path: '/risk-monitor', label: 'Risk monitor', section: 'MONITOR', crumb: 'Monitor', icon: 'alert' },
   { path: '/review-queue', label: 'Review queue', section: 'ACTIONS', crumb: 'Actions', icon: 'shield' },
   { path: '/run-demo', label: 'Run demo', section: 'ACTIONS', crumb: 'Actions', icon: 'play' },

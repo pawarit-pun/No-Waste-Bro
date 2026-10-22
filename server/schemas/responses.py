@@ -460,6 +460,38 @@ class TaskCompleteResponse(BaseModel):
     effects: CompleteEffects
 
 
+# ---------- Inventory (หน้า Inventory ของ dashboard) ----------
+
+class InventoryProduct(_Row):
+    product_id: str
+    name: str
+    category: str
+    unit_of_measure: str
+    regular_price: float
+    image_url: Optional[str] = None
+
+
+class LatestAssessment(_Row):
+    risk_level: str
+    risk_score: float
+    days_to_expiry: int
+    assessed_at: datetime
+
+
+class InventoryLotListItem(InventoryLotRow):
+    product: Optional[InventoryProduct] = Field(None, description="สินค้าของ lot")
+    days_left: int = Field(..., description="วันที่เหลือก่อนหมดอายุ เทียบกับวันของระบบ (ติดลบ = หมดอายุแล้ว)")
+    origin: str = Field(..., description="SUPPLIER = รับเข้า, MARKDOWN_SPLIT = แยกมาลดราคา, KITCHEN_OUTPUT = ผลผลิตครัว")
+    latest_assessment: Optional[LatestAssessment] = Field(None, description="ผลสแกนล่าสุดของ lot (null = ยังไม่เคยสแกน)")
+    waiting_plans: int = Field(..., description="plan ที่รอผู้จัดการอนุมัติ")
+    open_tasks: int = Field(..., description="task ที่ยังไม่เสร็จ (PENDING + IN_PROGRESS)")
+
+
+class InventoryLotListResponse(BaseModel):
+    reference_date: date = Field(..., description="วันที่ของระบบ (เวลาไทย หรือ DEMO_DATE) ใช้คำนวณ days_left")
+    items: list[InventoryLotListItem] = Field(..., description="เรียงตามวันหมดอายุ (ใกล้ก่อน)")
+
+
 # ---------- Review queue (pending_tasks) ----------
 
 class PendingTaskRow(_Row):

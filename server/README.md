@@ -210,6 +210,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 
 | Method | Path | Description |
 | --- | --- | --- |
+| `GET` | `/api/v1/inventory-lots?include_empty=false` | Current lots for the dashboard Inventory page, earliest expiry first, with product, `days_left` (vs. the system date), origin (supplier / markdown split / kitchen output), latest risk assessment, waiting plans and open tasks |
 | `POST` | `/api/v1/inventory-lots` | Create an inventory lot |
 | `PATCH` | `/api/v1/inventory-lots/ai-status` | Set `ai_status` (`IDLE` / `PROCESSING` / `CHECKED`) for multiple lots |
 | `PATCH` | `/api/v1/inventory-lots/{lot_id}` | Update an inventory lot |

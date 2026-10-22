@@ -86,3 +86,19 @@ export function actionDetail(item: ReviewItem): string | null {
 }
 
 export const managerRoleLabel = 'Store manager'
+
+// ---------- Inventory ----------
+
+export const CATEGORY_ORDER: ProductCategory[] = ['DAIRY', 'BAKERY', 'MEAT', 'SEAFOOD', 'PRODUCE', 'READY_TO_EAT']
+
+export const originLabels: Record<string, string> = {
+  MARKDOWN_SPLIT: 'Markdown split',
+  KITCHEN_OUTPUT: 'Kitchen output',
+  TASK_OUTPUT: 'From task',
+}
+
+export const aiStatusLabels: Record<string, string> = {
+  IDLE: 'Idle',
+  PROCESSING: 'Processing',
+  CHECKED: 'Checked',
+}

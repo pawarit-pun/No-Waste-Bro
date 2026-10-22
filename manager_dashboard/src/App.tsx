@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 import { SessionProvider, useSession } from './lib/session'
 import { ComingSoonPage } from './pages/ComingSoonPage'
+import { InventoryPage } from './pages/inventory/InventoryPage'
 import { AgentLogPage } from './pages/agent-log/AgentLogPage'
 import { LoginPage } from './pages/LoginPage'
 import { ReviewQueuePage } from './pages/review/ReviewQueuePage'
@@ -15,6 +16,7 @@ function AppRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/overview" element={<ComingSoonPage title="Overview" />} />
+        <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/risk-monitor" element={<ComingSoonPage title="Risk monitor" />} />
         <Route path="/review-queue" element={<ReviewQueuePage />} />
         <Route path="/run-demo" element={<RunDemoPage />} />
