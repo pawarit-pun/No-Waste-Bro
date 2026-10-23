@@ -1,0 +1,6706 @@
+{
+ "date": "2026-10-16",
+ "run_at": "08:00",
+ "branch": "optimizer-update",
+ "commit": "121f205 feat: optimizer rolling horizon, BIN/DEDICATED partner, backtest",
+ "forecaster": "forecaster_v3",
+ "lots": 27,
+ "units": 1320,
+ "cost_in": 40589.96,
+ "names": {
+  "BAK-001": "ขนมปังแซนวิช 480g",
+  "BAK-002": "เค้กกล้วยหอม 700g",
+  "BAK-003": "ขนมปังพุดดิ้ง 150g",
+  "DAI-001": "นมสดพาสเจอร์ไรส์ รสจืด 830ml",
+  "DAI-002": "โยเกิร์ต รสธรรมชาติ 125g",
+  "MEA-001": "อกไก่สด 500g",
+  "MEA-002": "เนื้อวัวสันนอก สเต็ก 500g",
+  "PRO-001": "กล้วยหอม 1kg",
+  "PRO-002": "ผักกาดหอม 250g",
+  "RTE-001": "สเต็กเนื้อสันนอก พร้อมสลัด 300g",
+  "RTE-002": "สลัดอกไก่ย่าง 200g",
+  "RTE-003": "ข้าวหน้าแซลมอนย่าง 300g",
+  "RTE-004": "สมูทตี้กล้วยโยเกิร์ต 400ml",
+  "SEA-001": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g"
+ },
+ "max_hold_days": 2.0,
+ "policies": {
+  "p1": {
+   "key": "p1",
+   "net_profit": -516.76,
+   "net_profit_bin": -516.76,
+   "revenue_full": 8696.0,
+   "revenue_md": 0,
+   "revenue": 8696.0,
+   "discount_given": 0.0,
+   "kitchen_value": 0,
+   "kitchen_menu_revenue": 0,
+   "cogs_sold": 5779.81,
+   "cogs_kitchen": 0,
+   "cogs_disposed": 2668.35,
+   "write_off_expired": 0,
+   "disposal_a": {
+    "trip": 728.62,
+    "handling": 35.98,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 728.62,
+    "handling": 35.98,
+    "buyback": 0.0
+   },
+   "trips": [
+    {
+     "partner_id": "P-LDF-01",
+     "partner_type": "LANDFILL",
+     "pickup_date": "2026-10-17",
+     "picked_up_today": false,
+     "kg": 31.29,
+     "units": 78,
+     "lots": [
+      "LOT-000006",
+      "LOT-000012",
+      "LOT-000013",
+      "LOT-000016",
+      "LOT-000018",
+      "LOT-000021",
+      "LOT-000023",
+      "LOT-000026"
+     ],
+     "timing": [
+      "EXPIRED_TONIGHT"
+     ],
+     "min_kg": 1.0,
+     "capacity_kg": 90.0,
+     "below_min": false,
+     "mode_in_optimizer": "BIN",
+     "trip_cost_a": 728.62,
+     "trip_cost_b": 728.62,
+     "fee_per_kg": 117.48,
+     "handling": 35.98,
+     "buyback": 0.0,
+     "net_a": -764.61,
+     "net_b": -764.61
+    }
+   ],
+   "units_in": 1320,
+   "cost_in": 40589.96,
+   "units": {
+    "sold_full": 175,
+    "LANDFILL": 78
+   },
+   "sold_units": 175,
+   "kitchen_units": 0,
+   "disposed_units": 78,
+   "disposed_kg": 31.29,
+   "left": [
+    {
+     "lot_id": "LOT-000001",
+     "uid": "LOT-000001",
+     "product_id": "DAI-001",
+     "class": "SELL_ON",
+     "units": 130,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 47.5,
+     "cost": 5063.5,
+     "retail_now": 6175.0,
+     "retail_regular": 6175.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000002",
+     "uid": "LOT-000002",
+     "product_id": "DAI-001",
+     "class": "SELL_ON",
+     "units": 159,
+     "expiry": "2026-10-24",
+     "days_left": 8,
+     "price": 47.5,
+     "cost": 6193.05,
+     "retail_now": 7552.5,
+     "retail_regular": 7552.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000003",
+     "uid": "LOT-000003",
+     "product_id": "DAI-002",
+     "class": "SELL_ON",
+     "units": 45,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 14.5,
+     "cost": 535.05,
+     "retail_now": 652.5,
+     "retail_regular": 652.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000004",
+     "uid": "LOT-000004",
+     "product_id": "MEA-001",
+     "class": "SELL_ON",
+     "units": 58,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 44.5,
+     "cost": 1936.04,
+     "retail_now": 2581.0,
+     "retail_regular": 2581.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000005",
+     "uid": "LOT-000005",
+     "product_id": "MEA-002",
+     "class": "SELL_ON",
+     "units": 20,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 130.0,
+     "cost": 1950.0,
+     "retail_now": 2600.0,
+     "retail_regular": 2600.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000007",
+     "uid": "LOT-000007",
+     "product_id": "PRO-001",
+     "class": "SELL_ON",
+     "units": 50,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.0,
+     "cost": 1225.0,
+     "retail_now": 1750.0,
+     "retail_regular": 1750.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000008",
+     "uid": "LOT-000008",
+     "product_id": "PRO-002",
+     "class": "SELL_ON",
+     "units": 90,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 23.75,
+     "cost": 1496.7,
+     "retail_now": 2137.5,
+     "retail_regular": 2137.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000009",
+     "uid": "LOT-000009",
+     "product_id": "BAK-001",
+     "class": "SELL_ON",
+     "units": 58,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 40.0,
+     "cost": 1856.0,
+     "retail_now": 2320.0,
+     "retail_regular": 2320.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000010",
+     "uid": "LOT-000010",
+     "product_id": "BAK-002",
+     "class": "SELL_ON",
+     "units": 22,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 179.0,
+     "cost": 1434.18,
+     "retail_now": 3938.0,
+     "retail_regular": 3938.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000011",
+     "uid": "LOT-000011",
+     "product_id": "BAK-003",
+     "class": "SELL_ON",
+     "units": 48,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.0,
+     "cost": 575.52,
+     "retail_now": 1680.0,
+     "retail_regular": 1680.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000014",
+     "uid": "LOT-000014",
+     "product_id": "SEA-001",
+     "class": "SELL_ON",
+     "units": 8,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 115.5,
+     "cost": 665.28,
+     "retail_now": 924.0,
+     "retail_regular": 924.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000015",
+     "uid": "LOT-000015",
+     "product_id": "MEA-002",
+     "class": "SELL_ON",
+     "units": 10,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 130.0,
+     "cost": 975.0,
+     "retail_now": 1300.0,
+     "retail_regular": 1300.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000017",
+     "uid": "LOT-000017",
+     "product_id": "MEA-001",
+     "class": "SELL_ON",
+     "units": 24,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 44.5,
+     "cost": 801.12,
+     "retail_now": 1068.0,
+     "retail_regular": 1068.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000019",
+     "uid": "LOT-000019",
+     "product_id": "DAI-002",
+     "class": "SELL_ON",
+     "units": 86,
+     "expiry": "2026-11-10",
+     "days_left": 25,
+     "price": 14.5,
+     "cost": 1022.54,
+     "retail_now": 1247.0,
+     "retail_regular": 1247.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000020",
+     "uid": "LOT-000020",
+     "product_id": "PRO-001",
+     "class": "SELL_ON",
+     "units": 197,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 35.0,
+     "cost": 4826.5,
+     "retail_now": 6895.0,
+     "retail_regular": 6895.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000022",
+     "uid": "LOT-000022",
+     "product_id": "PRO-002",
+     "class": "SELL_ON",
+     "units": 18,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 23.75,
+     "cost": 299.34,
+     "retail_now": 427.5,
+     "retail_regular": 427.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000024",
+     "uid": "LOT-000024",
+     "product_id": "BAK-001",
+     "class": "SELL_ON",
+     "units": 22,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 40.0,
+     "cost": 704.0,
+     "retail_now": 880.0,
+     "retail_regular": 880.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000025",
+     "uid": "LOT-000025",
+     "product_id": "BAK-002",
+     "class": "SELL_ON",
+     "units": 6,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 179.0,
+     "cost": 391.14,
+     "retail_now": 1074.0,
+     "retail_regular": 1074.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000027",
+     "uid": "LOT-000027",
+     "product_id": "BAK-003",
+     "class": "SELL_ON",
+     "units": 16,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 35.0,
+     "cost": 191.84,
+     "retail_now": 560.0,
+     "retail_regular": 560.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000006",
+     "uid": "LOT-000006",
+     "product_id": "SEA-001",
+     "class": "IN_BIN_WAITING",
+     "units": 13,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 1081.08,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 3.9
+    },
+    {
+     "lot_id": "LOT-000012",
+     "uid": "LOT-000012",
+     "product_id": "RTE-002",
+     "class": "IN_BIN_WAITING",
+     "units": 16,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 332.8,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 3.2
+    },
+    {
+     "lot_id": "LOT-000013",
+     "uid": "LOT-000013",
+     "product_id": "BAK-001",
+     "class": "IN_BIN_WAITING",
+     "units": 8,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 256.0,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 3.84
+    },
+    {
+     "lot_id": "LOT-000016",
+     "uid": "LOT-000016",
+     "product_id": "MEA-001",
+     "class": "IN_BIN_WAITING",
+     "units": 9,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 300.42,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 4.5
+    },
+    {
+     "lot_id": "LOT-000018",
+     "uid": "LOT-000018",
+     "product_id": "DAI-002",
+     "class": "IN_BIN_WAITING",
+     "units": 14,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 166.46,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 1.75
+    },
+    {
+     "lot_id": "LOT-000021",
+     "uid": "LOT-000021",
+     "product_id": "PRO-001",
+     "class": "IN_BIN_WAITING",
+     "units": 11,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 269.5,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 11.0
+    },
+    {
+     "lot_id": "LOT-000023",
+     "uid": "LOT-000023",
+     "product_id": "PRO-002",
+     "class": "IN_BIN_WAITING",
+     "units": 4,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 66.52,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 1.0
+    },
+    {
+     "lot_id": "LOT-000026",
+     "uid": "LOT-000026",
+     "product_id": "BAK-002",
+     "class": "IN_BIN_WAITING",
+     "units": 3,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 195.57,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 2.1
+    }
+   ],
+   "left_by_class": {
+    "SELL_ON": {
+     "units": 1067,
+     "cost": 32141.8,
+     "retail_now": 45762.0,
+     "retail_regular": 45762.0,
+     "lots": 19
+    },
+    "IN_BIN_WAITING": {
+     "units": 78,
+     "cost": 2668.35,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "lots": 8
+    }
+   },
+   "left_units": 1145,
+   "left_on_shelf_units": 1067,
+   "left_cost": 34810.15,
+   "left_retail_now": 45762.0,
+   "left_retail_regular": 45762.0,
+   "no_task_units": 1067,
+   "no_task_cost": 32141.8,
+   "risk_no_task_units": 0,
+   "risk_no_task_cost": 0,
+   "risk_no_task_lots": 0,
+   "expired_left_units": 0,
+   "expired_left_lots": 0,
+   "expired_left_kg": 0,
+   "expired_left_disposal_estimate": 0.0,
+   "early_removals": {},
+   "early_removal_cogs": 0,
+   "early_removal_units": 0,
+   "trace": {
+    "LOT-000001": {
+     "sold_full": 20
+    },
+    "LOT-000002": {
+     "sold_full": 13
+    },
+    "LOT-000005": {
+     "sold_full": 4
+    },
+    "LOT-000006": {
+     "sold_full": 7,
+     "LANDFILL": 13
+    },
+    "LOT-000009": {
+     "sold_full": 12
+    },
+    "LOT-000011": {
+     "sold_full": 7
+    },
+    "LOT-000012": {
+     "sold_full": 14,
+     "LANDFILL": 16
+    },
+    "LOT-000014": {
+     "sold_full": 4
+    },
+    "LOT-000015": {
+     "sold_full": 3
+    },
+    "LOT-000016": {
+     "sold_full": 9,
+     "LANDFILL": 9
+    },
+    "LOT-000017": {
+     "sold_full": 6
+    },
+    "LOT-000018": {
+     "sold_full": 16,
+     "LANDFILL": 14
+    },
+    "LOT-000019": {
+     "sold_full": 10
+    },
+    "LOT-000020": {
+     "sold_full": 8
+    },
+    "LOT-000021": {
+     "sold_full": 11,
+     "LANDFILL": 11
+    },
+    "LOT-000022": {
+     "sold_full": 6
+    },
+    "LOT-000023": {
+     "sold_full": 8,
+     "LANDFILL": 4
+    },
+    "LOT-000024": {
+     "sold_full": 8
+    },
+    "LOT-000025": {
+     "sold_full": 2
+    },
+    "LOT-000026": {
+     "sold_full": 3,
+     "LANDFILL": 3
+    },
+    "LOT-000027": {
+     "sold_full": 4
+    },
+    "LOT-000013": {
+     "LANDFILL": 8
+    }
+   }
+  },
+  "p2": {
+   "key": "p2",
+   "net_profit": -860.96,
+   "net_profit_bin": -860.96,
+   "revenue_full": 0,
+   "revenue_md": 7601.96,
+   "revenue": 7601.96,
+   "discount_given": 2414.54,
+   "kitchen_value": 0,
+   "kitchen_menu_revenue": 0,
+   "cogs_sold": 6615.96,
+   "cogs_kitchen": 0,
+   "cogs_disposed": 1108.52,
+   "write_off_expired": 0,
+   "disposal_a": {
+    "trip": 728.62,
+    "handling": 9.82,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 728.62,
+    "handling": 9.82,
+    "buyback": 0.0
+   },
+   "trips": [
+    {
+     "partner_id": "P-LDF-01",
+     "partner_type": "LANDFILL",
+     "pickup_date": "2026-10-17",
+     "picked_up_today": false,
+     "kg": 8.54,
+     "units": 28,
+     "lots": [
+      "LOT-000006",
+      "LOT-000012",
+      "LOT-000013"
+     ],
+     "timing": [
+      "EXPIRED_TONIGHT"
+     ],
+     "min_kg": 1.0,
+     "capacity_kg": 90.0,
+     "below_min": false,
+     "mode_in_optimizer": "BIN",
+     "trip_cost_a": 728.62,
+     "trip_cost_b": 728.62,
+     "fee_per_kg": 117.48,
+     "handling": 9.82,
+     "buyback": 0.0,
+     "net_a": -738.45,
+     "net_b": -738.45
+    }
+   ],
+   "units_in": 1320,
+   "cost_in": 40589.96,
+   "units": {
+    "sold_md": 201,
+    "LANDFILL": 28
+   },
+   "sold_units": 201,
+   "kitchen_units": 0,
+   "disposed_units": 28,
+   "disposed_kg": 8.54,
+   "left": [
+    {
+     "lot_id": "LOT-000001",
+     "uid": "LOT-000001",
+     "product_id": "DAI-001",
+     "class": "SELL_ON",
+     "units": 115,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 42.75,
+     "cost": 4479.25,
+     "retail_now": 4916.25,
+     "retail_regular": 5462.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000002",
+     "uid": "LOT-000002",
+     "product_id": "DAI-001",
+     "class": "SELL_ON",
+     "units": 172,
+     "expiry": "2026-10-24",
+     "days_left": 8,
+     "price": 47.5,
+     "cost": 6699.4,
+     "retail_now": 8170.0,
+     "retail_regular": 8170.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000003",
+     "uid": "LOT-000003",
+     "product_id": "DAI-002",
+     "class": "SELL_ON",
+     "units": 44,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 11.6,
+     "cost": 523.16,
+     "retail_now": 510.4,
+     "retail_regular": 638.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000004",
+     "uid": "LOT-000004",
+     "product_id": "MEA-001",
+     "class": "SELL_ON",
+     "units": 58,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.6,
+     "cost": 1936.04,
+     "retail_now": 2064.8,
+     "retail_regular": 2581.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000005",
+     "uid": "LOT-000005",
+     "product_id": "MEA-002",
+     "class": "SELL_ON",
+     "units": 16,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 104.0,
+     "cost": 1560.0,
+     "retail_now": 1664.0,
+     "retail_regular": 2080.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000007",
+     "uid": "LOT-000007",
+     "product_id": "PRO-001",
+     "class": "SELL_ON",
+     "units": 49,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 28.0,
+     "cost": 1200.5,
+     "retail_now": 1372.0,
+     "retail_regular": 1715.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000008",
+     "uid": "LOT-000008",
+     "product_id": "PRO-002",
+     "class": "SELL_ON",
+     "units": 86,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 21.38,
+     "cost": 1430.18,
+     "retail_now": 1838.68,
+     "retail_regular": 2042.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000009",
+     "uid": "LOT-000009",
+     "product_id": "BAK-001",
+     "class": "SELL_ON",
+     "units": 48,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 32.0,
+     "cost": 1536.0,
+     "retail_now": 1536.0,
+     "retail_regular": 1920.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000010",
+     "uid": "LOT-000010",
+     "product_id": "BAK-002",
+     "class": "SELL_ON",
+     "units": 22,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 143.2,
+     "cost": 1434.18,
+     "retail_now": 3150.4,
+     "retail_regular": 3938.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000011",
+     "uid": "LOT-000011",
+     "product_id": "BAK-003",
+     "class": "SELL_ON",
+     "units": 43,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 28.0,
+     "cost": 515.57,
+     "retail_now": 1204.0,
+     "retail_regular": 1505.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000014",
+     "uid": "LOT-000014",
+     "product_id": "SEA-001",
+     "class": "SELL_ON",
+     "units": 12,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 92.4,
+     "cost": 997.92,
+     "retail_now": 1108.8,
+     "retail_regular": 1386.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000015",
+     "uid": "LOT-000015",
+     "product_id": "MEA-002",
+     "class": "SELL_ON",
+     "units": 13,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 130.0,
+     "cost": 1267.5,
+     "retail_now": 1690.0,
+     "retail_regular": 1690.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000017",
+     "uid": "LOT-000017",
+     "product_id": "MEA-001",
+     "class": "SELL_ON",
+     "units": 30,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 44.5,
+     "cost": 1001.4,
+     "retail_now": 1335.0,
+     "retail_regular": 1335.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000019",
+     "uid": "LOT-000019",
+     "product_id": "DAI-002",
+     "class": "SELL_ON",
+     "units": 96,
+     "expiry": "2026-11-10",
+     "days_left": 25,
+     "price": 14.5,
+     "cost": 1141.44,
+     "retail_now": 1392.0,
+     "retail_regular": 1392.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000020",
+     "uid": "LOT-000020",
+     "product_id": "PRO-001",
+     "class": "SELL_ON",
+     "units": 205,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 35.0,
+     "cost": 5022.5,
+     "retail_now": 7175.0,
+     "retail_regular": 7175.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000022",
+     "uid": "LOT-000022",
+     "product_id": "PRO-002",
+     "class": "SELL_ON",
+     "units": 24,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 23.75,
+     "cost": 399.12,
+     "retail_now": 570.0,
+     "retail_regular": 570.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000024",
+     "uid": "LOT-000024",
+     "product_id": "BAK-001",
+     "class": "SELL_ON",
+     "units": 30,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 40.0,
+     "cost": 960.0,
+     "retail_now": 1200.0,
+     "retail_regular": 1200.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000025",
+     "uid": "LOT-000025",
+     "product_id": "BAK-002",
+     "class": "SELL_ON",
+     "units": 8,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 161.1,
+     "cost": 521.52,
+     "retail_now": 1288.8,
+     "retail_regular": 1432.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000027",
+     "uid": "LOT-000027",
+     "product_id": "BAK-003",
+     "class": "SELL_ON",
+     "units": 20,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 31.5,
+     "cost": 239.8,
+     "retail_now": 630.0,
+     "retail_regular": 700.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000006",
+     "uid": "LOT-000006",
+     "product_id": "SEA-001",
+     "class": "IN_BIN_WAITING",
+     "units": 7,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 582.12,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 2.1
+    },
+    {
+     "lot_id": "LOT-000012",
+     "uid": "LOT-000012",
+     "product_id": "RTE-002",
+     "class": "IN_BIN_WAITING",
+     "units": 13,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 270.4,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 2.6
+    },
+    {
+     "lot_id": "LOT-000013",
+     "uid": "LOT-000013",
+     "product_id": "BAK-001",
+     "class": "IN_BIN_WAITING",
+     "units": 8,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 256.0,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 3.84
+    }
+   ],
+   "left_by_class": {
+    "SELL_ON": {
+     "units": 1091,
+     "cost": 32865.48,
+     "retail_now": 42816.13,
+     "retail_regular": 46932.0,
+     "lots": 19
+    },
+    "IN_BIN_WAITING": {
+     "units": 28,
+     "cost": 1108.52,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "lots": 3
+    }
+   },
+   "left_units": 1119,
+   "left_on_shelf_units": 1091,
+   "left_cost": 33974.0,
+   "left_retail_now": 42816.13,
+   "left_retail_regular": 46932.0,
+   "no_task_units": 1091,
+   "no_task_cost": 32865.48,
+   "risk_no_task_units": 0,
+   "risk_no_task_cost": 0,
+   "risk_no_task_lots": 0,
+   "expired_left_units": 0,
+   "expired_left_lots": 0,
+   "expired_left_kg": 0,
+   "expired_left_disposal_estimate": 0.0,
+   "early_removals": {},
+   "early_removal_cogs": 0,
+   "early_removal_units": 0,
+   "trace": {
+    "LOT-000001": {
+     "sold_md": 35
+    },
+    "LOT-000003": {
+     "sold_md": 1
+    },
+    "LOT-000005": {
+     "sold_md": 8
+    },
+    "LOT-000006": {
+     "sold_md": 13,
+     "LANDFILL": 7
+    },
+    "LOT-000007": {
+     "sold_md": 1
+    },
+    "LOT-000008": {
+     "sold_md": 4
+    },
+    "LOT-000009": {
+     "sold_md": 22
+    },
+    "LOT-000011": {
+     "sold_md": 12
+    },
+    "LOT-000012": {
+     "sold_md": 17,
+     "LANDFILL": 13
+    },
+    "LOT-000016": {
+     "sold_md": 18
+    },
+    "LOT-000018": {
+     "sold_md": 30
+    },
+    "LOT-000021": {
+     "sold_md": 22
+    },
+    "LOT-000023": {
+     "sold_md": 12
+    },
+    "LOT-000026": {
+     "sold_md": 6
+    },
+    "LOT-000013": {
+     "LANDFILL": 8
+    }
+   }
+  },
+  "p3a": {
+   "key": "p3a",
+   "net_profit": -3127.97,
+   "net_profit_bin": -3127.97,
+   "revenue_full": 6891.0,
+   "revenue_md": 1691.2,
+   "revenue": 8582.2,
+   "discount_given": 422.8,
+   "kitchen_value": 2354.38,
+   "kitchen_menu_revenue": 2608.98,
+   "cogs_sold": 5942.5,
+   "cogs_kitchen": 1311.61,
+   "cogs_disposed": 5209.39,
+   "write_off_expired": 300.42,
+   "disposal_a": {
+    "trip": 1278.62,
+    "handling": 22.01,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 1278.62,
+    "handling": 22.01,
+    "buyback": 0.0
+   },
+   "trips": [
+    {
+     "partner_id": "P-DON-01",
+     "partner_type": "DONATION",
+     "pickup_date": "2026-10-16",
+     "picked_up_today": true,
+     "kg": 125.25,
+     "units": 177,
+     "lots": [
+      "LOT-000008",
+      "LOT-000020"
+     ],
+     "timing": [
+      "NOW"
+     ],
+     "min_kg": 4.0,
+     "capacity_kg": 50.0,
+     "below_min": false,
+     "mode_in_optimizer": "DEDICATED",
+     "trip_cost_a": 550.0,
+     "trip_cost_b": 550.0,
+     "fee_per_kg": 0.0,
+     "handling": 0.0,
+     "buyback": 0.0,
+     "net_a": -550.0,
+     "net_b": -550.0
+    },
+    {
+     "partner_id": "P-LDF-01",
+     "partner_type": "LANDFILL",
+     "pickup_date": "2026-10-17",
+     "picked_up_today": false,
+     "kg": 19.14,
+     "units": 41,
+     "lots": [
+      "LOT-000006",
+      "LOT-000012",
+      "LOT-000013",
+      "LOT-000021"
+     ],
+     "timing": [
+      "END_OF_LIFE",
+      "NOW"
+     ],
+     "min_kg": 1.0,
+     "capacity_kg": 90.0,
+     "below_min": false,
+     "mode_in_optimizer": "BIN",
+     "trip_cost_a": 728.62,
+     "trip_cost_b": 728.62,
+     "fee_per_kg": 117.48,
+     "handling": 22.01,
+     "buyback": 0.0,
+     "net_a": -750.64,
+     "net_b": -750.64
+    }
+   ],
+   "units_in": 1320,
+   "cost_in": 40589.96,
+   "units": {
+    "LANDFILL": 41,
+    "kitchen": 35,
+    "DONATION": 177,
+    "sold_full": 163,
+    "tagged_md": 26,
+    "sold_md": 14,
+    "kitchen_ingredient": 7
+   },
+   "sold_units": 177,
+   "kitchen_units": 42,
+   "disposed_units": 218,
+   "disposed_kg": 144.39,
+   "left": [
+    {
+     "lot_id": "LOT-000001",
+     "uid": "LOT-000001",
+     "product_id": "DAI-001",
+     "class": "NOT_AT_RISK",
+     "units": 128,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 47.5,
+     "cost": 4985.6,
+     "retail_now": 6080.0,
+     "retail_regular": 6080.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000002",
+     "uid": "LOT-000002",
+     "product_id": "DAI-001",
+     "class": "NOT_AT_RISK",
+     "units": 159,
+     "expiry": "2026-10-24",
+     "days_left": 8,
+     "price": 47.5,
+     "cost": 6193.05,
+     "retail_now": 7552.5,
+     "retail_regular": 7552.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000003",
+     "uid": "LOT-000003",
+     "product_id": "DAI-002",
+     "class": "NOT_AT_RISK",
+     "units": 43,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 14.5,
+     "cost": 511.27,
+     "retail_now": 623.5,
+     "retail_regular": 623.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000004",
+     "uid": "LOT-000004",
+     "product_id": "MEA-001",
+     "class": "EOL_PLANNED",
+     "units": 54,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 44.5,
+     "cost": 1802.52,
+     "retail_now": 2403.0,
+     "retail_regular": 2403.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000007",
+     "uid": "LOT-000007",
+     "product_id": "PRO-001",
+     "class": "EOL_PLANNED",
+     "units": 49,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.0,
+     "cost": 1200.5,
+     "retail_now": 1715.0,
+     "retail_regular": 1715.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000008",
+     "uid": "LOT-000008",
+     "product_id": "PRO-002",
+     "class": "EOL_PLANNED",
+     "units": 17,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 23.75,
+     "cost": 282.71,
+     "retail_now": 403.75,
+     "retail_regular": 403.75,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000009",
+     "uid": "LOT-000009",
+     "product_id": "BAK-001",
+     "class": "NOT_AT_RISK",
+     "units": 58,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 40.0,
+     "cost": 1856.0,
+     "retail_now": 2320.0,
+     "retail_regular": 2320.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000010",
+     "uid": "LOT-000010",
+     "product_id": "BAK-002",
+     "class": "EOL_PLANNED",
+     "units": 22,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 179.0,
+     "cost": 1434.18,
+     "retail_now": 3938.0,
+     "retail_regular": 3938.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000011",
+     "uid": "LOT-000011",
+     "product_id": "BAK-003",
+     "class": "EOL_PLANNED",
+     "units": 48,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.0,
+     "cost": 575.52,
+     "retail_now": 1680.0,
+     "retail_regular": 1680.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000014",
+     "uid": "LOT-000014",
+     "product_id": "SEA-001",
+     "class": "NOT_AT_RISK",
+     "units": 8,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 115.5,
+     "cost": 665.28,
+     "retail_now": 924.0,
+     "retail_regular": 924.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000015",
+     "uid": "LOT-000015",
+     "product_id": "MEA-002",
+     "class": "NOT_AT_RISK",
+     "units": 13,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 130.0,
+     "cost": 1267.5,
+     "retail_now": 1690.0,
+     "retail_regular": 1690.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000016",
+     "uid": "LOT-000016",
+     "product_id": "MEA-001",
+     "class": "EXPIRED_UNHANDLED",
+     "units": 9,
+     "expiry": "2026-10-16",
+     "days_left": 0,
+     "price": 44.5,
+     "cost": 300.42,
+     "retail_now": 400.5,
+     "retail_regular": 400.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000017",
+     "uid": "LOT-000017",
+     "product_id": "MEA-001",
+     "class": "NOT_AT_RISK",
+     "units": 24,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 44.5,
+     "cost": 801.12,
+     "retail_now": 1068.0,
+     "retail_regular": 1068.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000019",
+     "uid": "LOT-000019",
+     "product_id": "DAI-002",
+     "class": "NOT_AT_RISK",
+     "units": 86,
+     "expiry": "2026-11-10",
+     "days_left": 25,
+     "price": 14.5,
+     "cost": 1022.54,
+     "retail_now": 1247.0,
+     "retail_regular": 1247.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000020",
+     "uid": "LOT-000020",
+     "product_id": "PRO-001",
+     "class": "EOL_PLANNED",
+     "units": 89,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 35.0,
+     "cost": 2180.5,
+     "retail_now": 3115.0,
+     "retail_regular": 3115.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000022",
+     "uid": "LOT-000022",
+     "product_id": "PRO-002",
+     "class": "NOT_AT_RISK",
+     "units": 18,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 23.75,
+     "cost": 299.34,
+     "retail_now": 427.5,
+     "retail_regular": 427.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000024",
+     "uid": "LOT-000024",
+     "product_id": "BAK-001",
+     "class": "NOT_AT_RISK",
+     "units": 22,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 40.0,
+     "cost": 704.0,
+     "retail_now": 880.0,
+     "retail_regular": 880.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000025",
+     "uid": "LOT-000025",
+     "product_id": "BAK-002",
+     "class": "NOT_AT_RISK",
+     "units": 8,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 179.0,
+     "cost": 521.52,
+     "retail_now": 1432.0,
+     "retail_regular": 1432.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000027",
+     "uid": "LOT-000027",
+     "product_id": "BAK-003",
+     "class": "NOT_AT_RISK",
+     "units": 16,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 35.0,
+     "cost": 191.84,
+     "retail_now": 560.0,
+     "retail_regular": 560.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000005",
+     "uid": "LOT-000005~md",
+     "product_id": "MEA-002",
+     "class": "MARKDOWN_LEFT",
+     "units": 12,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 104.0,
+     "cost": 1170.0,
+     "retail_now": 1248.0,
+     "retail_regular": 1560.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000013",
+     "uid": "LOT-000013",
+     "product_id": "BAK-001",
+     "class": "IN_BIN_WAITING",
+     "units": 8,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 256.0,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 3.84
+    },
+    {
+     "lot_id": "LOT-000006",
+     "uid": "LOT-000006",
+     "product_id": "SEA-001",
+     "class": "IN_BIN_WAITING",
+     "units": 7,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 582.12,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 2.1
+    },
+    {
+     "lot_id": "LOT-000012",
+     "uid": "LOT-000012",
+     "product_id": "RTE-002",
+     "class": "IN_BIN_WAITING",
+     "units": 16,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 332.8,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 3.2
+    },
+    {
+     "lot_id": "LOT-000021",
+     "uid": "LOT-000021",
+     "product_id": "PRO-001",
+     "class": "IN_BIN_WAITING",
+     "units": 10,
+     "expiry": null,
+     "days_left": null,
+     "price": null,
+     "cost": 245.0,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "on_shelf": false,
+     "partner_id": "P-LDF-01",
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 10.0
+    }
+   ],
+   "left_by_class": {
+    "NOT_AT_RISK": {
+     "units": 583,
+     "cost": 19019.06,
+     "retail_now": 24804.5,
+     "retail_regular": 24804.5,
+     "lots": 12
+    },
+    "EOL_PLANNED": {
+     "units": 279,
+     "cost": 7475.93,
+     "retail_now": 13254.75,
+     "retail_regular": 13254.75,
+     "lots": 6
+    },
+    "EXPIRED_UNHANDLED": {
+     "units": 9,
+     "cost": 300.42,
+     "retail_now": 400.5,
+     "retail_regular": 400.5,
+     "lots": 1
+    },
+    "MARKDOWN_LEFT": {
+     "units": 12,
+     "cost": 1170.0,
+     "retail_now": 1248.0,
+     "retail_regular": 1560.0,
+     "lots": 1
+    },
+    "IN_BIN_WAITING": {
+     "units": 41,
+     "cost": 1415.92,
+     "retail_now": 0.0,
+     "retail_regular": 0.0,
+     "lots": 4
+    }
+   },
+   "left_units": 924,
+   "left_on_shelf_units": 883,
+   "left_cost": 29381.33,
+   "left_retail_now": 39707.75,
+   "left_retail_regular": 40019.75,
+   "no_task_units": 604,
+   "no_task_cost": 20489.48,
+   "risk_no_task_units": 21,
+   "risk_no_task_cost": 1470.42,
+   "risk_no_task_lots": 2,
+   "expired_left_units": 9,
+   "expired_left_lots": 1,
+   "expired_left_kg": 4.5,
+   "expired_left_disposal_estimate": 733.8,
+   "early_removals": {
+    "LOT-000008": {
+     "units": 69,
+     "cogs": 1147.47,
+     "retail": 1638.75,
+     "kg": 17.25,
+     "methods": [
+      "DONATION"
+     ]
+    },
+    "LOT-000020": {
+     "units": 108,
+     "cogs": 2646.0,
+     "retail": 3780.0,
+     "kg": 108.0,
+     "methods": [
+      "DONATION"
+     ]
+    }
+   },
+   "early_removal_cogs": 3793.47,
+   "early_removal_units": 177,
+   "trace": {
+    "LOT-000013": {
+     "LANDFILL": 8
+    },
+    "LOT-000008": {
+     "kitchen": 3,
+     "DONATION": 69,
+     "sold_full": 1
+    },
+    "LOT-000007": {
+     "kitchen": 1
+    },
+    "LOT-000006": {
+     "kitchen": 6,
+     "sold_full": 7,
+     "LANDFILL": 7
+    },
+    "LOT-000004": {
+     "kitchen": 4
+    },
+    "LOT-000005": {
+     "tagged_md": 20,
+     "kitchen": 4,
+     "sold_md": 8
+    },
+    "LOT-000020": {
+     "DONATION": 108,
+     "sold_full": 8
+    },
+    "LOT-000021": {
+     "kitchen": 1,
+     "sold_full": 11,
+     "LANDFILL": 10
+    },
+    "LOT-000018": {
+     "kitchen": 16,
+     "sold_full": 14
+    },
+    "LOT-000026": {
+     "tagged_md": 6,
+     "sold_md": 6
+    },
+    "LOT-000023": {
+     "kitchen_ingredient": 5,
+     "sold_full": 7
+    },
+    "LOT-000001": {
+     "kitchen_ingredient": 2,
+     "sold_full": 20
+    },
+    "LOT-000002": {
+     "sold_full": 13
+    },
+    "LOT-000003": {
+     "sold_full": 2
+    },
+    "LOT-000009": {
+     "sold_full": 12
+    },
+    "LOT-000011": {
+     "sold_full": 7
+    },
+    "LOT-000012": {
+     "sold_full": 14,
+     "LANDFILL": 16
+    },
+    "LOT-000014": {
+     "sold_full": 4
+    },
+    "LOT-000016": {
+     "sold_full": 9
+    },
+    "LOT-000017": {
+     "sold_full": 6
+    },
+    "LOT-000019": {
+     "sold_full": 10
+    },
+    "LOT-000022": {
+     "sold_full": 6
+    },
+    "LOT-000024": {
+     "sold_full": 8
+    },
+    "LOT-000027": {
+     "sold_full": 4
+    }
+   }
+  },
+  "p3b": {
+   "key": "p3b",
+   "net_profit": -827.07,
+   "net_profit_bin": -827.07,
+   "revenue_full": 5891.0,
+   "revenue_md": 2600.4,
+   "revenue": 8491.4,
+   "discount_given": 650.1,
+   "kitchen_value": 2354.39,
+   "kitchen_menu_revenue": 2608.99,
+   "cogs_sold": 6042.52,
+   "cogs_kitchen": 1311.61,
+   "cogs_disposed": 2833.02,
+   "write_off_expired": 717.25,
+   "disposal_a": {
+    "trip": 728.62,
+    "handling": 39.84,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 728.62,
+    "handling": 39.84,
+    "buyback": 0.0
+   },
+   "trips": [
+    {
+     "partner_id": "P-LDF-01",
+     "partner_type": "LANDFILL",
+     "pickup_date": "2026-10-16",
+     "picked_up_today": true,
+     "kg": 34.64,
+     "units": 92,
+     "lots": [
+      "LOT-000004",
+      "LOT-000005",
+      "LOT-000006",
+      "LOT-000008",
+      "LOT-000012",
+      "LOT-000013",
+      "LOT-000021"
+     ],
+     "timing": [
+      "END_OF_LIFE",
+      "NOW"
+     ],
+     "min_kg": 1.0,
+     "capacity_kg": 90.0,
+     "below_min": false,
+     "mode_in_optimizer": "BIN",
+     "trip_cost_a": 728.62,
+     "trip_cost_b": 728.62,
+     "fee_per_kg": 117.48,
+     "handling": 39.84,
+     "buyback": 0.0,
+     "net_a": -768.46,
+     "net_b": -768.46
+    }
+   ],
+   "units_in": 1320,
+   "cost_in": 40589.96,
+   "units": {
+    "LANDFILL": 92,
+    "tagged_md": 116,
+    "kitchen": 35,
+    "sold_md": 47,
+    "sold_full": 134,
+    "kitchen_ingredient": 7
+   },
+   "sold_units": 181,
+   "kitchen_units": 42,
+   "disposed_units": 92,
+   "disposed_kg": 34.64,
+   "left": [
+    {
+     "lot_id": "LOT-000001",
+     "uid": "LOT-000001",
+     "product_id": "DAI-001",
+     "class": "NOT_AT_RISK",
+     "units": 128,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 47.5,
+     "cost": 4985.6,
+     "retail_now": 6080.0,
+     "retail_regular": 6080.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000002",
+     "uid": "LOT-000002",
+     "product_id": "DAI-001",
+     "class": "NOT_AT_RISK",
+     "units": 159,
+     "expiry": "2026-10-24",
+     "days_left": 8,
+     "price": 47.5,
+     "cost": 6193.05,
+     "retail_now": 7552.5,
+     "retail_regular": 7552.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000003",
+     "uid": "LOT-000003",
+     "product_id": "DAI-002",
+     "class": "NOT_AT_RISK",
+     "units": 43,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 14.5,
+     "cost": 511.27,
+     "retail_now": 623.5,
+     "retail_regular": 623.5,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000007",
+     "uid": "LOT-000007",
+     "product_id": "PRO-001",
+     "class": "EOL_PLANNED",
+     "units": 50,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.0,
+     "cost": 1225.0,
+     "retail_now": 1750.0,
+     "retail_regular": 1750.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000009",
+     "uid": "LOT-000009",
+     "product_id": "BAK-001",
+     "class": "NOT_AT_RISK",
+     "units": 58,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 40.0,
+     "cost": 1856.0,
+     "retail_now": 2320.0,
+     "retail_regular": 2320.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000010",
+     "uid": "LOT-000010",
+     "product_id": "BAK-002",
+     "class": "EOL_PLANNED",
+     "units": 22,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 179.0,
+     "cost": 1434.18,
+     "retail_now": 3938.0,
+     "retail_regular": 3938.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000011",
+     "uid": "LOT-000011",
+     "product_id": "BAK-003",
+     "class": "EOL_PLANNED",
+     "units": 48,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.0,
+     "cost": 575.52,
+     "retail_now": 1680.0,
+     "retail_regular": 1680.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000014",
+     "uid": "LOT-000014",
+     "product_id": "SEA-001",
+     "class": "NOT_AT_RISK",
+     "units": 8,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 115.5,
+     "cost": 665.28,
+     "retail_now": 924.0,
+     "retail_regular": 924.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000015",
+     "uid": "LOT-000015",
+     "product_id": "MEA-002",
+     "class": "NOT_AT_RISK",
+     "units": 13,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 130.0,
+     "cost": 1267.5,
+     "retail_now": 1690.0,
+     "retail_regular": 1690.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000016",
+     "uid": "LOT-000016",
+     "product_id": "MEA-001",
+     "class": "EXPIRED_UNHANDLED",
+     "units": 18,
+     "expiry": "2026-10-16",
+     "days_left": 0,
+     "price": 44.5,
+     "cost": 600.84,
+     "retail_now": 801.0,
+     "retail_regular": 801.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000017",
+     "uid": "LOT-000017",
+     "product_id": "MEA-001",
+     "class": "NOT_AT_RISK",
+     "units": 30,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 44.5,
+     "cost": 1001.4,
+     "retail_now": 1335.0,
+     "retail_regular": 1335.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000019",
+     "uid": "LOT-000019",
+     "product_id": "DAI-002",
+     "class": "NOT_AT_RISK",
+     "units": 86,
+     "expiry": "2026-11-10",
+     "days_left": 25,
+     "price": 14.5,
+     "cost": 1022.54,
+     "retail_now": 1247.0,
+     "retail_regular": 1247.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000020",
+     "uid": "LOT-000020",
+     "product_id": "PRO-001",
+     "class": "EOL_PLANNED",
+     "units": 196,
+     "expiry": "2026-10-20",
+     "days_left": 4,
+     "price": 35.0,
+     "cost": 4802.0,
+     "retail_now": 6860.0,
+     "retail_regular": 6860.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000022",
+     "uid": "LOT-000022",
+     "product_id": "PRO-002",
+     "class": "NOT_AT_RISK",
+     "units": 24,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 23.75,
+     "cost": 399.12,
+     "retail_now": 570.0,
+     "retail_regular": 570.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000023",
+     "uid": "LOT-000023",
+     "product_id": "PRO-002",
+     "class": "EXPIRED_UNHANDLED",
+     "units": 7,
+     "expiry": "2026-10-16",
+     "days_left": 0,
+     "price": 23.75,
+     "cost": 116.41,
+     "retail_now": 166.25,
+     "retail_regular": 166.25,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000024",
+     "uid": "LOT-000024",
+     "product_id": "BAK-001",
+     "class": "NOT_AT_RISK",
+     "units": 22,
+     "expiry": "2026-10-19",
+     "days_left": 3,
+     "price": 40.0,
+     "cost": 704.0,
+     "retail_now": 880.0,
+     "retail_regular": 880.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000025",
+     "uid": "LOT-000025",
+     "product_id": "BAK-002",
+     "class": "NOT_AT_RISK",
+     "units": 8,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 179.0,
+     "cost": 521.52,
+     "retail_now": 1432.0,
+     "retail_regular": 1432.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000027",
+     "uid": "LOT-000027",
+     "product_id": "BAK-003",
+     "class": "NOT_AT_RISK",
+     "units": 16,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 35.0,
+     "cost": 191.84,
+     "retail_now": 560.0,
+     "retail_regular": 560.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000008",
+     "uid": "LOT-000008~md",
+     "product_id": "PRO-002",
+     "class": "MARKDOWN_LEFT",
+     "units": 31,
+     "expiry": "2026-10-18",
+     "days_left": 2,
+     "price": 19.0,
+     "cost": 515.53,
+     "retail_now": 589.0,
+     "retail_regular": 736.25,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000004",
+     "uid": "LOT-000004~md",
+     "product_id": "MEA-001",
+     "class": "MARKDOWN_LEFT",
+     "units": 32,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 35.6,
+     "cost": 1068.16,
+     "retail_now": 1139.2,
+     "retail_regular": 1424.0,
+     "on_shelf": true
+    },
+    {
+     "lot_id": "LOT-000005",
+     "uid": "LOT-000005~md",
+     "product_id": "MEA-002",
+     "class": "MARKDOWN_LEFT",
+     "units": 6,
+     "expiry": "2026-10-17",
+     "days_left": 1,
+     "price": 104.0,
+     "cost": 585.0,
+     "retail_now": 624.0,
+     "retail_regular": 780.0,
+     "on_shelf": true
+    }
+   ],
+   "left_by_class": {
+    "NOT_AT_RISK": {
+     "units": 595,
+     "cost": 19319.12,
+     "retail_now": 25214.0,
+     "retail_regular": 25214.0,
+     "lots": 12
+    },
+    "EOL_PLANNED": {
+     "units": 316,
+     "cost": 8036.7,
+     "retail_now": 14228.0,
+     "retail_regular": 14228.0,
+     "lots": 4
+    },
+    "EXPIRED_UNHANDLED": {
+     "units": 25,
+     "cost": 717.25,
+     "retail_now": 967.25,
+     "retail_regular": 967.25,
+     "lots": 2
+    },
+    "MARKDOWN_LEFT": {
+     "units": 69,
+     "cost": 2168.69,
+     "retail_now": 2352.2,
+     "retail_regular": 2940.25,
+     "lots": 3
+    }
+   },
+   "left_units": 1005,
+   "left_on_shelf_units": 1005,
+   "left_cost": 30241.76,
+   "left_retail_now": 42761.45,
+   "left_retail_regular": 43349.5,
+   "no_task_units": 689,
+   "no_task_cost": 22205.06,
+   "risk_no_task_units": 94,
+   "risk_no_task_cost": 2885.94,
+   "risk_no_task_lots": 5,
+   "expired_left_units": 25,
+   "expired_left_lots": 2,
+   "expired_left_kg": 10.75,
+   "expired_left_disposal_estimate": 740.99,
+   "early_removals": {
+    "LOT-000008": {
+     "units": 40,
+     "cogs": 665.2,
+     "retail": 950.0,
+     "kg": 10.0,
+     "methods": [
+      "LANDFILL"
+     ]
+    },
+    "LOT-000004": {
+     "units": 5,
+     "cogs": 166.9,
+     "retail": 222.5,
+     "kg": 2.5,
+     "methods": [
+      "LANDFILL"
+     ]
+    },
+    "LOT-000005": {
+     "units": 6,
+     "cogs": 585.0,
+     "retail": 780.0,
+     "kg": 3.0,
+     "methods": [
+      "LANDFILL"
+     ]
+    }
+   },
+   "early_removal_cogs": 1417.1,
+   "early_removal_units": 51,
+   "trace": {
+    "LOT-000013": {
+     "LANDFILL": 8
+    },
+    "LOT-000008": {
+     "tagged_md": 47,
+     "kitchen": 3,
+     "LANDFILL": 40,
+     "sold_md": 16
+    },
+    "LOT-000006": {
+     "kitchen": 6,
+     "sold_full": 7,
+     "LANDFILL": 7
+    },
+    "LOT-000004": {
+     "tagged_md": 49,
+     "kitchen": 4,
+     "LANDFILL": 5,
+     "sold_md": 17
+    },
+    "LOT-000005": {
+     "tagged_md": 14,
+     "kitchen": 4,
+     "LANDFILL": 6,
+     "sold_md": 8
+    },
+    "LOT-000020": {
+     "kitchen": 1,
+     "sold_full": 8
+    },
+    "LOT-000021": {
+     "kitchen": 1,
+     "sold_full": 11,
+     "LANDFILL": 10
+    },
+    "LOT-000018": {
+     "kitchen": 16,
+     "sold_full": 14
+    },
+    "LOT-000026": {
+     "tagged_md": 6,
+     "sold_md": 6
+    },
+    "LOT-000023": {
+     "kitchen_ingredient": 5
+    },
+    "LOT-000001": {
+     "kitchen_ingredient": 2,
+     "sold_full": 20
+    },
+    "LOT-000002": {
+     "sold_full": 13
+    },
+    "LOT-000003": {
+     "sold_full": 2
+    },
+    "LOT-000009": {
+     "sold_full": 12
+    },
+    "LOT-000011": {
+     "sold_full": 7
+    },
+    "LOT-000012": {
+     "sold_full": 14,
+     "LANDFILL": 16
+    },
+    "LOT-000014": {
+     "sold_full": 4
+    },
+    "LOT-000019": {
+     "sold_full": 10
+    },
+    "LOT-000024": {
+     "sold_full": 8
+    },
+    "LOT-000027": {
+     "sold_full": 4
+    }
+   }
+  }
+ },
+ "policy2_variant": "ต่ำ",
+ "policy2_variants": {
+  "ต่ำ": {
+   "net_profit": -860.96,
+   "left_units": 1119
+  },
+  "กลาง": {
+   "net_profit": -1532.78,
+   "left_units": 1109
+  },
+  "สูง": {
+   "net_profit": -2217.77,
+   "left_units": 1099
+  }
+ },
+ "optimizer": {
+  "p3a": {
+   "decisions": [
+    {
+     "lot_id": "LOT-000013",
+     "name": "ขนมปังแซนวิช 480g",
+     "risk": "CRITICAL",
+     "days_to_expiry": -1,
+     "action": "LANDFILL",
+     "quantity": 8,
+     "lot_quantity": 8,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T20:00:00+07:00",
+     "expected_thb": -398.8,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000010",
+     "name": "เค้กกล้วยหอม 700g",
+     "risk": "CRITICAL",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 19,
+     "lot_quantity": 22,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-19T20:00:00+07:00",
+     "expected_thb": -1371.83,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000008",
+     "name": "ผักกาดหอม 250g",
+     "risk": "HIGH",
+     "days_to_expiry": 2,
+     "action": "LANDFILL",
+     "quantity": 2,
+     "lot_quantity": 90,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-20T20:00:00+07:00",
+     "expected_thb": -89.61,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000008",
+     "name": "ผักกาดหอม 250g",
+     "risk": "HIGH",
+     "days_to_expiry": 2,
+     "action": "DONATE",
+     "quantity": 69,
+     "lot_quantity": 90,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-DON-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T09:00:00+07:00",
+     "expected_thb": -1223.22,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000011",
+     "name": "ขนมปังพุดดิ้ง 150g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 44,
+     "lot_quantity": 55,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-19T20:00:00+07:00",
+     "expected_thb": -594.49,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000007",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 1,
+     "lot_quantity": 50,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-004",
+     "batches": 1,
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "expected_thb": 199.39,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000007",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 38,
+     "lot_quantity": 50,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-19T20:00:00+07:00",
+     "expected_thb": -1316.36,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000006",
+     "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+     "risk": "CRITICAL",
+     "days_to_expiry": 0,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 6,
+     "lot_quantity": 20,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-003",
+     "batches": 2,
+     "due_by": "2026-10-16T10:00:00+07:00",
+     "expected_thb": 302.19,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000006",
+     "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+     "risk": "CRITICAL",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 10,
+     "lot_quantity": 20,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T20:00:00+07:00",
+     "expected_thb": -932.23,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 2,
+     "lot_quantity": 58,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-002",
+     "batches": 1,
+     "due_by": "2026-10-16T09:15:00+07:00",
+     "expected_thb": -38.44,
+     "score": 0.424
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 2,
+     "lot_quantity": 58,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-002",
+     "batches": 1,
+     "due_by": "2026-10-17T08:45:00+07:00",
+     "expected_thb": -39.92,
+     "score": 0.658
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 40,
+     "lot_quantity": 58,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-19T20:00:00+07:00",
+     "expected_thb": -1538.27,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000005",
+     "name": "เนื้อวัวสันนอก สเต็ก 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 4,
+     "lot_quantity": 24,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-001",
+     "batches": 1,
+     "due_by": "2026-10-16T09:30:00+07:00",
+     "expected_thb": 420.16,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000005",
+     "name": "เนื้อวัวสันนอก สเต็ก 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "MARKDOWN",
+     "quantity": 20,
+     "lot_quantity": 24,
+     "discount_pct": 20,
+     "price": 104.0,
+     "partner": null,
+     "recipe": null,
+     "batches": null,
+     "due_by": null,
+     "expected_thb": -536.94,
+     "score": 0.725
+    },
+    {
+     "lot_id": "LOT-000020",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 4,
+     "action": "LANDFILL",
+     "quantity": 27,
+     "lot_quantity": 205,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-22T20:00:00+07:00",
+     "expected_thb": -1420.73,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000020",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 4,
+     "action": "DONATE",
+     "quantity": 108,
+     "lot_quantity": 205,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-DON-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T09:00:00+07:00",
+     "expected_thb": -3120.25,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000012",
+     "name": "สลัดอกไก่ย่าง 200g",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 17,
+     "lot_quantity": 30,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T20:00:00+07:00",
+     "expected_thb": -473.08,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000021",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 1,
+     "lot_quantity": 22,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-004",
+     "batches": 1,
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "expected_thb": 199.39,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000021",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 10,
+     "lot_quantity": 22,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T20:00:00+07:00",
+     "expected_thb": -592.34,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000018",
+     "name": "โยเกิร์ต รสธรรมชาติ 125g",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 2,
+     "lot_quantity": 30,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T20:00:00+07:00",
+     "expected_thb": -30.52,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000026",
+     "name": "เค้กกล้วยหอม 700g",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "MARKDOWN",
+     "quantity": 6,
+     "lot_quantity": 6,
+     "discount_pct": 20,
+     "price": 143.2,
+     "partner": null,
+     "recipe": null,
+     "batches": null,
+     "due_by": null,
+     "expected_thb": 241.29,
+     "score": 1.0
+    }
+   ],
+   "provisional": [],
+   "released": [],
+   "lots": [
+    {
+     "lot_id": "LOT-000013",
+     "name": "ขนมปังแซนวิช 480g",
+     "quantity": 8,
+     "risk": "CRITICAL",
+     "days_to_expiry": -1,
+     "portions": [
+      "ฝังกลบ 8 → P-LDF-01 17/10 20:00"
+     ],
+     "net_thb": -398.8,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:ALL": [
+       "K0_EXPIRED"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-006": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000010",
+     "name": "เค้กกล้วยหอม 700g",
+     "quantity": 22,
+     "risk": "CRITICAL",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายราคาปกติ 3 @179.00",
+      "ฝังกลบ 19 → P-LDF-01 19/10 20:00"
+     ],
+     "net_thb": -932.85,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000008",
+     "name": "ผักกาดหอม 250g",
+     "quantity": 90,
+     "risk": "HIGH",
+     "days_to_expiry": 2,
+     "portions": [
+      "ขายราคาปกติ 16 @23.75",
+      "ฝังกลบ 2 → P-LDF-01 20/10 20:00",
+      "วัตถุดิบรองของครัว 3 RCP-002",
+      "บริจาค 69 → P-DON-01 16/10 09:00"
+     ],
+     "net_thb": -1213.61,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000011",
+     "name": "ขนมปังพุดดิ้ง 150g",
+     "quantity": 55,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายราคาปกติ 11 @35.00",
+      "ฝังกลบ 44 → P-LDF-01 19/10 20:00"
+     ],
+     "net_thb": -315.83,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000007",
+     "name": "กล้วยหอม 1kg",
+     "quantity": 50,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายราคาปกติ 11 @35.00",
+      "ฝังกลบ 38 → P-LDF-01 19/10 20:00",
+      "เข้าครัว 1 RCP-004"
+     ],
+     "net_thb": -1137.97,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-005": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000006",
+     "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+     "quantity": 20,
+     "risk": "CRITICAL",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 4 @115.50",
+      "ฝังกลบ 10 → P-LDF-01 17/10 20:00",
+      "เข้าครัว 6 RCP-003"
+     ],
+     "net_thb": -387.49,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED",
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "quantity": 58,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายราคาปกติ 14 @44.50",
+      "ฝังกลบ 40 → P-LDF-01 19/10 20:00",
+      "เข้าครัว 2 RCP-002",
+      "เข้าครัว 2 RCP-002"
+     ],
+     "net_thb": -1416.5,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000005",
+     "name": "เนื้อวัวสันนอก สเต็ก 500g",
+     "quantity": 24,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายลดราคา 20 @104.00",
+      "เข้าครัว 4 RCP-001"
+     ],
+     "net_thb": -116.78,
+     "md_expected_leftover": 6.11,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000020",
+     "name": "กล้วยหอม 1kg",
+     "quantity": 205,
+     "risk": "HIGH",
+     "days_to_expiry": 4,
+     "portions": [
+      "ขายราคาปกติ 70 @35.00",
+      "ฝังกลบ 27 → P-LDF-01 22/10 20:00",
+      "บริจาค 108 → P-DON-01 16/10 09:00"
+     ],
+     "net_thb": -3792.33,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-005": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000012",
+     "name": "สลัดอกไก่ย่าง 200g",
+     "quantity": 30,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 13 @59.00",
+      "ฝังกลบ 17 → P-LDF-01 17/10 20:00"
+     ],
+     "net_thb": 78.69,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P2_CATEGORY_READY_TO_EAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P2_CATEGORY_READY_TO_EAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000021",
+     "name": "กล้วยหอม 1kg",
+     "quantity": 22,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 11 @35.00",
+      "ฝังกลบ 10 → P-LDF-01 17/10 20:00",
+      "เข้าครัว 1 RCP-004"
+     ],
+     "net_thb": -412.9,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-005": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000018",
+     "name": "โยเกิร์ต รสธรรมชาติ 125g",
+     "quantity": 30,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 12 @14.50",
+      "ฝังกลบ 2 → P-LDF-01 17/10 20:00",
+      "วัตถุดิบรองของครัว 8 RCP-004",
+      "วัตถุดิบรองของครัว 8 RCP-004"
+     ],
+     "net_thb": 325.87,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000026",
+     "name": "เค้กกล้วยหอม 700g",
+     "quantity": 6,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายลดราคา 6 @143.20"
+     ],
+     "net_thb": 241.29,
+     "md_expected_leftover": 1.34,
+     "excluded": {
+      "MARKDOWN:30": [
+       "K6_NO_EXTRA_SALES expected 4.70 <= 4.66"
+      ],
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    }
+   ],
+   "trips": [
+    {
+     "trip_id": "P-DON-01@2026-10-16",
+     "partner_id": "P-DON-01",
+     "name": "ธนาคารอาหารสยามสุข",
+     "partner_type": "DONATION",
+     "mode": "DEDICATED",
+     "full_call": false,
+     "next_run_kg": 0.0,
+     "pickup_at": "2026-10-16T09:00:00+07:00",
+     "kg": 125.25,
+     "capacity_kg": 50.0,
+     "min_kg": 4.0,
+     "rounds": 3,
+     "extra_rounds_free": 2,
+     "fixed_cost_thb": 550.0,
+     "travel_cost_thb": 0.0,
+     "fee_per_kg_thb": 0.0,
+     "trip_cost_thb": 550.0,
+     "handling_thb": 0.0,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 550.0,
+     "net_cash_thb": -550.0,
+     "cost_per_kg_thb": 4.39,
+     "units_now": {
+      "LOT-000008": 69,
+      "LOT-000020": 108
+     },
+     "expected_units_end_of_life": {}
+    },
+    {
+     "trip_id": "P-LDF-01@2026-10-17",
+     "partner_id": "P-LDF-01",
+     "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+     "partner_type": "LANDFILL",
+     "mode": "BIN",
+     "full_call": true,
+     "next_run_kg": 0.938,
+     "pickup_at": "2026-10-17T20:00:00+07:00",
+     "kg": 19.28,
+     "capacity_kg": 90.0,
+     "min_kg": 0.0,
+     "rounds": 1,
+     "extra_rounds_free": 0,
+     "fixed_cost_thb": 650.0,
+     "travel_cost_thb": 78.62,
+     "fee_per_kg_thb": 117.48,
+     "trip_cost_thb": 694.82,
+     "handling_thb": 22.17,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 716.99,
+     "net_cash_thb": -716.99,
+     "cost_per_kg_thb": 37.19,
+     "units_now": {
+      "LOT-000013": 8
+     },
+     "expected_units_end_of_life": {
+      "LOT-000006": 9.02,
+      "LOT-000012": 16.065,
+      "LOT-000021": 9.34,
+      "LOT-000018": 1.45
+     }
+    },
+    {
+     "trip_id": "P-LDF-01@2026-10-19",
+     "partner_id": "P-LDF-01",
+     "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+     "partner_type": "LANDFILL",
+     "mode": "BIN",
+     "full_call": true,
+     "next_run_kg": 3.055,
+     "pickup_at": "2026-10-19T20:00:00+07:00",
+     "kg": 76.472,
+     "capacity_kg": 90.0,
+     "min_kg": 0.0,
+     "rounds": 1,
+     "extra_rounds_free": 0,
+     "fixed_cost_thb": 650.0,
+     "travel_cost_thb": 78.62,
+     "fee_per_kg_thb": 117.48,
+     "trip_cost_thb": 700.63,
+     "handling_thb": 87.94,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 788.58,
+     "net_cash_thb": -788.58,
+     "cost_per_kg_thb": 10.31,
+     "units_now": {},
+     "expected_units_end_of_life": {
+      "LOT-000010": 18.455,
+      "LOT-000011": 43.27,
+      "LOT-000007": 37.37,
+      "LOT-000004": 39.385
+     }
+    },
+    {
+     "trip_id": "P-LDF-01@2026-10-20",
+     "partner_id": "P-LDF-01",
+     "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+     "partner_type": "LANDFILL",
+     "mode": "BIN",
+     "full_call": false,
+     "next_run_kg": 0.0,
+     "pickup_at": "2026-10-20T20:00:00+07:00",
+     "kg": 0.475,
+     "capacity_kg": 90.0,
+     "min_kg": 0.0,
+     "rounds": 1,
+     "extra_rounds_free": 0,
+     "fixed_cost_thb": 650.0,
+     "travel_cost_thb": 78.62,
+     "fee_per_kg_thb": 117.48,
+     "trip_cost_thb": 55.8,
+     "handling_thb": 0.55,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 56.35,
+     "net_cash_thb": -56.35,
+     "cost_per_kg_thb": 118.63,
+     "units_now": {},
+     "expected_units_end_of_life": {
+      "LOT-000008": 1.9
+     }
+    },
+    {
+     "trip_id": "P-LDF-01@2026-10-22",
+     "partner_id": "P-LDF-01",
+     "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+     "partner_type": "LANDFILL",
+     "mode": "BIN",
+     "full_call": true,
+     "next_run_kg": 0.0,
+     "pickup_at": "2026-10-22T20:00:00+07:00",
+     "kg": 26.61,
+     "capacity_kg": 90.0,
+     "min_kg": 0.0,
+     "rounds": 1,
+     "extra_rounds_free": 0,
+     "fixed_cost_thb": 650.0,
+     "travel_cost_thb": 78.62,
+     "fee_per_kg_thb": 117.48,
+     "trip_cost_thb": 728.62,
+     "handling_thb": 30.6,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 759.23,
+     "net_cash_thb": -759.23,
+     "cost_per_kg_thb": 28.53,
+     "units_now": {},
+     "expected_units_end_of_life": {
+      "LOT-000020": 26.61
+     }
+    }
+   ],
+   "partner_bins": [
+    {
+     "partner_id": "P-ADG-01",
+     "partner_type": "ANAEROBIC_DIGESTION",
+     "mode": "BIN",
+     "waste_kg_per_day": 3.544,
+     "days_between_pickups": 1.0,
+     "calls_per_week": 4,
+     "call_interval_days": 1.75,
+     "max_wait_days": 2.0,
+     "economic_call_kg": 6.202,
+     "expected_kg_per_trip": 6.202,
+     "trip_cost_thb": 1850.64,
+     "fee_per_kg_thb": 298.39,
+     "cost_per_kg_thb": 299.29,
+     "min_kg": 5.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 0.0,
+     "bin_after_kg": 0.0,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": null,
+     "must_call_by": null,
+     "call_now": false,
+     "call_reason": null,
+     "below_min_kg": false,
+     "expected_call_at": null,
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-ANI-01",
+     "partner_type": "ANIMAL_FEED",
+     "mode": "BIN",
+     "waste_kg_per_day": 2.834,
+     "days_between_pickups": 1.75,
+     "calls_per_week": 3,
+     "call_interval_days": 2.33,
+     "max_wait_days": 3.0,
+     "economic_call_kg": 6.612,
+     "expected_kg_per_trip": 6.612,
+     "trip_cost_thb": 1037.74,
+     "fee_per_kg_thb": 156.96,
+     "cost_per_kg_thb": 156.34,
+     "min_kg": 5.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 0.0,
+     "bin_after_kg": 0.0,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": null,
+     "must_call_by": null,
+     "call_now": false,
+     "call_reason": null,
+     "below_min_kg": false,
+     "expected_call_at": null,
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-CMP-01",
+     "partner_type": "COMPOSTING",
+     "mode": "BIN",
+     "waste_kg_per_day": 2.834,
+     "days_between_pickups": 1.75,
+     "calls_per_week": 4,
+     "call_interval_days": 1.75,
+     "max_wait_days": 2.0,
+     "economic_call_kg": 4.959,
+     "expected_kg_per_trip": 4.959,
+     "trip_cost_thb": 1653.46,
+     "fee_per_kg_thb": 333.44,
+     "cost_per_kg_thb": 334.04,
+     "min_kg": 4.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 0.0,
+     "bin_after_kg": 0.0,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": null,
+     "must_call_by": null,
+     "call_now": false,
+     "call_reason": null,
+     "below_min_kg": false,
+     "expected_call_at": null,
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-DON-01",
+     "partner_type": "DONATION",
+     "mode": "DEDICATED",
+     "waste_kg_per_day": 1.362,
+     "days_between_pickups": 1.4,
+     "calls_per_week": 0,
+     "call_interval_days": null,
+     "max_wait_days": null,
+     "economic_call_kg": 2.383,
+     "expected_kg_per_trip": 2.383,
+     "trip_cost_thb": 550.0,
+     "fee_per_kg_thb": 0.0,
+     "cost_per_kg_thb": 0.0,
+     "min_kg": 4.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 125.25,
+     "bin_after_kg": 125.25,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": "2026-10-16T09:00:00+07:00",
+     "must_call_by": null,
+     "call_now": true,
+     "call_reason": "THIS_RUN",
+     "below_min_kg": false,
+     "expected_call_at": "2026-10-16T09:00:00+07:00",
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-LDF-01",
+     "partner_type": "LANDFILL",
+     "mode": "BIN",
+     "waste_kg_per_day": 3.544,
+     "days_between_pickups": 1.17,
+     "calls_per_week": 4,
+     "call_interval_days": 1.75,
+     "max_wait_days": 2.0,
+     "economic_call_kg": 6.202,
+     "expected_kg_per_trip": 6.202,
+     "trip_cost_thb": 728.62,
+     "fee_per_kg_thb": 117.48,
+     "cost_per_kg_thb": 118.63,
+     "min_kg": 1.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 3.84,
+     "bin_after_kg": 3.84,
+     "end_of_life_kg_later": 118.997,
+     "oldest_waiting_since": "2026-10-16T09:00:00+07:00",
+     "must_call_by": "2026-10-18T09:00:00+07:00",
+     "call_now": false,
+     "call_reason": "ECONOMIC_SIZE",
+     "below_min_kg": false,
+     "expected_call_at": "2026-10-17T20:00:00+07:00",
+     "full_call_dates": [
+      "2026-10-17",
+      "2026-10-19",
+      "2026-10-22"
+     ]
+    }
+   ],
+   "kitchen_jobs": [
+    {
+     "job_id": "RCP-001@2026-10-16#LOT-000005",
+     "recipe_id": "RCP-001",
+     "name": "สเต็กเนื้อสันนอก พร้อมสลัด",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T09:30:00+07:00",
+     "anchor_lot_id": "LOT-000005",
+     "batches": 1,
+     "anchor_units": 4,
+     "hours": 1.0,
+     "output_units": 10.0,
+     "expected_sold_units": 5.25,
+     "menu_demand_cap": 5.38,
+     "sale_start": "2026-10-16T09:30:00+07:00",
+     "output_product_id": "RTE-001",
+     "revenue_thb": 887.25,
+     "utility_cost_thb": 77.09,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 390.0,
+     "net_profit_thb": 420.16,
+     "inputs": [
+      {
+       "lot_id": "LOT-000005",
+       "product_id": "MEA-002",
+       "role": "ANCHOR",
+       "units": 4,
+       "cogs_thb": 390.0
+      },
+      {
+       "lot_id": "LOT-000023",
+       "product_id": "PRO-002",
+       "role": "SECONDARY",
+       "content": 500.0,
+       "at_risk": false,
+       "units": 2.0,
+       "cogs_thb": 0.0
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-002@2026-10-16#LOT-000004",
+     "recipe_id": "RCP-002",
+     "name": "สลัดอกไก่ย่าง",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T09:15:00+07:00",
+     "anchor_lot_id": "LOT-000004",
+     "batches": 1,
+     "anchor_units": 2,
+     "hours": 0.75,
+     "output_units": 10.0,
+     "expected_sold_units": 1.35,
+     "menu_demand_cap": 2.67,
+     "sale_start": "2026-10-16T09:15:00+07:00",
+     "output_product_id": "RTE-002",
+     "revenue_thb": 79.65,
+     "utility_cost_thb": 51.33,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 66.76,
+     "net_profit_thb": -38.44,
+     "inputs": [
+      {
+       "lot_id": "LOT-000004",
+       "product_id": "MEA-001",
+       "role": "ANCHOR",
+       "units": 2,
+       "cogs_thb": 66.76
+      },
+      {
+       "lot_id": "LOT-000023",
+       "product_id": "PRO-002",
+       "role": "SECONDARY",
+       "content": 750.0,
+       "at_risk": false,
+       "units": 3.0,
+       "cogs_thb": 0.0
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-002@2026-10-17#LOT-000004",
+     "recipe_id": "RCP-002",
+     "name": "สลัดอกไก่ย่าง",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-17",
+     "start_at": "2026-10-17T08:00:00+07:00",
+     "due_by": "2026-10-17T08:45:00+07:00",
+     "anchor_lot_id": "LOT-000004",
+     "batches": 1,
+     "anchor_units": 2,
+     "hours": 0.75,
+     "output_units": 10.0,
+     "expected_sold_units": 1.32,
+     "menu_demand_cap": 1.32,
+     "sale_start": "2026-10-17T08:45:00+07:00",
+     "output_product_id": "RTE-002",
+     "revenue_thb": 78.17,
+     "utility_cost_thb": 51.33,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 49.89,
+     "cogs_thb": 116.65,
+     "net_profit_thb": -39.92,
+     "inputs": [
+      {
+       "lot_id": "LOT-000004",
+       "product_id": "MEA-001",
+       "role": "ANCHOR",
+       "units": 2,
+       "cogs_thb": 66.76
+      },
+      {
+       "lot_id": "LOT-000008",
+       "product_id": "PRO-002",
+       "role": "SECONDARY",
+       "content": 750.0,
+       "at_risk": true,
+       "units": 3,
+       "cogs_thb": 49.89
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-003@2026-10-16#LOT-000006",
+     "recipe_id": "RCP-003",
+     "name": "ข้าวหน้าแซลมอนย่าง",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T10:00:00+07:00",
+     "anchor_lot_id": "LOT-000006",
+     "batches": 2,
+     "anchor_units": 6,
+     "hours": 1.5,
+     "output_units": 20.0,
+     "expected_sold_units": 8.18,
+     "menu_demand_cap": 8.18,
+     "sale_start": "2026-10-16T09:15:00+07:00",
+     "output_product_id": "RTE-003",
+     "revenue_thb": 891.43,
+     "utility_cost_thb": 90.28,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 498.96,
+     "net_profit_thb": 302.19,
+     "inputs": [
+      {
+       "lot_id": "LOT-000006",
+       "product_id": "SEA-001",
+       "role": "ANCHOR",
+       "units": 6,
+       "cogs_thb": 498.96
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-004@2026-10-16#LOT-000007",
+     "recipe_id": "RCP-004",
+     "name": "สมูทตี้กล้วยโยเกิร์ต",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "anchor_lot_id": "LOT-000007",
+     "batches": 1,
+     "anchor_units": 1,
+     "hours": 0.33,
+     "output_units": 8.0,
+     "expected_sold_units": 5.17,
+     "menu_demand_cap": 10.63,
+     "sale_start": "2026-10-16T08:50:00+07:00",
+     "output_product_id": "RTE-004",
+     "revenue_thb": 336.24,
+     "utility_cost_thb": 17.23,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 119.62,
+     "net_profit_thb": 199.39,
+     "inputs": [
+      {
+       "lot_id": "LOT-000007",
+       "product_id": "PRO-001",
+       "role": "ANCHOR",
+       "units": 1,
+       "cogs_thb": 24.5
+      },
+      {
+       "lot_id": "LOT-000001",
+       "product_id": "DAI-001",
+       "role": "SECONDARY",
+       "content": 800.0,
+       "at_risk": false,
+       "units": 0.964,
+       "cogs_thb": 0.0
+      },
+      {
+       "lot_id": "LOT-000018",
+       "product_id": "DAI-002",
+       "role": "PRIMARY",
+       "content": 1000.0,
+       "at_risk": true,
+       "units": 8,
+       "cogs_thb": 95.12
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-004@2026-10-16#LOT-000021",
+     "recipe_id": "RCP-004",
+     "name": "สมูทตี้กล้วยโยเกิร์ต",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "anchor_lot_id": "LOT-000021",
+     "batches": 1,
+     "anchor_units": 1,
+     "hours": 0.33,
+     "output_units": 8.0,
+     "expected_sold_units": 5.17,
+     "menu_demand_cap": 10.63,
+     "sale_start": "2026-10-16T08:50:00+07:00",
+     "output_product_id": "RTE-004",
+     "revenue_thb": 336.24,
+     "utility_cost_thb": 17.23,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 119.62,
+     "net_profit_thb": 199.39,
+     "inputs": [
+      {
+       "lot_id": "LOT-000021",
+       "product_id": "PRO-001",
+       "role": "ANCHOR",
+       "units": 1,
+       "cogs_thb": 24.5
+      },
+      {
+       "lot_id": "LOT-000001",
+       "product_id": "DAI-001",
+       "role": "SECONDARY",
+       "content": 800.0,
+       "at_risk": false,
+       "units": 0.964,
+       "cogs_thb": 0.0
+      },
+      {
+       "lot_id": "LOT-000018",
+       "product_id": "DAI-002",
+       "role": "PRIMARY",
+       "content": 1000.0,
+       "at_risk": true,
+       "units": 8,
+       "cogs_thb": 95.12
+      }
+     ]
+    }
+   ],
+   "kitchen_usage": [
+    {
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "hours_used": 3.91,
+     "hours_budget": 8.0,
+     "utilization": 0.489,
+     "binding": false
+    },
+    {
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-17",
+     "hours_used": 0.75,
+     "hours_budget": 8.0,
+     "utilization": 0.094,
+     "binding": false
+    }
+   ],
+   "summary": {
+    "lots": 13,
+    "units": 620,
+    "split_pct_by_method": {
+     "LANDFILL": 35.0,
+     "DONATION": 28.55,
+     "SELL_REGULAR": 26.61,
+     "MARKDOWN 20%": 4.19,
+     "KITCHEN_INGREDIENT": 3.06,
+     "KITCHEN": 2.58
+    },
+    "units_by_method": {
+     "LANDFILL": 217,
+     "SELL_REGULAR": 165,
+     "KITCHEN_INGREDIENT": 19,
+     "DONATION": 177,
+     "KITCHEN": 16,
+     "MARKDOWN 20%": 26
+    },
+    "kg_by_method": {
+     "LANDFILL": 122.837,
+     "SELL_REGULAR": 112.05,
+     "KITCHEN_INGREDIENT": 2.75,
+     "DONATION": 125.25,
+     "KITCHEN": 7.8,
+     "MARKDOWN 20%": 14.2
+    },
+    "gross_revenue_thb": 11656.82,
+    "route_costs_thb": 3192.13,
+    "cogs_thb": 17943.91,
+    "net_recovery_thb": 8464.69,
+    "net_profit_thb": -9479.21,
+    "unresolved_units": 0,
+    "shelf_units": 400,
+    "expected_sold_units": 189.69,
+    "expected_end_of_life_units": 202.87,
+    "expected_leftover_next_run_units": 7.45,
+    "reconciliation_gap_thb": 0.0026,
+    "reconciliation_ok": true
+   },
+   "baselines": {
+    "do_nothing_no_disposal_cost": {
+     "net_profit_thb": -9343.62
+    },
+    "regular_price_then_landfill": {
+     "net_profit_thb": -12564.03,
+     "unresolved_units": 0
+    },
+    "markdown_then_landfill": {
+     "net_profit_thb": -11935.11,
+     "unresolved_units": 0
+    },
+    "optimized": {
+     "net_profit_thb": -9479.21,
+     "unresolved_units": 0
+    },
+    "improvement_vs_regular_then_landfill_thb": 3084.81
+   },
+   "warnings": [
+    "W3_PICKUP_GAP_OVER_HOLD P-ANI-01: ตารางรับห่างสุด 3 วัน > max_hold_days 2 ของอาจรอในถังนานกว่าเพดานเวลา",
+    "W2_PARTNER_DEDICATED P-DON-01: ของทิ้ง 1.36 kg/วัน ภายในเพดานเวลา 2 วัน สะสมได้ 2.38 kg < ขั้นต่ำ 4 kg -> เรียกรถเฉพาะรอบนี้",
+    "A3_TRIP_COST_PER_KG P-LDF-01: 118.63 บาท/kg (0.475 kg)"
+   ],
+   "skipped": {},
+   "solver": {
+    "name": "HiGHS",
+    "status": "optimal",
+    "gap": 1.1135530917889668e-05,
+    "time_ms": 521
+   },
+   "violations": [],
+   "payload_errors": [],
+   "action_counts": {
+    "LANDFILL": 11,
+    "DONATE": 2,
+    "KITCHEN_REPURPOSE": 6,
+    "MARKDOWN": 2
+   }
+  },
+  "p3b": {
+   "decisions": [
+    {
+     "lot_id": "LOT-000013",
+     "name": "ขนมปังแซนวิช 480g",
+     "risk": "CRITICAL",
+     "days_to_expiry": -1,
+     "action": "LANDFILL",
+     "quantity": 8,
+     "lot_quantity": 8,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -340.86,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000010",
+     "name": "เค้กกล้วยหอม 700g",
+     "risk": "CRITICAL",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 19,
+     "lot_quantity": 22,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T22:00:00+07:00",
+     "expected_thb": -1416.38,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000008",
+     "name": "ผักกาดหอม 250g",
+     "risk": "HIGH",
+     "days_to_expiry": 2,
+     "action": "MARKDOWN",
+     "quantity": 47,
+     "lot_quantity": 90,
+     "discount_pct": 20,
+     "price": 19.0,
+     "partner": null,
+     "recipe": null,
+     "batches": null,
+     "due_by": null,
+     "expected_thb": -443.18,
+     "score": 0.433
+    },
+    {
+     "lot_id": "LOT-000008",
+     "name": "ผักกาดหอม 250g",
+     "risk": "HIGH",
+     "days_to_expiry": 2,
+     "action": "LANDFILL",
+     "quantity": 40,
+     "lot_quantity": 90,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -886.19,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000011",
+     "name": "ขนมปังพุดดิ้ง 150g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 44,
+     "lot_quantity": 55,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T22:00:00+07:00",
+     "expected_thb": -616.87,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000007",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 39,
+     "lot_quantity": 50,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-17T22:00:00+07:00",
+     "expected_thb": -1483.49,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000006",
+     "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+     "risk": "CRITICAL",
+     "days_to_expiry": 0,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 6,
+     "lot_quantity": 20,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-003",
+     "batches": 2,
+     "due_by": "2026-10-16T10:00:00+07:00",
+     "expected_thb": 302.19,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000006",
+     "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+     "risk": "CRITICAL",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 10,
+     "lot_quantity": 20,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -891.4,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 2,
+     "lot_quantity": 58,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-002",
+     "batches": 1,
+     "due_by": "2026-10-16T09:15:00+07:00",
+     "expected_thb": 2.02,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 2,
+     "lot_quantity": 58,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-002",
+     "batches": 1,
+     "due_by": "2026-10-17T08:45:00+07:00",
+     "expected_thb": -80.37,
+     "score": 0.311
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "MARKDOWN",
+     "quantity": 49,
+     "lot_quantity": 58,
+     "discount_pct": 20,
+     "price": 35.6,
+     "partner": null,
+     "recipe": null,
+     "batches": null,
+     "due_by": null,
+     "expected_thb": -633.72,
+     "score": 0.613
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 5,
+     "lot_quantity": 58,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -222.15,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000005",
+     "name": "เนื้อวัวสันนอก สเต็ก 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 4,
+     "lot_quantity": 24,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-001",
+     "batches": 1,
+     "due_by": "2026-10-16T09:30:00+07:00",
+     "expected_thb": 420.16,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000005",
+     "name": "เนื้อวัวสันนอก สเต็ก 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "MARKDOWN",
+     "quantity": 14,
+     "lot_quantity": 24,
+     "discount_pct": 20,
+     "price": 104.0,
+     "partner": null,
+     "recipe": null,
+     "batches": null,
+     "due_by": null,
+     "expected_thb": -111.8,
+     "score": 0.918
+    },
+    {
+     "lot_id": "LOT-000005",
+     "name": "เนื้อวัวสันนอก สเต็ก 500g",
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "action": "LANDFILL",
+     "quantity": 6,
+     "lot_quantity": 24,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -651.3,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000020",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 4,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 1,
+     "lot_quantity": 205,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-004",
+     "batches": 1,
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "expected_thb": 199.39,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000020",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 4,
+     "action": "LANDFILL",
+     "quantity": 134,
+     "lot_quantity": 205,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-20T22:00:00+07:00",
+     "expected_thb": -4165.25,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000012",
+     "name": "สลัดอกไก่ย่าง 200g",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 17,
+     "lot_quantity": 30,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -424.61,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000021",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "KITCHEN_REPURPOSE",
+     "quantity": 1,
+     "lot_quantity": 22,
+     "discount_pct": null,
+     "price": null,
+     "partner": null,
+     "recipe": "RCP-004",
+     "batches": 1,
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "expected_thb": 199.39,
+     "score": 1.0
+    },
+    {
+     "lot_id": "LOT-000021",
+     "name": "กล้วยหอม 1kg",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 10,
+     "lot_quantity": 22,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -451.41,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000018",
+     "name": "โยเกิร์ต รสธรรมชาติ 125g",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "LANDFILL",
+     "quantity": 2,
+     "lot_quantity": 30,
+     "discount_pct": null,
+     "price": null,
+     "partner": "P-LDF-01",
+     "recipe": null,
+     "batches": null,
+     "due_by": "2026-10-16T22:00:00+07:00",
+     "expected_thb": -27.79,
+     "score": 0.0
+    },
+    {
+     "lot_id": "LOT-000026",
+     "name": "เค้กกล้วยหอม 700g",
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "action": "MARKDOWN",
+     "quantity": 6,
+     "lot_quantity": 6,
+     "discount_pct": 20,
+     "price": 143.2,
+     "partner": null,
+     "recipe": null,
+     "batches": null,
+     "due_by": null,
+     "expected_thb": 276.17,
+     "score": 1.0
+    }
+   ],
+   "provisional": [],
+   "released": [],
+   "lots": [
+    {
+     "lot_id": "LOT-000013",
+     "name": "ขนมปังแซนวิช 480g",
+     "quantity": 8,
+     "risk": "CRITICAL",
+     "days_to_expiry": -1,
+     "portions": [
+      "ฝังกลบ 8 → P-LDF-01 16/10 22:00"
+     ],
+     "net_thb": -340.86,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:ALL": [
+       "K0_EXPIRED"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-006": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000010",
+     "name": "เค้กกล้วยหอม 700g",
+     "quantity": 22,
+     "risk": "CRITICAL",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายราคาปกติ 3 @179.00",
+      "ฝังกลบ 19 → P-LDF-01 17/10 22:00"
+     ],
+     "net_thb": -977.39,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000008",
+     "name": "ผักกาดหอม 250g",
+     "quantity": 90,
+     "risk": "HIGH",
+     "days_to_expiry": 2,
+     "portions": [
+      "ขายลดราคา 47 @19.00",
+      "วัตถุดิบรองของครัว 3 RCP-002",
+      "ฝังกลบ 40 → P-LDF-01 16/10 22:00"
+     ],
+     "net_thb": -1363.74,
+     "md_expected_leftover": 5.22,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000011",
+     "name": "ขนมปังพุดดิ้ง 150g",
+     "quantity": 55,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายราคาปกติ 11 @35.00",
+      "ฝังกลบ 44 → P-LDF-01 17/10 22:00"
+     ],
+     "net_thb": -338.21,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000007",
+     "name": "กล้วยหอม 1kg",
+     "quantity": 50,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายราคาปกติ 11 @35.00",
+      "ฝังกลบ 39 → P-LDF-01 17/10 22:00"
+     ],
+     "net_thb": -1345.94,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-005": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000006",
+     "name": "ปลาแซลมอนนอร์เวย์ ตัดชิ้น 300g",
+     "quantity": 20,
+     "risk": "CRITICAL",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 4 @115.50",
+      "ฝังกลบ 10 → P-LDF-01 16/10 22:00",
+      "เข้าครัว 6 RCP-003"
+     ],
+     "net_thb": -346.66,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED",
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_SEAFOOD_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000004",
+     "name": "อกไก่สด 500g",
+     "quantity": 58,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายลดราคา 49 @35.60",
+      "เข้าครัว 2 RCP-002",
+      "เข้าครัว 2 RCP-002",
+      "ฝังกลบ 5 → P-LDF-01 16/10 22:00"
+     ],
+     "net_thb": -899.85,
+     "md_expected_leftover": 5.2,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000005",
+     "name": "เนื้อวัวสันนอก สเต็ก 500g",
+     "quantity": 24,
+     "risk": "HIGH",
+     "days_to_expiry": 1,
+     "portions": [
+      "ขายลดราคา 14 @104.00",
+      "เข้าครัว 4 RCP-001",
+      "ฝังกลบ 6 → P-LDF-01 16/10 22:00"
+     ],
+     "net_thb": -342.94,
+     "md_expected_leftover": 1.95,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS 1d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P1_FLAG_ALLOW_DONATION_FALSE",
+       "P2_CATEGORY_MEAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000020",
+     "name": "กล้วยหอม 1kg",
+     "quantity": 205,
+     "risk": "HIGH",
+     "days_to_expiry": 4,
+     "portions": [
+      "ขายราคาปกติ 70 @35.00",
+      "ฝังกลบ 134 → P-LDF-01 20/10 22:00",
+      "เข้าครัว 1 RCP-004"
+     ],
+     "net_thb": -3375.06,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-005": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000012",
+     "name": "สลัดอกไก่ย่าง 200g",
+     "quantity": 30,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 13 @59.00",
+      "ฝังกลบ 17 → P-LDF-01 16/10 22:00"
+     ],
+     "net_thb": 127.15,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P2_CATEGORY_READY_TO_EAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P2_CATEGORY_READY_TO_EAT_NOT_ACCEPTED",
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000021",
+     "name": "กล้วยหอม 1kg",
+     "quantity": 22,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 11 @35.00",
+      "ฝังกลบ 10 → P-LDF-01 16/10 22:00",
+      "เข้าครัว 1 RCP-004"
+     ],
+     "net_thb": -271.97,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:RCP-005": [
+       "U5_NO_MENU_DEMAND 2026-10-16 expected 0.00",
+       "U5_NO_MENU_DEMAND 2026-10-17 expected 0.00"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000018",
+     "name": "โยเกิร์ต รสธรรมชาติ 125g",
+     "quantity": 30,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายราคาปกติ 12 @14.50",
+      "ฝังกลบ 2 → P-LDF-01 16/10 22:00",
+      "วัตถุดิบรองของครัว 8 RCP-004",
+      "วัตถุดิบรองของครัว 8 RCP-004"
+     ],
+     "net_thb": 328.6,
+     "md_expected_leftover": null,
+     "excluded": {
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "EOL:ANIMAL_FEED:P-ANI-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "EOL:COMPOSTING:P-CMP-01": [
+       "P2_CATEGORY_DAIRY_NOT_ACCEPTED"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ]
+     },
+     "released": false
+    },
+    {
+     "lot_id": "LOT-000026",
+     "name": "เค้กกล้วยหอม 700g",
+     "quantity": 6,
+     "risk": "HIGH",
+     "days_to_expiry": 0,
+     "portions": [
+      "ขายลดราคา 6 @143.20"
+     ],
+     "net_thb": 276.17,
+     "md_expected_leftover": 1.34,
+     "excluded": {
+      "MARKDOWN:30": [
+       "K6_NO_EXTRA_SALES expected 4.70 <= 4.66"
+      ],
+      "MARKDOWN:40": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:60": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:70": [
+       "K3_NOT_FORECAST"
+      ],
+      "MARKDOWN:80": [
+       "K3_NOT_FORECAST"
+      ],
+      "DONATION:P-DON-01": [
+       "P4_MIN_DAYS 0d at pickup < 2d"
+      ],
+      "EOL:DONATION:P-DON-01": [
+       "P4_MIN_DAYS -1d at pickup < 2d",
+       "P5_EXPIRED_FOR_HUMAN_USE"
+      ],
+      "KITCHEN:ALL": [
+       "U2_NOT_AN_INGREDIENT"
+      ]
+     },
+     "released": false
+    }
+   ],
+   "trips": [
+    {
+     "trip_id": "P-LDF-01@2026-10-16",
+     "partner_id": "P-LDF-01",
+     "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+     "partner_type": "LANDFILL",
+     "mode": "DEDICATED",
+     "full_call": false,
+     "next_run_kg": 0.0,
+     "pickup_at": "2026-10-16T22:00:00+07:00",
+     "kg": 34.78,
+     "capacity_kg": 90.0,
+     "min_kg": 1.0,
+     "rounds": 1,
+     "extra_rounds_free": 0,
+     "fixed_cost_thb": 650.0,
+     "travel_cost_thb": 78.62,
+     "fee_per_kg_thb": 0.0,
+     "trip_cost_thb": 728.62,
+     "handling_thb": 40.0,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 768.62,
+     "net_cash_thb": -768.62,
+     "cost_per_kg_thb": 22.1,
+     "units_now": {
+      "LOT-000013": 8,
+      "LOT-000008": 40,
+      "LOT-000004": 5,
+      "LOT-000005": 6
+     },
+     "expected_units_end_of_life": {
+      "LOT-000006": 9.02,
+      "LOT-000012": 16.065,
+      "LOT-000021": 9.34,
+      "LOT-000018": 1.45
+     }
+    },
+    {
+     "trip_id": "P-LDF-01@2026-10-17",
+     "partner_id": "P-LDF-01",
+     "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+     "partner_type": "LANDFILL",
+     "mode": "DEDICATED",
+     "full_call": false,
+     "next_run_kg": 0.0,
+     "pickup_at": "2026-10-17T22:00:00+07:00",
+     "kg": 57.779,
+     "capacity_kg": 90.0,
+     "min_kg": 1.0,
+     "rounds": 1,
+     "extra_rounds_free": 0,
+     "fixed_cost_thb": 650.0,
+     "travel_cost_thb": 78.62,
+     "fee_per_kg_thb": 0.0,
+     "trip_cost_thb": 728.62,
+     "handling_thb": 66.45,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 795.07,
+     "net_cash_thb": -795.07,
+     "cost_per_kg_thb": 13.76,
+     "units_now": {},
+     "expected_units_end_of_life": {
+      "LOT-000010": 18.455,
+      "LOT-000011": 43.27,
+      "LOT-000007": 38.37
+     }
+    },
+    {
+     "trip_id": "P-LDF-01@2026-10-20",
+     "partner_id": "P-LDF-01",
+     "name": "บริษัท กรีนเบย์ ฝังกลบ จำกัด",
+     "partner_type": "LANDFILL",
+     "mode": "DEDICATED",
+     "full_call": false,
+     "next_run_kg": 0.0,
+     "pickup_at": "2026-10-20T22:00:00+07:00",
+     "kg": 133.59,
+     "capacity_kg": 90.0,
+     "min_kg": 1.0,
+     "rounds": 2,
+     "extra_rounds_free": 1,
+     "fixed_cost_thb": 650.0,
+     "travel_cost_thb": 78.62,
+     "fee_per_kg_thb": 0.0,
+     "trip_cost_thb": 728.62,
+     "handling_thb": 153.63,
+     "buyback_revenue_thb": 0.0,
+     "total_cost_thb": 882.25,
+     "net_cash_thb": -882.25,
+     "cost_per_kg_thb": 6.6,
+     "units_now": {},
+     "expected_units_end_of_life": {
+      "LOT-000020": 133.59
+     }
+    }
+   ],
+   "partner_bins": [
+    {
+     "partner_id": "P-ADG-01",
+     "partner_type": "ANAEROBIC_DIGESTION",
+     "mode": "DEDICATED",
+     "waste_kg_per_day": 0.0,
+     "days_between_pickups": 1.0,
+     "calls_per_week": 0,
+     "call_interval_days": null,
+     "max_wait_days": null,
+     "economic_call_kg": 0.0,
+     "expected_kg_per_trip": 0.0,
+     "trip_cost_thb": 1850.64,
+     "fee_per_kg_thb": 0.0,
+     "cost_per_kg_thb": 0.9,
+     "min_kg": 5.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 0.0,
+     "bin_after_kg": 0.0,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": null,
+     "must_call_by": null,
+     "call_now": false,
+     "call_reason": null,
+     "below_min_kg": false,
+     "expected_call_at": null,
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-ANI-01",
+     "partner_type": "ANIMAL_FEED",
+     "mode": "DEDICATED",
+     "waste_kg_per_day": 0.0,
+     "days_between_pickups": 1.75,
+     "calls_per_week": 0,
+     "call_interval_days": null,
+     "max_wait_days": null,
+     "economic_call_kg": 0.0,
+     "expected_kg_per_trip": 0.0,
+     "trip_cost_thb": 1037.74,
+     "fee_per_kg_thb": 0.0,
+     "cost_per_kg_thb": -0.62,
+     "min_kg": 5.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 0.0,
+     "bin_after_kg": 0.0,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": null,
+     "must_call_by": null,
+     "call_now": false,
+     "call_reason": null,
+     "below_min_kg": false,
+     "expected_call_at": null,
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-CMP-01",
+     "partner_type": "COMPOSTING",
+     "mode": "DEDICATED",
+     "waste_kg_per_day": 0.0,
+     "days_between_pickups": 1.75,
+     "calls_per_week": 0,
+     "call_interval_days": null,
+     "max_wait_days": null,
+     "economic_call_kg": 0.0,
+     "expected_kg_per_trip": 0.0,
+     "trip_cost_thb": 1653.46,
+     "fee_per_kg_thb": 0.0,
+     "cost_per_kg_thb": 0.6,
+     "min_kg": 4.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 0.0,
+     "bin_after_kg": 0.0,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": null,
+     "must_call_by": null,
+     "call_now": false,
+     "call_reason": null,
+     "below_min_kg": false,
+     "expected_call_at": null,
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-DON-01",
+     "partner_type": "DONATION",
+     "mode": "DEDICATED",
+     "waste_kg_per_day": 0.0,
+     "days_between_pickups": 1.4,
+     "calls_per_week": 0,
+     "call_interval_days": null,
+     "max_wait_days": null,
+     "economic_call_kg": 0.0,
+     "expected_kg_per_trip": 0.0,
+     "trip_cost_thb": 550.0,
+     "fee_per_kg_thb": 0.0,
+     "cost_per_kg_thb": 0.0,
+     "min_kg": 4.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 0.0,
+     "bin_after_kg": 0.0,
+     "end_of_life_kg_later": 0.0,
+     "oldest_waiting_since": null,
+     "must_call_by": null,
+     "call_now": false,
+     "call_reason": null,
+     "below_min_kg": false,
+     "expected_call_at": null,
+     "full_call_dates": []
+    },
+    {
+     "partner_id": "P-LDF-01",
+     "partner_type": "LANDFILL",
+     "mode": "DEDICATED",
+     "waste_kg_per_day": 0.0,
+     "days_between_pickups": 1.17,
+     "calls_per_week": 0,
+     "call_interval_days": null,
+     "max_wait_days": null,
+     "economic_call_kg": 0.0,
+     "expected_kg_per_trip": 0.0,
+     "trip_cost_thb": 728.62,
+     "fee_per_kg_thb": 0.0,
+     "cost_per_kg_thb": 1.15,
+     "min_kg": 1.0,
+     "bin_before_kg": 0.0,
+     "now_kg": 19.34,
+     "bin_after_kg": 19.34,
+     "end_of_life_kg_later": 206.809,
+     "oldest_waiting_since": "2026-10-16T09:00:00+07:00",
+     "must_call_by": null,
+     "call_now": true,
+     "call_reason": "THIS_RUN",
+     "below_min_kg": false,
+     "expected_call_at": "2026-10-16T20:00:00+07:00",
+     "full_call_dates": []
+    }
+   ],
+   "kitchen_jobs": [
+    {
+     "job_id": "RCP-001@2026-10-16#LOT-000005",
+     "recipe_id": "RCP-001",
+     "name": "สเต็กเนื้อสันนอก พร้อมสลัด",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T09:30:00+07:00",
+     "anchor_lot_id": "LOT-000005",
+     "batches": 1,
+     "anchor_units": 4,
+     "hours": 1.0,
+     "output_units": 10.0,
+     "expected_sold_units": 5.25,
+     "menu_demand_cap": 5.38,
+     "sale_start": "2026-10-16T09:30:00+07:00",
+     "output_product_id": "RTE-001",
+     "revenue_thb": 887.25,
+     "utility_cost_thb": 77.09,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 390.0,
+     "net_profit_thb": 420.16,
+     "inputs": [
+      {
+       "lot_id": "LOT-000005",
+       "product_id": "MEA-002",
+       "role": "ANCHOR",
+       "units": 4,
+       "cogs_thb": 390.0
+      },
+      {
+       "lot_id": "LOT-000023",
+       "product_id": "PRO-002",
+       "role": "SECONDARY",
+       "content": 500.0,
+       "at_risk": false,
+       "units": 2.0,
+       "cogs_thb": 0.0
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-002@2026-10-16#LOT-000004",
+     "recipe_id": "RCP-002",
+     "name": "สลัดอกไก่ย่าง",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T09:15:00+07:00",
+     "anchor_lot_id": "LOT-000004",
+     "batches": 1,
+     "anchor_units": 2,
+     "hours": 0.75,
+     "output_units": 10.0,
+     "expected_sold_units": 2.04,
+     "menu_demand_cap": 2.67,
+     "sale_start": "2026-10-16T09:15:00+07:00",
+     "output_product_id": "RTE-002",
+     "revenue_thb": 120.11,
+     "utility_cost_thb": 51.33,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 66.76,
+     "net_profit_thb": 2.02,
+     "inputs": [
+      {
+       "lot_id": "LOT-000004",
+       "product_id": "MEA-001",
+       "role": "ANCHOR",
+       "units": 2,
+       "cogs_thb": 66.76
+      },
+      {
+       "lot_id": "LOT-000023",
+       "product_id": "PRO-002",
+       "role": "SECONDARY",
+       "content": 750.0,
+       "at_risk": false,
+       "units": 3.0,
+       "cogs_thb": 0.0
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-002@2026-10-17#LOT-000004",
+     "recipe_id": "RCP-002",
+     "name": "สลัดอกไก่ย่าง",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-17",
+     "start_at": "2026-10-17T08:00:00+07:00",
+     "due_by": "2026-10-17T08:45:00+07:00",
+     "anchor_lot_id": "LOT-000004",
+     "batches": 1,
+     "anchor_units": 2,
+     "hours": 0.75,
+     "output_units": 10.0,
+     "expected_sold_units": 0.64,
+     "menu_demand_cap": 1.32,
+     "sale_start": "2026-10-17T08:45:00+07:00",
+     "output_product_id": "RTE-002",
+     "revenue_thb": 37.72,
+     "utility_cost_thb": 51.33,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 49.89,
+     "cogs_thb": 116.65,
+     "net_profit_thb": -80.37,
+     "inputs": [
+      {
+       "lot_id": "LOT-000004",
+       "product_id": "MEA-001",
+       "role": "ANCHOR",
+       "units": 2,
+       "cogs_thb": 66.76
+      },
+      {
+       "lot_id": "LOT-000008",
+       "product_id": "PRO-002",
+       "role": "SECONDARY",
+       "content": 750.0,
+       "at_risk": true,
+       "units": 3,
+       "cogs_thb": 49.89
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-003@2026-10-16#LOT-000006",
+     "recipe_id": "RCP-003",
+     "name": "ข้าวหน้าแซลมอนย่าง",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T10:00:00+07:00",
+     "anchor_lot_id": "LOT-000006",
+     "batches": 2,
+     "anchor_units": 6,
+     "hours": 1.5,
+     "output_units": 20.0,
+     "expected_sold_units": 8.18,
+     "menu_demand_cap": 8.18,
+     "sale_start": "2026-10-16T09:15:00+07:00",
+     "output_product_id": "RTE-003",
+     "revenue_thb": 891.43,
+     "utility_cost_thb": 90.28,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 498.96,
+     "net_profit_thb": 302.19,
+     "inputs": [
+      {
+       "lot_id": "LOT-000006",
+       "product_id": "SEA-001",
+       "role": "ANCHOR",
+       "units": 6,
+       "cogs_thb": 498.96
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-004@2026-10-16#LOT-000020",
+     "recipe_id": "RCP-004",
+     "name": "สมูทตี้กล้วยโยเกิร์ต",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "anchor_lot_id": "LOT-000020",
+     "batches": 1,
+     "anchor_units": 1,
+     "hours": 0.33,
+     "output_units": 8.0,
+     "expected_sold_units": 5.17,
+     "menu_demand_cap": 10.63,
+     "sale_start": "2026-10-16T08:50:00+07:00",
+     "output_product_id": "RTE-004",
+     "revenue_thb": 336.24,
+     "utility_cost_thb": 17.23,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 119.62,
+     "net_profit_thb": 199.39,
+     "inputs": [
+      {
+       "lot_id": "LOT-000020",
+       "product_id": "PRO-001",
+       "role": "ANCHOR",
+       "units": 1,
+       "cogs_thb": 24.5
+      },
+      {
+       "lot_id": "LOT-000001",
+       "product_id": "DAI-001",
+       "role": "SECONDARY",
+       "content": 800.0,
+       "at_risk": false,
+       "units": 0.964,
+       "cogs_thb": 0.0
+      },
+      {
+       "lot_id": "LOT-000018",
+       "product_id": "DAI-002",
+       "role": "PRIMARY",
+       "content": 1000.0,
+       "at_risk": true,
+       "units": 8,
+       "cogs_thb": 95.12
+      }
+     ]
+    },
+    {
+     "job_id": "RCP-004@2026-10-16#LOT-000021",
+     "recipe_id": "RCP-004",
+     "name": "สมูทตี้กล้วยโยเกิร์ต",
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "start_at": "2026-10-16T08:30:00+07:00",
+     "due_by": "2026-10-16T08:50:00+07:00",
+     "anchor_lot_id": "LOT-000021",
+     "batches": 1,
+     "anchor_units": 1,
+     "hours": 0.33,
+     "output_units": 8.0,
+     "expected_sold_units": 5.17,
+     "menu_demand_cap": 10.63,
+     "sale_start": "2026-10-16T08:50:00+07:00",
+     "output_product_id": "RTE-004",
+     "revenue_thb": 336.24,
+     "utility_cost_thb": 17.23,
+     "primary_from_regular_stock_thb": 0.0,
+     "secondary_credit_thb": 0.0,
+     "cogs_thb": 119.62,
+     "net_profit_thb": 199.39,
+     "inputs": [
+      {
+       "lot_id": "LOT-000021",
+       "product_id": "PRO-001",
+       "role": "ANCHOR",
+       "units": 1,
+       "cogs_thb": 24.5
+      },
+      {
+       "lot_id": "LOT-000001",
+       "product_id": "DAI-001",
+       "role": "SECONDARY",
+       "content": 800.0,
+       "at_risk": false,
+       "units": 0.964,
+       "cogs_thb": 0.0
+      },
+      {
+       "lot_id": "LOT-000018",
+       "product_id": "DAI-002",
+       "role": "PRIMARY",
+       "content": 1000.0,
+       "at_risk": true,
+       "units": 8,
+       "cogs_thb": 95.12
+      }
+     ]
+    }
+   ],
+   "kitchen_usage": [
+    {
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-16",
+     "hours_used": 3.91,
+     "hours_budget": 8.0,
+     "utilization": 0.489,
+     "binding": false
+    },
+    {
+     "department_id": "KITCHEN_DELI",
+     "date": "2026-10-17",
+     "hours_used": 0.75,
+     "hours_budget": 8.0,
+     "utilization": 0.094,
+     "binding": false
+    }
+   ],
+   "summary": {
+    "lots": 13,
+    "units": 620,
+    "split_pct_by_method": {
+     "LANDFILL": 53.87,
+     "SELL_REGULAR": 21.77,
+     "MARKDOWN 20%": 18.71,
+     "KITCHEN_INGREDIENT": 3.06,
+     "KITCHEN": 2.58
+    },
+    "units_by_method": {
+     "LANDFILL": 334,
+     "SELL_REGULAR": 135,
+     "MARKDOWN 20%": 116,
+     "KITCHEN_INGREDIENT": 19,
+     "KITCHEN": 16
+    },
+    "kg_by_method": {
+     "LANDFILL": 226.149,
+     "SELL_REGULAR": 101.05,
+     "MARKDOWN 20%": 47.45,
+     "KITCHEN_INGREDIENT": 2.75,
+     "KITCHEN": 7.8
+    },
+    "gross_revenue_thb": 12786.53,
+    "route_costs_thb": 3713.32,
+    "cogs_thb": 17943.91,
+    "net_recovery_thb": 9073.21,
+    "net_profit_thb": -8870.7,
+    "unresolved_units": 0,
+    "shelf_units": 526,
+    "expected_sold_units": 242.73,
+    "expected_end_of_life_units": 269.56,
+    "expected_leftover_next_run_units": 13.71,
+    "reconciliation_gap_thb": 0.0001,
+    "reconciliation_ok": true
+   },
+   "baselines": {
+    "do_nothing_no_disposal_cost": {
+     "net_profit_thb": -9343.62
+    },
+    "regular_price_then_landfill": {
+     "net_profit_thb": -12256.06,
+     "unresolved_units": 0
+    },
+    "markdown_then_landfill": {
+     "net_profit_thb": -11124.73,
+     "unresolved_units": 0
+    },
+    "optimized": {
+     "net_profit_thb": -8870.7,
+     "unresolved_units": 0
+    },
+    "improvement_vs_regular_then_landfill_thb": 3385.36
+   },
+   "warnings": [
+    "W2_PARTNER_DEDICATED P-ADG-01: ของทิ้ง 0.00 kg/วัน ภายในเพดานเวลา 2 วัน สะสมได้ 0.00 kg < ขั้นต่ำ 5 kg -> เรียกรถเฉพาะรอบนี้",
+    "W2_PARTNER_DEDICATED P-ANI-01: ของทิ้ง 0.00 kg/วัน ภายในเพดานเวลา 2 วัน สะสมได้ 0.00 kg < ขั้นต่ำ 5 kg -> เรียกรถเฉพาะรอบนี้",
+    "W2_PARTNER_DEDICATED P-CMP-01: ของทิ้ง 0.00 kg/วัน ภายในเพดานเวลา 2 วัน สะสมได้ 0.00 kg < ขั้นต่ำ 4 kg -> เรียกรถเฉพาะรอบนี้",
+    "W2_PARTNER_DEDICATED P-DON-01: ของทิ้ง 0.00 kg/วัน ภายในเพดานเวลา 2 วัน สะสมได้ 0.00 kg < ขั้นต่ำ 4 kg -> เรียกรถเฉพาะรอบนี้",
+    "W2_PARTNER_DEDICATED P-LDF-01: ของทิ้ง 0.00 kg/วัน ภายในเพดานเวลา 2 วัน สะสมได้ 0.00 kg < ขั้นต่ำ 1 kg -> เรียกรถเฉพาะรอบนี้",
+    "A2_EOL_NO_ROUTE_NEXT_RUN: LOT-000008 ลดราคาแล้วคาดว่าเหลือ 5.2 หน่วย ไม่มี partner รับ รอบถัดไปต้องวางแผนกำจัดใหม่ / ให้ผู้จัดการตัดสินใจ",
+    "A2_EOL_NO_ROUTE_NEXT_RUN: LOT-000004 ลดราคาแล้วคาดว่าเหลือ 5.2 หน่วย ไม่มี partner รับ รอบถัดไปต้องวางแผนกำจัดใหม่ / ให้ผู้จัดการตัดสินใจ",
+    "A2_EOL_NO_ROUTE_NEXT_RUN: LOT-000005 ลดราคาแล้วคาดว่าเหลือ 2.0 หน่วย ไม่มี partner รับ รอบถัดไปต้องวางแผนกำจัดใหม่ / ให้ผู้จัดการตัดสินใจ",
+    "A2_EOL_NO_ROUTE_NEXT_RUN: LOT-000026 ลดราคาแล้วคาดว่าเหลือ 1.3 หน่วย ไม่มี partner รับ รอบถัดไปต้องวางแผนกำจัดใหม่ / ให้ผู้จัดการตัดสินใจ"
+   ],
+   "skipped": {},
+   "solver": {
+    "name": "HiGHS",
+    "status": "optimal",
+    "gap": 0.0,
+    "time_ms": 405
+   },
+   "violations": [],
+   "payload_errors": [],
+   "action_counts": {
+    "LANDFILL": 12,
+    "MARKDOWN": 4,
+    "KITCHEN_REPURPOSE": 6
+   }
+  }
+ },
+ "scan": {
+  "lots": {
+   "LOT-000013": {
+    "lot_id": "LOT-000013",
+    "days_to_expiry": -1,
+    "forecast_daily_demand": 0.0,
+    "predicted_units_sold_before_expiry": 0.0,
+    "predicted_leftover_units": 8.0,
+    "sell_through_probability": 0.0,
+    "risk_score": 100.0,
+    "risk_level": "CRITICAL",
+    "product_id": "BAK-001",
+    "expiration_date": "2026-10-15",
+    "quantity": 8
+   },
+   "LOT-000010": {
+    "lot_id": "LOT-000010",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 5.8,
+    "predicted_units_sold_before_expiry": 3.67,
+    "predicted_leftover_units": 18.33,
+    "sell_through_probability": 0.0061,
+    "risk_score": 83.31,
+    "risk_level": "CRITICAL",
+    "product_id": "BAK-002",
+    "expiration_date": "2026-10-17",
+    "quantity": 22
+   },
+   "LOT-000008": {
+    "lot_id": "LOT-000008",
+    "days_to_expiry": 2,
+    "forecast_daily_demand": 14.47,
+    "predicted_units_sold_before_expiry": 18.02,
+    "predicted_leftover_units": 71.98,
+    "sell_through_probability": 0.0,
+    "risk_score": 79.98,
+    "risk_level": "HIGH",
+    "product_id": "PRO-002",
+    "expiration_date": "2026-10-18",
+    "quantity": 90
+   },
+   "LOT-000011": {
+    "lot_id": "LOT-000011",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 9.87,
+    "predicted_units_sold_before_expiry": 11.84,
+    "predicted_leftover_units": 43.16,
+    "sell_through_probability": 0.0,
+    "risk_score": 78.47,
+    "risk_level": "HIGH",
+    "product_id": "BAK-003",
+    "expiration_date": "2026-10-17",
+    "quantity": 55
+   },
+   "LOT-000007": {
+    "lot_id": "LOT-000007",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 19.49,
+    "predicted_units_sold_before_expiry": 11.77,
+    "predicted_leftover_units": 38.23,
+    "sell_through_probability": 0.001,
+    "risk_score": 76.46,
+    "risk_level": "HIGH",
+    "product_id": "PRO-001",
+    "expiration_date": "2026-10-17",
+    "quantity": 50
+   },
+   "LOT-000006": {
+    "lot_id": "LOT-000006",
+    "days_to_expiry": 0,
+    "forecast_daily_demand": 8.02,
+    "predicted_units_sold_before_expiry": 4.81,
+    "predicted_leftover_units": 15.19,
+    "sell_through_probability": 0.0026,
+    "risk_score": 75.94,
+    "risk_level": "CRITICAL",
+    "product_id": "SEA-001",
+    "expiration_date": "2026-10-16",
+    "quantity": 20
+   },
+   "LOT-000004": {
+    "lot_id": "LOT-000004",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 22.76,
+    "predicted_units_sold_before_expiry": 14.86,
+    "predicted_leftover_units": 43.14,
+    "sell_through_probability": 0.0005,
+    "risk_score": 74.38,
+    "risk_level": "HIGH",
+    "product_id": "MEA-001",
+    "expiration_date": "2026-10-17",
+    "quantity": 58
+   },
+   "LOT-000005": {
+    "lot_id": "LOT-000005",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 6.57,
+    "predicted_units_sold_before_expiry": 7.89,
+    "predicted_leftover_units": 16.11,
+    "sell_through_probability": 0.005,
+    "risk_score": 67.14,
+    "risk_level": "HIGH",
+    "product_id": "MEA-002",
+    "expiration_date": "2026-10-17",
+    "quantity": 24
+   },
+   "LOT-000020": {
+    "lot_id": "LOT-000020",
+    "days_to_expiry": 4,
+    "forecast_daily_demand": 19.2,
+    "predicted_units_sold_before_expiry": 72.61,
+    "predicted_leftover_units": 132.39,
+    "sell_through_probability": 0.0,
+    "risk_score": 64.58,
+    "risk_level": "HIGH",
+    "product_id": "PRO-001",
+    "expiration_date": "2026-10-20",
+    "quantity": 205
+   },
+   "LOT-000003": {
+    "lot_id": "LOT-000003",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 28.36,
+    "predicted_units_sold_before_expiry": 18.04,
+    "predicted_leftover_units": 26.96,
+    "sell_through_probability": 0.0133,
+    "risk_score": 59.91,
+    "risk_level": "MEDIUM",
+    "product_id": "DAI-002",
+    "expiration_date": "2026-10-17",
+    "quantity": 45
+   },
+   "LOT-000001": {
+    "lot_id": "LOT-000001",
+    "days_to_expiry": 2,
+    "forecast_daily_demand": 34.21,
+    "predicted_units_sold_before_expiry": 61.57,
+    "predicted_leftover_units": 88.43,
+    "sell_through_probability": 0.0,
+    "risk_score": 58.95,
+    "risk_level": "MEDIUM",
+    "product_id": "DAI-001",
+    "expiration_date": "2026-10-18",
+    "quantity": 150
+   },
+   "LOT-000009": {
+    "lot_id": "LOT-000009",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 24.91,
+    "predicted_units_sold_before_expiry": 29.89,
+    "predicted_leftover_units": 40.11,
+    "sell_through_probability": 0.0002,
+    "risk_score": 57.3,
+    "risk_level": "MEDIUM",
+    "product_id": "BAK-001",
+    "expiration_date": "2026-10-17",
+    "quantity": 70
+   },
+   "LOT-000012": {
+    "lot_id": "LOT-000012",
+    "days_to_expiry": 0,
+    "forecast_daily_demand": 14.11,
+    "predicted_units_sold_before_expiry": 14.11,
+    "predicted_leftover_units": 15.89,
+    "sell_through_probability": 0.0029,
+    "risk_score": 52.98,
+    "risk_level": "HIGH",
+    "product_id": "RTE-002",
+    "expiration_date": "2026-10-16",
+    "quantity": 30
+   },
+   "LOT-000021": {
+    "lot_id": "LOT-000021",
+    "days_to_expiry": 0,
+    "forecast_daily_demand": 19.35,
+    "predicted_units_sold_before_expiry": 11.61,
+    "predicted_leftover_units": 10.39,
+    "sell_through_probability": 0.0534,
+    "risk_score": 47.22,
+    "risk_level": "HIGH",
+    "product_id": "PRO-001",
+    "expiration_date": "2026-10-16",
+    "quantity": 22
+   },
+   "LOT-000018": {
+    "lot_id": "LOT-000018",
+    "days_to_expiry": 0,
+    "forecast_daily_demand": 26.66,
+    "predicted_units_sold_before_expiry": 16.0,
+    "predicted_leftover_units": 14.0,
+    "sell_through_probability": 0.0329,
+    "risk_score": 46.67,
+    "risk_level": "HIGH",
+    "product_id": "DAI-002",
+    "expiration_date": "2026-10-16",
+    "quantity": 30
+   },
+   "LOT-000026": {
+    "lot_id": "LOT-000026",
+    "days_to_expiry": 0,
+    "forecast_daily_demand": 5.48,
+    "predicted_units_sold_before_expiry": 3.29,
+    "predicted_leftover_units": 2.71,
+    "sell_through_probability": 0.1887,
+    "risk_score": 45.22,
+    "risk_level": "HIGH",
+    "product_id": "BAK-002",
+    "expiration_date": "2026-10-16",
+    "quantity": 6
+   },
+   "LOT-000023": {
+    "lot_id": "LOT-000023",
+    "days_to_expiry": 0,
+    "forecast_daily_demand": 13.38,
+    "predicted_units_sold_before_expiry": 8.03,
+    "predicted_leftover_units": 3.97,
+    "sell_through_probability": 0.2026,
+    "risk_score": 33.09,
+    "risk_level": "MEDIUM",
+    "product_id": "PRO-002",
+    "expiration_date": "2026-10-16",
+    "quantity": 12
+   },
+   "LOT-000016": {
+    "lot_id": "LOT-000016",
+    "days_to_expiry": 0,
+    "forecast_daily_demand": 20.75,
+    "predicted_units_sold_before_expiry": 12.45,
+    "predicted_leftover_units": 5.55,
+    "sell_through_probability": 0.1782,
+    "risk_score": 30.85,
+    "risk_level": "MEDIUM",
+    "product_id": "MEA-001",
+    "expiration_date": "2026-10-16",
+    "quantity": 18
+   },
+   "LOT-000027": {
+    "lot_id": "LOT-000027",
+    "days_to_expiry": 2,
+    "forecast_daily_demand": 10.15,
+    "predicted_units_sold_before_expiry": 18.61,
+    "predicted_leftover_units": 1.39,
+    "sell_through_probability": 0.41,
+    "risk_score": 6.95,
+    "risk_level": "LOW",
+    "product_id": "BAK-003",
+    "expiration_date": "2026-10-18",
+    "quantity": 20
+   },
+   "LOT-000014": {
+    "lot_id": "LOT-000014",
+    "days_to_expiry": 1,
+    "forecast_daily_demand": 8.48,
+    "predicted_units_sold_before_expiry": 12,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 0.5062,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "SEA-001",
+    "expiration_date": "2026-10-17",
+    "quantity": 12
+   },
+   "LOT-000025": {
+    "lot_id": "LOT-000025",
+    "days_to_expiry": 2,
+    "forecast_daily_demand": 6.01,
+    "predicted_units_sold_before_expiry": 8,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 0.722,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "BAK-002",
+    "expiration_date": "2026-10-18",
+    "quantity": 8
+   },
+   "LOT-000017": {
+    "lot_id": "LOT-000017",
+    "days_to_expiry": 3,
+    "forecast_daily_demand": 22.76,
+    "predicted_units_sold_before_expiry": 30,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 0.9994,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "MEA-001",
+    "expiration_date": "2026-10-19",
+    "quantity": 30
+   },
+   "LOT-000022": {
+    "lot_id": "LOT-000022",
+    "days_to_expiry": 3,
+    "forecast_daily_demand": 14.03,
+    "predicted_units_sold_before_expiry": 24,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 0.7338,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "PRO-002",
+    "expiration_date": "2026-10-19",
+    "quantity": 24
+   },
+   "LOT-000024": {
+    "lot_id": "LOT-000024",
+    "days_to_expiry": 3,
+    "forecast_daily_demand": 24.67,
+    "predicted_units_sold_before_expiry": 30,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 0.9999,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "BAK-001",
+    "expiration_date": "2026-10-19",
+    "quantity": 30
+   },
+   "LOT-000015": {
+    "lot_id": "LOT-000015",
+    "days_to_expiry": 4,
+    "forecast_daily_demand": 6.58,
+    "predicted_units_sold_before_expiry": 13,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 0.9664,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "MEA-002",
+    "expiration_date": "2026-10-20",
+    "quantity": 13
+   },
+   "LOT-000002": {
+    "lot_id": "LOT-000002",
+    "days_to_expiry": 8,
+    "forecast_daily_demand": 31.7,
+    "predicted_units_sold_before_expiry": 172,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 0.9875,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "DAI-001",
+    "expiration_date": "2026-10-24",
+    "quantity": 172
+   },
+   "LOT-000019": {
+    "lot_id": "LOT-000019",
+    "days_to_expiry": 25,
+    "forecast_daily_demand": 26.63,
+    "predicted_units_sold_before_expiry": 96,
+    "predicted_leftover_units": 0,
+    "sell_through_probability": 1.0,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "product_id": "DAI-002",
+    "expiration_date": "2026-11-10",
+    "quantity": 96
+   }
+  },
+  "levels": {
+   "CRITICAL": 3,
+   "HIGH": 10,
+   "MEDIUM": 5,
+   "LOW": 9
+  },
+  "forwarded": 13
+ },
+ "demand": {
+  "proxy_dates": [
+   "2026-10-09",
+   "2026-10-02",
+   "2026-09-25",
+   "2026-09-18"
+  ],
+  "by_product": {
+   "DAI-001": {
+    "forecast_mu": 32.3683545777556,
+    "proxy": 32.75,
+    "stock_units": 322,
+    "lots": 2
+   },
+   "DAI-002": {
+    "forecast_mu": 26.663099496748725,
+    "proxy": 25.75,
+    "stock_units": 171,
+    "lots": 3
+   },
+   "MEA-001": {
+    "forecast_mu": 20.745027719225185,
+    "proxy": 15.0,
+    "stock_units": 106,
+    "lots": 3
+   },
+   "MEA-002": {
+    "forecast_mu": 6.199056259471275,
+    "proxy": 7.25,
+    "stock_units": 37,
+    "lots": 2
+   },
+   "SEA-001": {
+    "forecast_mu": 8.0190329168515,
+    "proxy": 11.0,
+    "stock_units": 32,
+    "lots": 2
+   },
+   "PRO-001": {
+    "forecast_mu": 19.3533765581879,
+    "proxy": 19.25,
+    "stock_units": 277,
+    "lots": 3
+   },
+   "PRO-002": {
+    "forecast_mu": 13.38156517498926,
+    "proxy": 13.75,
+    "stock_units": 126,
+    "lots": 3
+   },
+   "BAK-001": {
+    "forecast_mu": 23.059368796964673,
+    "proxy": 20.5,
+    "stock_units": 108,
+    "lots": 3
+   },
+   "BAK-002": {
+    "forecast_mu": 5.477715116866313,
+    "proxy": 5.0,
+    "stock_units": 36,
+    "lots": 3
+   },
+   "BAK-003": {
+    "forecast_mu": 9.394866321950536,
+    "proxy": 10.75,
+    "stock_units": 75,
+    "lots": 2
+   },
+   "RTE-002": {
+    "forecast_mu": 14.106924364438507,
+    "proxy": 14.25,
+    "stock_units": 30,
+    "lots": 1
+   }
+  }
+ },
+ "partners": [
+  {
+   "partner_id": "P-ADG-01",
+   "type": "ANAEROBIC_DIGESTION",
+   "mode": "BIN",
+   "trip_cost": 1850.64,
+   "handling": 0.9,
+   "buyback": 0.0,
+   "min_kg": 5.0,
+   "cap_kg": 60.0,
+   "pickup_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "window": "07:00-10:00",
+   "daily_kg": 3.544107142857143,
+   "economic_kg": 6.2021875,
+   "fee_per_kg": 298.3850455988311
+  },
+  {
+   "partner_id": "P-ANI-01",
+   "type": "ANIMAL_FEED",
+   "mode": "BIN",
+   "trip_cost": 1037.74,
+   "handling": 0.3,
+   "buyback": 0.92,
+   "min_kg": 5.0,
+   "cap_kg": 90.0,
+   "pickup_days": [
+    2,
+    3,
+    4,
+    6
+   ],
+   "window": "16:00-18:00",
+   "daily_kg": 2.8335714285714286,
+   "economic_kg": 6.611666666666667,
+   "fee_per_kg": 156.95588605999495
+  },
+  {
+   "partner_id": "P-CMP-01",
+   "type": "COMPOSTING",
+   "mode": "BIN",
+   "trip_cost": 1653.465,
+   "handling": 0.6,
+   "buyback": 0.0,
+   "min_kg": 4.0,
+   "cap_kg": 90.0,
+   "pickup_days": [
+    1,
+    2,
+    4,
+    6
+   ],
+   "window": "13:00-16:00",
+   "daily_kg": 2.8335714285714286,
+   "economic_kg": 4.95875,
+   "fee_per_kg": 333.44391227627926
+  },
+  {
+   "partner_id": "P-DON-01",
+   "type": "DONATION",
+   "mode": "DEDICATED",
+   "trip_cost": 550.0,
+   "handling": 0.0,
+   "buyback": 0.0,
+   "min_kg": 4.0,
+   "cap_kg": 50.0,
+   "pickup_days": [
+    1,
+    3,
+    5,
+    6,
+    7
+   ],
+   "window": "09:00-11:00",
+   "daily_kg": 1.3619642857142855,
+   "economic_kg": 2.3834374999999994,
+   "fee_per_kg": 0.0
+  },
+  {
+   "partner_id": "P-LDF-01",
+   "type": "LANDFILL",
+   "mode": "BIN",
+   "trip_cost": 728.625,
+   "handling": 1.15,
+   "buyback": 0.0,
+   "min_kg": 1.0,
+   "cap_kg": 90.0,
+   "pickup_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "window": "20:00-22:00",
+   "daily_kg": 3.544107142857143,
+   "economic_kg": 6.2021875,
+   "fee_per_kg": 117.47871214793167
+  }
+ ],
+ "waste_history": {
+  "from": "2026-09-18",
+  "to": "2026-10-15",
+  "days": 28,
+  "kg_per_day": {
+   "DAIRY": 0.14982142857142858,
+   "MEAT": 0.4642857142857143,
+   "SEAFOOD": 0.09642857142857142,
+   "PRODUCE": 0.42857142857142855,
+   "BAKERY": 0.7835714285714285,
+   "READY_TO_EAT": 1.6214285714285717
+  }
+ },
+ "time_sensitivity": [
+  {
+   "at": "08:00",
+   "decisions": 21,
+   "actions": {
+    "LANDFILL": 11,
+    "DONATE": 2,
+    "KITCHEN_REPURPOSE": 6,
+    "MARKDOWN": 2
+   },
+   "expected_net": -9479.21,
+   "provisional_lots": 0,
+   "released_lots": 0,
+   "kitchen_jobs": 6,
+   "markdown_units": 26,
+   "sell_regular_units": 165,
+   "partner_units": 394,
+   "unresolved_units": 0,
+   "violations": 0,
+   "warnings_a2": 0
+  },
+  {
+   "at": "10:00",
+   "decisions": 21,
+   "actions": {
+    "LANDFILL": 11,
+    "DONATE": 2,
+    "KITCHEN_REPURPOSE": 6,
+    "MARKDOWN": 2
+   },
+   "expected_net": -10551.33,
+   "provisional_lots": 0,
+   "released_lots": 0,
+   "kitchen_jobs": 6,
+   "markdown_units": 26,
+   "sell_regular_units": 155,
+   "partner_units": 404,
+   "unresolved_units": 0,
+   "violations": 0,
+   "warnings_a2": 0
+  },
+  {
+   "at": "12:00",
+   "decisions": 18,
+   "actions": {
+    "LANDFILL": 11,
+    "KITCHEN_REPURPOSE": 5,
+    "MARKDOWN": 2
+   },
+   "expected_net": -11862.99,
+   "provisional_lots": 0,
+   "released_lots": 0,
+   "kitchen_jobs": 5,
+   "markdown_units": 26,
+   "sell_regular_units": 145,
+   "partner_units": 417,
+   "unresolved_units": 0,
+   "violations": 0,
+   "warnings_a2": 0
+  },
+  {
+   "at": "14:00",
+   "decisions": 17,
+   "actions": {
+    "LANDFILL": 10,
+    "KITCHEN_REPURPOSE": 4,
+    "MARKDOWN": 3
+   },
+   "expected_net": -12940.44,
+   "provisional_lots": 0,
+   "released_lots": 0,
+   "kitchen_jobs": 4,
+   "markdown_units": 48,
+   "sell_regular_units": 125,
+   "partner_units": 426,
+   "unresolved_units": 0,
+   "violations": 0,
+   "warnings_a2": 0
+  },
+  {
+   "at": "16:00",
+   "decisions": 15,
+   "actions": {
+    "LANDFILL": 10,
+    "KITCHEN_REPURPOSE": 2,
+    "MARKDOWN": 3
+   },
+   "expected_net": -14597.77,
+   "provisional_lots": 0,
+   "released_lots": 0,
+   "kitchen_jobs": 2,
+   "markdown_units": 52,
+   "sell_regular_units": 115,
+   "partner_units": 439,
+   "unresolved_units": 0,
+   "violations": 0,
+   "warnings_a2": 0
+  },
+  {
+   "at": "18:00",
+   "decisions": 14,
+   "actions": {
+    "LANDFILL": 10,
+    "KITCHEN_REPURPOSE": 1,
+    "MARKDOWN": 3
+   },
+   "expected_net": -15602.48,
+   "provisional_lots": 0,
+   "released_lots": 0,
+   "kitchen_jobs": 1,
+   "markdown_units": 60,
+   "sell_regular_units": 105,
+   "partner_units": 450,
+   "unresolved_units": 0,
+   "violations": 0,
+   "warnings_a2": 0
+  },
+  {
+   "at": "20:00",
+   "decisions": 14,
+   "actions": {
+    "LANDFILL": 10,
+    "KITCHEN_REPURPOSE": 1,
+    "MARKDOWN": 3
+   },
+   "expected_net": -16352.65,
+   "provisional_lots": 0,
+   "released_lots": 0,
+   "kitchen_jobs": 1,
+   "markdown_units": 60,
+   "sell_regular_units": 94,
+   "partner_units": 461,
+   "unresolved_units": 0,
+   "violations": 0,
+   "warnings_a2": 0
+  }
+ ],
+ "demand_scenarios": [
+  {
+   "scale": 0.8,
+   "policies": {
+    "p1": {
+     "net_profit": -1558.32,
+     "net_profit_bin": -1558.32,
+     "sold_units": 140,
+     "left_units": 1180,
+     "no_task_units": 1088,
+     "risk_no_task_units": 0,
+     "expired_left_units": 0
+    },
+    "p2": {
+     "net_profit": -1679.12,
+     "net_profit_bin": -1679.12,
+     "sold_units": 162,
+     "left_units": 1158,
+     "no_task_units": 1110,
+     "risk_no_task_units": 0,
+     "expired_left_units": 0
+    },
+    "p3a": {
+     "net_profit": -4207.98,
+     "net_profit_bin": -4207.98,
+     "sold_units": 141,
+     "left_units": 960,
+     "no_task_units": 627,
+     "risk_no_task_units": 26,
+     "expired_left_units": 13
+    },
+    "p3b": {
+     "net_profit": -1803.96,
+     "net_profit_bin": -1803.96,
+     "sold_units": 143,
+     "left_units": 1035,
+     "no_task_units": 715,
+     "risk_no_task_units": 105,
+     "expired_left_units": 27
+    }
+   }
+  },
+  {
+   "scale": 1.0,
+   "policies": {
+    "p1": {
+     "net_profit": -516.76,
+     "net_profit_bin": -516.76,
+     "sold_units": 175,
+     "left_units": 1145,
+     "no_task_units": 1067,
+     "risk_no_task_units": 0,
+     "expired_left_units": 0
+    },
+    "p2": {
+     "net_profit": -860.96,
+     "net_profit_bin": -860.96,
+     "sold_units": 201,
+     "left_units": 1119,
+     "no_task_units": 1091,
+     "risk_no_task_units": 0,
+     "expired_left_units": 0
+    },
+    "p3a": {
+     "net_profit": -3127.97,
+     "net_profit_bin": -3127.97,
+     "sold_units": 177,
+     "left_units": 924,
+     "no_task_units": 604,
+     "risk_no_task_units": 21,
+     "expired_left_units": 9
+    },
+    "p3b": {
+     "net_profit": -827.07,
+     "net_profit_bin": -827.07,
+     "sold_units": 181,
+     "left_units": 1005,
+     "no_task_units": 689,
+     "risk_no_task_units": 94,
+     "expired_left_units": 25
+    }
+   }
+  },
+  {
+   "scale": 1.2,
+   "policies": {
+    "p1": {
+     "net_profit": 508.68,
+     "net_profit_bin": 508.68,
+     "sold_units": 210,
+     "left_units": 1110,
+     "no_task_units": 1047,
+     "risk_no_task_units": 0,
+     "expired_left_units": 0
+    },
+    "p2": {
+     "net_profit": -302.53,
+     "net_profit_bin": -302.53,
+     "sold_units": 240,
+     "left_units": 1080,
+     "no_task_units": 1058,
+     "risk_no_task_units": 0,
+     "expired_left_units": 0
+    },
+    "p3a": {
+     "net_profit": -2291.61,
+     "net_profit_bin": -2291.61,
+     "sold_units": 212,
+     "left_units": 889,
+     "no_task_units": 581,
+     "risk_no_task_units": 17,
+     "expired_left_units": 7
+    },
+    "p3b": {
+     "net_profit": -93.66,
+     "net_profit_bin": -93.66,
+     "sold_units": 216,
+     "left_units": 977,
+     "no_task_units": 664,
+     "risk_no_task_units": 87,
+     "expired_left_units": 25
+    }
+   }
+  }
+ ],
+ "horizon": {
+  "p1": {
+   "days": 26,
+   "last_day": "2026-11-10",
+   "net_profit": -11332.54,
+   "net_profit_bin": -11332.54,
+   "revenue_full": 31860.25,
+   "revenue_md": 0,
+   "kitchen_value": 0,
+   "disposal_a": {
+    "trip": 2185.88,
+    "handling": 416.95,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 2185.88,
+    "handling": 416.95,
+    "buyback": 0.0
+   },
+   "calls": 3,
+   "calls_by_partner": {
+    "P-LDF-01": 3
+   },
+   "sold_full": 729,
+   "sold_md": 0,
+   "kitchen_units": 0,
+   "disposed_by_method": {
+    "LANDFILL": 591
+   },
+   "disposed_kg": 362.56,
+   "landfill_kg": 362.56,
+   "unplanned_units": 513,
+   "unplanned_cogs": 15033.61,
+   "waste_cogs": 17701.96,
+   "trace": {
+    "LOT-000001": {
+     "sold_full": 69,
+     "unplanned": 81,
+     "LANDFILL": 81
+    },
+    "LOT-000002": {
+     "sold_full": 172
+    },
+    "LOT-000005": {
+     "sold_full": 7,
+     "unplanned": 17,
+     "LANDFILL": 17
+    },
+    "LOT-000006": {
+     "sold_full": 7,
+     "LANDFILL": 13
+    },
+    "LOT-000009": {
+     "sold_full": 31,
+     "unplanned": 39,
+     "LANDFILL": 39
+    },
+    "LOT-000011": {
+     "sold_full": 14,
+     "unplanned": 41,
+     "LANDFILL": 41
+    },
+    "LOT-000012": {
+     "sold_full": 14,
+     "LANDFILL": 16
+    },
+    "LOT-000014": {
+     "sold_full": 12
+    },
+    "LOT-000015": {
+     "sold_full": 13
+    },
+    "LOT-000016": {
+     "sold_full": 9,
+     "LANDFILL": 9
+    },
+    "LOT-000017": {
+     "sold_full": 30
+    },
+    "LOT-000018": {
+     "sold_full": 16,
+     "LANDFILL": 14
+    },
+    "LOT-000019": {
+     "sold_full": 96
+    },
+    "LOT-000020": {
+     "sold_full": 73,
+     "unplanned": 132,
+     "LANDFILL": 132
+    },
+    "LOT-000021": {
+     "sold_full": 11,
+     "LANDFILL": 11
+    },
+    "LOT-000022": {
+     "sold_full": 24
+    },
+    "LOT-000023": {
+     "sold_full": 8,
+     "LANDFILL": 4
+    },
+    "LOT-000024": {
+     "sold_full": 30
+    },
+    "LOT-000025": {
+     "sold_full": 8
+    },
+    "LOT-000026": {
+     "sold_full": 3,
+     "LANDFILL": 3
+    },
+    "LOT-000027": {
+     "sold_full": 20
+    },
+    "LOT-000013": {
+     "LANDFILL": 8
+    },
+    "LOT-000003": {
+     "sold_full": 20,
+     "unplanned": 25,
+     "LANDFILL": 25
+    },
+    "LOT-000004": {
+     "sold_full": 14,
+     "unplanned": 44,
+     "LANDFILL": 44
+    },
+    "LOT-000007": {
+     "sold_full": 8,
+     "unplanned": 42,
+     "LANDFILL": 42
+    },
+    "LOT-000008": {
+     "sold_full": 17,
+     "unplanned": 73,
+     "LANDFILL": 73
+    },
+    "LOT-000010": {
+     "sold_full": 3,
+     "unplanned": 19,
+     "LANDFILL": 19
+    }
+   }
+  },
+  "p2": {
+   "days": 26,
+   "last_day": "2026-11-10",
+   "net_profit": -11147.06,
+   "net_profit_bin": -10712.13,
+   "revenue_full": 5809.5,
+   "revenue_md": 26839.47,
+   "kitchen_value": 0,
+   "disposal_a": {
+    "trip": 2914.5,
+    "handling": 291.57,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 2479.57,
+    "handling": 291.57,
+    "buyback": 0.0
+   },
+   "calls": 4,
+   "calls_by_partner": {
+    "P-LDF-01": 4
+   },
+   "sold_full": 189,
+   "sold_md": 743,
+   "kitchen_units": 0,
+   "disposed_by_method": {
+    "LANDFILL": 388
+   },
+   "disposed_kg": 253.54,
+   "landfill_kg": 253.54,
+   "unplanned_units": 360,
+   "unplanned_cogs": 9849.06,
+   "waste_cogs": 10957.58,
+   "trace": {
+    "LOT-000001": {
+     "sold_md": 131,
+     "unplanned": 19,
+     "LANDFILL": 19
+    },
+    "LOT-000003": {
+     "sold_md": 42,
+     "unplanned": 3,
+     "LANDFILL": 3
+    },
+    "LOT-000005": {
+     "sold_md": 14,
+     "unplanned": 10,
+     "LANDFILL": 10
+    },
+    "LOT-000006": {
+     "sold_md": 13,
+     "LANDFILL": 7
+    },
+    "LOT-000007": {
+     "sold_md": 18,
+     "unplanned": 32,
+     "LANDFILL": 32
+    },
+    "LOT-000008": {
+     "sold_md": 35,
+     "unplanned": 55,
+     "LANDFILL": 55
+    },
+    "LOT-000009": {
+     "sold_md": 60,
+     "unplanned": 10,
+     "LANDFILL": 10
+    },
+    "LOT-000011": {
+     "sold_md": 25,
+     "unplanned": 30,
+     "LANDFILL": 30
+    },
+    "LOT-000012": {
+     "sold_md": 17,
+     "LANDFILL": 13
+    },
+    "LOT-000016": {
+     "sold_md": 18
+    },
+    "LOT-000018": {
+     "sold_md": 30
+    },
+    "LOT-000021": {
+     "sold_md": 22
+    },
+    "LOT-000023": {
+     "sold_md": 12
+    },
+    "LOT-000026": {
+     "sold_md": 6
+    },
+    "LOT-000013": {
+     "LANDFILL": 8
+    },
+    "LOT-000004": {
+     "sold_md": 29,
+     "unplanned": 29,
+     "LANDFILL": 29
+    },
+    "LOT-000010": {
+     "sold_md": 6,
+     "unplanned": 16,
+     "LANDFILL": 16
+    },
+    "LOT-000014": {
+     "sold_md": 12
+    },
+    "LOT-000015": {
+     "sold_md": 13
+    },
+    "LOT-000017": {
+     "sold_md": 30
+    },
+    "LOT-000019": {
+     "sold_full": 96
+    },
+    "LOT-000020": {
+     "sold_md": 66,
+     "unplanned": 139,
+     "LANDFILL": 139
+    },
+    "LOT-000024": {
+     "sold_md": 30
+    },
+    "LOT-000025": {
+     "sold_md": 7,
+     "unplanned": 1,
+     "LANDFILL": 1
+    },
+    "LOT-000027": {
+     "sold_md": 14,
+     "unplanned": 6,
+     "LANDFILL": 6
+    },
+    "LOT-000002": {
+     "sold_full": 93,
+     "sold_md": 79
+    },
+    "LOT-000022": {
+     "sold_md": 14,
+     "unplanned": 10,
+     "LANDFILL": 10
+    }
+   }
+  },
+  "p3a": {
+   "days": 26,
+   "last_day": "2026-11-10",
+   "net_profit": -8332.95,
+   "net_profit_bin": -8332.95,
+   "revenue_full": 30413.25,
+   "revenue_md": 2315.2,
+   "kitchen_value": 2354.38,
+   "disposal_a": {
+    "trip": 2735.88,
+    "handling": 250.99,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 2735.88,
+    "handling": 250.99,
+    "buyback": 0.0
+   },
+   "calls": 4,
+   "calls_by_partner": {
+    "P-DON-01": 1,
+    "P-LDF-01": 3
+   },
+   "sold_full": 719,
+   "sold_md": 20,
+   "kitchen_units": 42,
+   "disposed_by_method": {
+    "LANDFILL": 362,
+    "DONATION": 177
+   },
+   "disposed_kg": 343.5,
+   "landfill_kg": 218.25,
+   "unplanned_units": 156,
+   "unplanned_cogs": 5483.94,
+   "waste_cogs": 15351.23,
+   "trace": {
+    "LOT-000013": {
+     "LANDFILL": 8
+    },
+    "LOT-000008": {
+     "kitchen": 3,
+     "DONATION": 69,
+     "sold_full": 18
+    },
+    "LOT-000007": {
+     "kitchen": 1,
+     "sold_full": 8,
+     "LANDFILL": 41
+    },
+    "LOT-000006": {
+     "kitchen": 6,
+     "sold_full": 7,
+     "LANDFILL": 7
+    },
+    "LOT-000004": {
+     "kitchen": 4,
+     "sold_full": 14,
+     "LANDFILL": 40
+    },
+    "LOT-000005": {
+     "tagged_md": 20,
+     "kitchen": 4,
+     "sold_md": 14,
+     "unplanned": 6,
+     "LANDFILL": 6
+    },
+    "LOT-000020": {
+     "DONATION": 108,
+     "sold_full": 73,
+     "LANDFILL": 24
+    },
+    "LOT-000021": {
+     "kitchen": 1,
+     "sold_full": 11,
+     "LANDFILL": 10
+    },
+    "LOT-000018": {
+     "kitchen": 16,
+     "sold_full": 14
+    },
+    "LOT-000026": {
+     "tagged_md": 6,
+     "sold_md": 6
+    },
+    "LOT-000023": {
+     "kitchen_ingredient": 5,
+     "sold_full": 7
+    },
+    "LOT-000001": {
+     "kitchen_ingredient": 2,
+     "sold_full": 69,
+     "unplanned": 79,
+     "LANDFILL": 79
+    },
+    "LOT-000002": {
+     "sold_full": 172
+    },
+    "LOT-000003": {
+     "sold_full": 22,
+     "unplanned": 23,
+     "LANDFILL": 23
+    },
+    "LOT-000009": {
+     "sold_full": 31,
+     "unplanned": 39,
+     "LANDFILL": 39
+    },
+    "LOT-000011": {
+     "sold_full": 14,
+     "LANDFILL": 41
+    },
+    "LOT-000012": {
+     "sold_full": 14,
+     "LANDFILL": 16
+    },
+    "LOT-000014": {
+     "sold_full": 12
+    },
+    "LOT-000016": {
+     "sold_full": 9,
+     "unplanned": 9,
+     "LANDFILL": 9
+    },
+    "LOT-000017": {
+     "sold_full": 30
+    },
+    "LOT-000019": {
+     "sold_full": 96
+    },
+    "LOT-000022": {
+     "sold_full": 24
+    },
+    "LOT-000024": {
+     "sold_full": 30
+    },
+    "LOT-000027": {
+     "sold_full": 20
+    },
+    "LOT-000010": {
+     "sold_full": 3,
+     "LANDFILL": 19
+    },
+    "LOT-000025": {
+     "sold_full": 8
+    },
+    "LOT-000015": {
+     "sold_full": 13
+    }
+   }
+  },
+  "p3b": {
+   "days": 26,
+   "last_day": "2026-11-10",
+   "net_profit": -8102.79,
+   "net_profit_bin": -8102.79,
+   "revenue_full": 28511.0,
+   "revenue_md": 4755.6,
+   "kitchen_value": 2354.39,
+   "disposal_a": {
+    "trip": 2914.5,
+    "handling": 380.37,
+    "buyback": 0.0
+   },
+   "disposal_b": {
+    "trip": 2914.5,
+    "handling": 380.37,
+    "buyback": 0.0
+   },
+   "calls": 4,
+   "calls_by_partner": {
+    "P-LDF-01": 4
+   },
+   "sold_full": 659,
+   "sold_md": 110,
+   "kitchen_units": 42,
+   "disposed_by_method": {
+    "LANDFILL": 509
+   },
+   "disposed_kg": 330.75,
+   "landfill_kg": 330.75,
+   "unplanned_units": 184,
+   "unplanned_cogs": 5698.86,
+   "waste_cogs": 14500.58,
+   "trace": {
+    "LOT-000013": {
+     "LANDFILL": 8
+    },
+    "LOT-000008": {
+     "tagged_md": 47,
+     "kitchen": 3,
+     "LANDFILL": 41,
+     "sold_md": 46,
+     "unplanned": 1
+    },
+    "LOT-000006": {
+     "kitchen": 6,
+     "sold_full": 7,
+     "LANDFILL": 7
+    },
+    "LOT-000004": {
+     "tagged_md": 49,
+     "kitchen": 4,
+     "LANDFILL": 10,
+     "sold_md": 44,
+     "unplanned": 5
+    },
+    "LOT-000005": {
+     "tagged_md": 14,
+     "kitchen": 4,
+     "LANDFILL": 6,
+     "sold_md": 14
+    },
+    "LOT-000020": {
+     "kitchen": 1,
+     "sold_full": 73,
+     "LANDFILL": 131
+    },
+    "LOT-000021": {
+     "kitchen": 1,
+     "sold_full": 11,
+     "LANDFILL": 10
+    },
+    "LOT-000018": {
+     "kitchen": 16,
+     "sold_full": 14
+    },
+    "LOT-000026": {
+     "tagged_md": 6,
+     "sold_md": 6
+    },
+    "LOT-000023": {
+     "kitchen_ingredient": 5,
+     "unplanned": 7,
+     "LANDFILL": 7
+    },
+    "LOT-000001": {
+     "kitchen_ingredient": 2,
+     "sold_full": 69,
+     "unplanned": 79,
+     "LANDFILL": 79
+    },
+    "LOT-000002": {
+     "sold_full": 172
+    },
+    "LOT-000003": {
+     "sold_full": 22,
+     "unplanned": 23,
+     "LANDFILL": 23
+    },
+    "LOT-000009": {
+     "sold_full": 31,
+     "unplanned": 39,
+     "LANDFILL": 39
+    },
+    "LOT-000011": {
+     "sold_full": 14,
+     "LANDFILL": 41
+    },
+    "LOT-000012": {
+     "sold_full": 14,
+     "LANDFILL": 16
+    },
+    "LOT-000014": {
+     "sold_full": 12
+    },
+    "LOT-000019": {
+     "sold_full": 96
+    },
+    "LOT-000024": {
+     "sold_full": 30
+    },
+    "LOT-000027": {
+     "sold_full": 20
+    },
+    "LOT-000007": {
+     "sold_full": 8,
+     "LANDFILL": 42
+    },
+    "LOT-000010": {
+     "sold_full": 3,
+     "LANDFILL": 19
+    },
+    "LOT-000025": {
+     "sold_full": 8
+    },
+    "LOT-000016": {
+     "unplanned": 18,
+     "LANDFILL": 18
+    },
+    "LOT-000015": {
+     "sold_full": 13
+    },
+    "LOT-000017": {
+     "sold_full": 30
+    },
+    "LOT-000022": {
+     "sold_full": 12,
+     "unplanned": 12,
+     "LANDFILL": 12
+    }
+   }
+  }
+ }
+}
