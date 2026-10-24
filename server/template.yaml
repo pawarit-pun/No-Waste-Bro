@@ -32,6 +32,11 @@ Parameters:
     Type: String
     Default: us-east-1
     Description: Region of the Bedrock models and Knowledge Base used by the LLM Task Agent
+  AgentAutoRun:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Manager Agent starts the morning pipeline run itself at 07:30 (plans still need a manager's approval). false = it only notifies with a proposal
   BedrockKnowledgeBaseId:
     Type: String
     Default: N0NJ2UIEIU
@@ -120,7 +125,7 @@ Resources:
   ManagerAgentFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: No-Waste-Bro Manager Agent (invoked sync by POST /agent/ask)
+      Description: No-Waste-Bro Manager Agent (chat sync by POST /agent/ask; events async from the API; hourly watch)
       PackageType: Image
       ImageUri: !Ref WorkerImageUri
       ImageConfig:
@@ -128,15 +133,35 @@ Resources:
       Architectures:
         - arm64
       MemorySize: 2048
-      Timeout: 30                     # the agent stops itself at 25 s; the API waits 27 s
+      Timeout: 90                     # chat stops itself at 25 s (the API waits 27 s); events / watch write several notices
       EventInvokeConfig:
-        MaximumRetryAttempts: 0       # only the warm-up ping is async
+        MaximumRetryAttempts: 0       # events / watch are async; a retry could notify twice (dedupe_key also guards)
+      Events:
+        HourlyWatch:                  # overdue tasks, plans near their review deadline, lots stuck in PROCESSING
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0-15 * * ? *)   # every hour 07:00-22:00 Asia/Bangkok (UTC+7)
+            Input: '{"trigger": "SCHEDULE", "event_type": "WATCH"}'
+            Description: Manager Agent hourly watch
+        MorningRun:                   # start the day's pipeline run; the Morning brief follows when it succeeds
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 0 * * ? *)     # 07:30 Asia/Bangkok
+            Input: '{"trigger": "SCHEDULE", "event_type": "MORNING_RUN"}'
+            Description: Manager Agent morning pipeline run
+        EveningSummary:               # what was really done today
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 14 * * ? *)    # 21:30 Asia/Bangkok
+            Input: '{"trigger": "SCHEDULE", "event_type": "EVENING_SUMMARY"}'
+            Description: Manager Agent evening summary
       Environment:
         Variables:
           API_BASE_URL: !Ref WorkerApiBaseUrl
           DEMO_DATE: !Ref DemoDate
           BEDROCK_REGION: !Ref BedrockRegion
           BEDROCK_KB_ID: !Ref BedrockKnowledgeBaseId
+          AUTO_MORNING_RUN: !Ref AgentAutoRun
       Policies:
         - Statement:
             - Effect: Allow
@@ -153,6 +178,87 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${ManagerAgentFunction}
       RetentionInDays: 14
+
+  # ---------------------------------------------------------------------------
+  # Manager Dashboard hosting: S3 (private) + CloudFront (HTTPS)
+  # Upload the build with manager_dashboard/scripts/deploy_dashboard.sh after sam deploy
+  # sam delete fails while the bucket still has files: empty it first (aws s3 rm s3://<bucket> --recursive)
+  DashboardBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:   # nobody reads the bucket directly, only CloudFront (OAC)
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+  DashboardOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub ${AWS::StackName}-dashboard-oac
+        Description: CloudFront reads the Manager Dashboard bucket
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  DashboardDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: No-Waste-Bro Manager Dashboard
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_200      # includes Asia edge locations (Thailand)
+        Origins:
+          - Id: DashboardS3Origin
+            DomainName: !GetAtt DashboardBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt DashboardOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""  # empty = use OAC, not the legacy OAI
+        DefaultCacheBehavior:
+          TargetOriginId: DashboardS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6   # AWS managed "CachingOptimized"
+        # React Router (BrowserRouter): /review, /kitchen ... are not files in S3,
+        # S3 answers 403 (no ListBucket) -> serve index.html so the app opens that page
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 0
+
+  DashboardBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DashboardBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${DashboardBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${DashboardDistribution}
 
 Outputs:
   ApiUrl:
@@ -173,3 +279,12 @@ Outputs:
   ManagerAgentName:
     Description: Manager Agent Lambda (logs in CloudWatch under /aws/lambda/<name>)
     Value: !Ref ManagerAgentFunction
+  DashboardUrl:
+    Description: Manager Dashboard (CloudFront, HTTPS)
+    Value: !Sub https://${DashboardDistribution.DomainName}
+  DashboardBucketName:
+    Description: S3 bucket of the dashboard build (deploy_dashboard.sh uploads dist/ here)
+    Value: !Ref DashboardBucket
+  DashboardDistributionId:
+    Description: CloudFront distribution ID (deploy_dashboard.sh invalidates it)
+    Value: !Ref DashboardDistribution

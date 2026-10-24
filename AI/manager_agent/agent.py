@@ -182,7 +182,7 @@ def _dedupe(artifacts: list) -> list:
     """การ์ดซ้ำ (type + lot) เก็บอันล่าสุด สูงสุด 4 ใบ"""
     seen, out = set(), []
     for a in reversed(artifacts):
-        key = (a.get("type"), a.get("lot_id"), json.dumps(a.get("scenario"), ensure_ascii=False))
+        key = (a.get("type"), a.get("lot_id"), a.get("title"), json.dumps(a.get("scenario"), ensure_ascii=False))
         if key not in seen:
             seen.add(key)
             out.append(a)

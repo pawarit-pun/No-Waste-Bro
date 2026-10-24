@@ -5,11 +5,13 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Select } from '../../components/ui/Select'
 import { Tabs } from '../../components/ui/Tabs'
 import { Toast, type ToastMessage } from '../../components/ui/Toast'
+import { undoAutoApprove } from '../../lib/agent'
 import { errorMessage } from '../../lib/api'
 import { formatImpact, systemNow } from '../../lib/format'
 import { ACTION_ORDER, SEVERITY_ORDER, actionLabels } from '../../lib/labels'
 import { useSession } from '../../lib/session'
 import type { ActionType, ReviewStatus, Severity } from '../../types/review'
+import { AutoApprovePanel } from './AutoApprovePanel'
 import { groupReviews, sortGroups, type ReviewGroup, type SortColumn, type SortState } from './groups'
 import { ReviewDrawer } from './ReviewDrawer'
 import { ReviewTable } from './ReviewTable'
@@ -97,6 +99,12 @@ export function ReviewQueuePage() {
     notify('success', `Rejected ${res.rejected} plan(s).` +
       (res.lots_reset.length ? ` ${res.lots_reset.join(', ')} will be planned again on the next run.` : ''))
   }
+  const handleUndo = async (reviewId: string) => {
+    if (!manager) throw new Error('Pick a manager first.')
+    const res = await undoAutoApprove(reviewId, manager.staff_id)
+    notify('success', `Undid the AI approval of ${res.lot_id}: ${res.undone} plan(s) are waiting for you again and the task was removed from staff.`)
+    void reload()
+  }
   const approveSelected = async () => {
     setBulkBusy(true)
     try {
@@ -117,7 +125,10 @@ export function ReviewQueuePage() {
   return (
     <div className="px-8 py-7">
       <h1 className="text-3xl font-bold tracking-tight text-slate-900">Review queue</h1>
-      <p className="mt-1 text-[15px] text-slate-600">Every AI plan waits here. Nothing reaches staff until you approve.</p>
+      <p className="mt-1 text-[15px] text-slate-600">
+        Every AI plan waits here. Nothing reaches staff until it is approved, by you or by the AI within the rules you set.
+      </p>
+      <AutoApprovePanel managerId={manager?.staff_id} managerName={manager?.full_name} />
 
       <div className="mt-6">
         <Tabs
@@ -200,6 +211,7 @@ export function ReviewQueuePage() {
         onClose={() => setOpenKey(null)}
         onApprove={handleApprove}
         onReject={handleReject}
+        onUndo={handleUndo}
       />
       <Toast toast={toast} onDismiss={dismissToast} />
     </div>

@@ -1,4 +1,5 @@
 import { Button } from '../../components/ui/Button'
+import { SparklesIcon } from '../../components/ui/icons'
 import { SeverityBadge } from '../../components/ui/SeverityBadge'
 import { bkkDate, formatDay, formatImpact, formatTime } from '../../lib/format'
 import { actionDetail, actionHeadline } from '../../lib/labels'
@@ -14,11 +15,11 @@ function formatDeadline(iso: string, referenceDate: string) {
 }
 
 /** หัวคอลัมน์ที่กดเรียงได้ (▲ น้อยไปมาก / ▼ มากไปน้อย) ลูกศรแสดงเฉพาะคอลัมน์ที่กำลังใช้เรียง */
-function SortableTh({ label, column, sort, onSort, align = 'left' }: {
+export function SortableTh<C extends string = SortColumn>({ label, column, sort, onSort, align = 'left' }: {
   label: string
-  column: SortColumn
-  sort: SortState | null
-  onSort: (column: SortColumn) => void
+  column: C
+  sort: { column: C; dir: SortState['dir'] } | null
+  onSort: (column: C) => void
   align?: 'left' | 'right'
 }) {
   const active = sort?.column === column
@@ -33,6 +34,15 @@ function SortableTh({ label, column, sort, onSort, align = 'left' }: {
         )}
       </button>
     </th>
+  )
+}
+
+/** ป้าย "Approved by AI" (Auto-approve) */
+export function AiBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-700">
+      <SparklesIcon className="size-3" /> Approved by AI
+    </span>
   )
 }
 
@@ -128,7 +138,14 @@ export function ReviewTable({ tab, groups, referenceDate, now, selected, sort, o
                     {state === 'overdue' && <span className="block font-sans text-[11px] font-semibold">Past due</span>}
                   </td>
                 ) : (
-                  <td className={`${TD} text-sm text-slate-700`}>{first.reviewer?.full_name ?? first.reviewed_by ?? '—'}</td>
+                  <td className={`${TD} text-sm text-slate-700`}>
+                    {first.approved_by_agent ? (
+                      <>
+                        <AiBadge />
+                        <span className="mt-0.5 block text-xs text-slate-500">rules of {first.reviewer?.full_name ?? first.reviewed_by}</span>
+                      </>
+                    ) : (first.reviewer?.full_name ?? first.reviewed_by ?? '—')}
+                  </td>
                 )}
                 {waiting ? (
                   <td className="py-4 pr-5 text-right align-top">

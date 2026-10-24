@@ -14,6 +14,8 @@ from typing import Any, Callable, Optional
 from .whatif import WhatIfError, run_what_if
 
 from .labels import ACTION_TH, METHOD_TH
+from .proposals import KINDS as PROPOSAL_KINDS
+from .proposals import propose_action
 
 # รหัสเหตุผลที่ Optimizer ตัดทางเลือกออก (ai_engine/optimizer/rules.py) -> ภาษาไทย ดูจาก prefix ยาวสุดที่ตรง
 REASON_TH = {
@@ -364,6 +366,21 @@ def search_sop(ds, args, retriever=None):
     return result, {"type": "sources", "docs": sorted({c["doc_id"] for c in chunks})}
 
 
+def get_daily_report(ds, args):
+    kind = (args.get("kind") or "").upper() or None
+    date = args.get("date") or ds.reference_date().isoformat()
+    rows = [r for r in ds.daily_reports(8) if str(r.get("report_date")) == date and (kind is None or r.get("kind") == kind)]
+    if not rows:
+        have = sorted({f"{r.get('report_date')} {r.get('kind')}" for r in ds.daily_reports(8)})
+        raise ValueError(f"ไม่มีรายงาน{' ' + kind if kind else ''}ของวันที่ {date}"
+                         + (f" (มี: {', '.join(have)})" if have else " (ยังไม่เคยทำรายงาน)"))
+    result = {"reports": [{"report_date": r["report_date"], "kind": r["kind"], "message": r.get("message"),
+                           "metrics": r.get("metrics"), "anomalies": r.get("anomalies"),
+                           "updated_at": r.get("updated_at")} for r in rows],
+              "note": "กำไรเป็นค่าที่ Optimizer คาด ยังไม่ใช่ยอดขายจริง"}
+    return result, None
+
+
 ACTION_ENUM = ["MARKDOWN", "KITCHEN_REPURPOSE", "DONATE", "DISCARD", "ANIMAL_FEED", "COMPOST",
                "ANAEROBIC_DIGESTION", "LANDFILL"]
 
@@ -403,6 +420,23 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
         "kitchen_hours": Param("object", "ชั่วโมงครัวที่ว่างวันนี้",
                                properties={"department_id": {"type": "string"}, "hours": {"type": "number"}}),
         "demand_scale": Param("number", "ยอดขายทั้งร้านเปลี่ยนกี่เท่า 0.5 ถึง 1.5"),
+    }),
+    Tool("propose_action", "เสนองานให้ผู้จัดการกดยืนยันบนการ์ด (คุณทำเองไม่ได้): RUN_PIPELINE = รัน pipeline วางแผนให้ lot IDLE, "
+         "RELEASE_LOTS = คืน lot ที่ค้างเป็น IDLE, BLOCK_KITCHEN = ปิดครัวที่ใช้ไม่ได้วันนี้ (then_run_pipeline = วางแผนใหม่ต่อ) "
+         "ใช้เมื่อผู้จัดการขอให้ทำสิ่งเหล่านี้ หรือข้อมูลชี้ว่าควรทำ", propose_action, {
+        "kind": Param("string", "ประเภทข้อเสนอ", required=True, enum=list(PROPOSAL_KINDS)),
+        "params": Param("object", "RUN_PIPELINE: {stop_after: SCAN|OPTIMIZE|TASKS}, RELEASE_LOTS: {lot_ids: [...]}, "
+                                  "BLOCK_KITCHEN: {department_id, hours?, then_run_pipeline?}",
+                        properties={"stop_after": {"type": "string"}, "lot_ids": {"type": "array", "items": {"type": "string"}},
+                                    "department_id": {"type": "string"}, "hours": {"type": "number"},
+                                    "then_run_pipeline": {"type": "boolean"}}),
+        "reason": Param("string", "เหตุผลสั้นๆ ภาษาไทยว่าทำไมเสนอ (แสดงบนการ์ด)"),
+    }),
+    Tool("get_daily_report", "รายงานประจำวัน: MORNING = สรุปแผนของวัน (lot เสี่ยง, แผนต่อวิธี, kg, ความผิดปกติ), "
+         "EVENING = สรุปปิดวัน (งานที่ทำจริง, kg ที่ขายต่อ/ฝังกลบ, งานค้าง) ใช้ตอบคำถามแบบ 'เมื่อเช้า' 'วันนี้ทำไปเท่าไร'",
+         get_daily_report, {
+        "date": Param("string", "วันที่ YYYY-MM-DD ไม่ระบุ = วันนี้ของระบบ"),
+        "kind": Param("string", "ประเภทรายงาน ไม่ระบุ = ทั้งสอง", enum=["MORNING", "EVENING"]),
     }),
     Tool("search_sop", "ค้นเอกสาร SOP / นโยบายร้าน (ขั้นตอนลดราคา ครัว บริจาค ทิ้ง ความปลอดภัยอาหาร)", search_sop, {
         "query": Param("string", "สิ่งที่ต้องการค้น เป็นภาษาไทย", required=True),

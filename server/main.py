@@ -4,8 +4,8 @@ from mangum import Mangum
 
 from configs.config import db_env
 from core.openapi import APP_DESCRIPTION, APP_TITLE, APP_VERSION, TAGS_METADATA
-from routers import (agent, ai, demo, inventory_lots, kitchen, optimization_decisions, optimizer, pending_tasks, pipeline,
-                    products, risk_assessments, staff, tasks)
+from routers import (agent, ai, demo, inventory_lots, kitchen, optimization_decisions, optimizer, pending_tasks, pickups, pipeline,
+                    products, risk_assessments, staff, task_log, tasks)
 
 API_PREFIX = "/api/v1"
 
@@ -24,8 +24,9 @@ app.add_middleware(
 )
 
 for module in (products, inventory_lots, kitchen, ai, pipeline, optimizer, risk_assessments,
-            optimization_decisions, pending_tasks, tasks, staff, demo, agent):
+            optimization_decisions, pending_tasks, tasks, task_log, pickups, staff, demo, agent):
     app.include_router(module.router, prefix=API_PREFIX)
+app.include_router(agent.reports_router, prefix=API_PREFIX)   # GET /daily-reports (Manager Agent Phase 3)
 
 # Entry point for AWS Lambda (API Gateway → Lambda → Mangum → FastAPI), see template.yaml
 # Not used when running locally with fastapi dev / uvicorn

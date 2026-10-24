@@ -1,14 +1,18 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { AskAgentButton } from '../../components/agent/AskAgentButton'
 import { Button } from '../../components/ui/Button'
 import { Drawer } from '../../components/ui/Drawer'
 import { CheckIcon, MapPinIcon } from '../../components/ui/icons'
 import { SeverityBadge } from '../../components/ui/SeverityBadge'
+import { TaskStatusBadge } from '../../components/ui/TaskStatusBadge'
 import { apiGet, errorMessage } from '../../lib/api'
 import { formatDay, formatImpact, formatTime } from '../../lib/format'
 import { actionDetail, actionHeadline, actionLabels } from '../../lib/labels'
 import type { Alternative, ReviewItem } from '../../types/review'
+import type { TaskStatus } from '../../types/taskLog'
 import { deadlineState, type ReviewGroup } from './groups'
+import { AiBadge } from './ReviewTable'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -47,6 +51,27 @@ function AlternativeRow({ alt }: { alt: Alternative }) {
   )
 }
 
+/** สถานะ task ปัจจุบันของ plan ที่อนุมัติแล้ว + ลิงก์ไปหน้า Task log */
+function TaskStatusLine({ taskId }: { taskId: string }) {
+  const [task, setTask] = useState<{ task_status: TaskStatus; assigned_staff: { full_name: string } | null } | null | 'gone'>(null)
+  useEffect(() => {
+    let cancelled = false
+    apiGet<{ task_status: TaskStatus; assigned_staff: { full_name: string } | null }>(`/tasks/${taskId}`)
+      .then((t) => !cancelled && setTask(t))
+      .catch(() => !cancelled && setTask('gone'))
+    return () => { cancelled = true }
+  }, [taskId])
+  if (task === null || task === 'gone') return null
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-slate-600">
+      <span className="font-semibold text-slate-700">Task</span>
+      <TaskStatusBadge status={task.task_status} />
+      {task.assigned_staff && <span>· {task.assigned_staff.full_name}</span>}
+      <Link to={`/task-log?task=${taskId}`} className="ml-auto font-semibold text-brand hover:underline">Open in Task log</Link>
+    </div>
+  )
+}
+
 function PlanCard({ item, alternatives }: { item: ReviewItem; alternatives: Alternative[] | undefined }) {
   const d = item.decision
   const model = item.model_used === 'TEMPLATE' ? 'Template text' : item.model_used?.split('.').pop()
@@ -76,6 +101,14 @@ function PlanCard({ item, alternatives }: { item: ReviewItem; alternatives: Alte
           </span>
         )}
       </div>
+
+      {item.agent_undone_at && (
+        <p className="mt-3 rounded-lg bg-violet-50 px-3 py-2 text-[12px] text-violet-800">
+          A manager undid the AI’s approval of this plan, so the AI will not approve it again. It needs your decision.
+        </p>
+      )}
+
+      {item.review_status === 'APPROVED' && item.task_id && <TaskStatusLine taskId={item.task_id} />}
 
       <Section title="Why the AI chose this">
         <p className="text-sm leading-relaxed text-slate-700">{item.ai_reasoning ?? '—'}</p>
@@ -108,12 +141,49 @@ function PlanCard({ item, alternatives }: { item: ReviewItem; alternatives: Alte
   )
 }
 
-export function ReviewDrawer({ group, now, onClose, onApprove, onReject }: {
+/** ย้อนการอนุมัติของ AI: นับถอยหลังด้วยนาฬิกาจริง (undo_until เป็นเวลาจริง ไม่ใช่ DEMO_DATE) */
+function UndoAuto({ item, onUndo, onDone }: { item: ReviewItem; onUndo: (reviewId: string) => Promise<void>; onDone: () => void }) {
+  const [left, setLeft] = useState(() => (item.undo_until ? Date.parse(item.undo_until) - Date.now() : 0))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!item.undo_until) return
+    const t = setInterval(() => setLeft(Date.parse(item.undo_until!) - Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [item.undo_until])
+  if (left <= 0) return <p className="mt-1 text-xs text-slate-400">The undo window has closed.</p>
+  const mm = Math.floor(left / 60000)
+  const ss = Math.floor((left % 60000) / 1000).toString().padStart(2, '0')
+  const undo = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await onUndo(item.review_id)
+      onDone()
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="mt-2">
+      <Button size="sm" variant="danger" disabled={busy} onClick={() => void undo()}>
+        {busy ? 'Undoing…' : `Undo AI approval (${mm}:${ss})`}
+      </Button>
+      <span className="ml-2 text-xs text-slate-500">Removes the task from staff (only if not started) and puts the plan back here.</span>
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
+  )
+}
+
+export function ReviewDrawer({ group, now, onClose, onApprove, onReject, onUndo }: {
   group: ReviewGroup | null
   now: Date
   onClose: () => void
   onApprove: (ids: string[], note?: string) => Promise<void>
   onReject: (ids: string[], note: string) => Promise<void>
+  onUndo: (reviewId: string) => Promise<void>
 }) {
   const [alternatives, setAlternatives] = useState<Record<string, Alternative[]>>({})
   const [note, setNote] = useState('')
@@ -223,12 +293,24 @@ export function ReviewDrawer({ group, now, onClose, onApprove, onReject }: {
             </div>
           </div>
         ) : (
+          first.approved_by_agent ? (
+            <div className="text-sm text-slate-600">
+              <p className="flex flex-wrap items-center gap-2">
+                <AiBadge />
+                <span>under the rules of <span className="font-semibold">{first.reviewer?.full_name ?? first.reviewed_by}</span>
+                  {first.reviewed_at && <> at {formatTime(first.reviewed_at)}</>}</span>
+              </p>
+              {first.review_note && <p className="mt-1 text-[13px] text-slate-500">{first.review_note}</p>}
+              <UndoAuto key={first.review_id} item={first} onUndo={onUndo} onDone={onClose} />
+            </div>
+          ) : (
           <p className="text-sm text-slate-600">
             {group.status === 'APPROVED' ? 'Approved' : 'Rejected'} by{' '}
             <span className="font-semibold">{first.reviewer?.full_name ?? first.reviewed_by}</span>
             {first.reviewed_at && <> at {formatTime(first.reviewed_at)}</>}
             {first.review_note && <span className="block text-slate-500">“{first.review_note}”</span>}
           </p>
+          )
         )
       }
     >

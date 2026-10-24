@@ -1,7 +1,7 @@
 """อ่านข้อมูลร้านผ่าน API ของ server (อ่านอย่างเดียว) + รัน Optimizer แบบ dry-run สำหรับอธิบาย / what-if
 
 1 คำถาม = 1 DataSource: ผลของแต่ละ route ถูก cache ไว้ในคำถามนั้น (tool หลายตัวใช้ข้อมูลชุดเดียวกัน ตัวเลขตรงกัน)
-ไม่มี route ไหนในไฟล์นี้เขียนข้อมูล
+ไม่มี route ไหนในไฟล์นี้เขียนข้อมูล (การเขียนอยู่ที่ events / daily / autoapprove ผ่าน self.client)
 """
 from __future__ import annotations
 
@@ -28,12 +28,21 @@ class DataSource:
         self.client = client or ApiClient(settings.API_BASE_URL, timeout=settings.HTTP_TIMEOUT_S)
         self._clock = clock or (lambda: datetime.now(BKK))
         self._cache: dict[str, Any] = {}
+        self.fetch_log: list[dict] = []          # route ที่อ่าน (บันทึกใน agent_runs.tool_calls ของโหมดเหตุการณ์)
         self._plans: dict[str, dict] = {}
 
     def _get(self, key: str, route: str, params: Optional[dict] = None):
         if key not in self._cache:
+            started = self._clock()
             self._cache[key] = self.client.request("GET", route, params)
+            self.fetch_log.append({"name": f"GET {route.split('?')[0]}", "args": params,
+                                   "ms": int((self._clock() - started).total_seconds() * 1000), "ok": True})
         return self._cache[key]
+
+    def invalidate(self, *prefixes: str) -> None:
+        """ลืม cache ของ route ที่เพิ่งเปลี่ยน (หลัง Auto-approve อนุมัติ plan: reviews / inventory / tasks)"""
+        for k in [k for k in self._cache if any(k == p or k.startswith(p + ":") for p in prefixes)]:
+            del self._cache[k]
 
     # ---------------- route ของ server
     def inventory(self) -> dict:
@@ -55,11 +64,30 @@ class DataSource:
             self._cache["optimize_inputs"] = self.client.get_optimize_inputs(run_id, 1)
         return self._cache["optimize_inputs"]
 
+    def use_scan_run(self, run_id: str) -> dict:
+        """ใช้รอบสแกนที่ระบุ (รายงานเช้าของ pipeline รอบนั้น) แทน suggested_run_id"""
+        self._cache["optimize_inputs"] = self.client.get_optimize_inputs(run_id, 1)
+        self._plans.clear()
+        return self._cache["optimize_inputs"]
+
+    def kitchen_overview(self) -> dict:
+        return self._get("kitchen_overview", "kitchen-overview", {"days_ahead": 1})
+
+    def daily_reports(self, days: int = 8) -> list:
+        return (self._get(f"daily_reports:{days}", "daily-reports", {"days": days}) or {}).get("items") or []
+
     def products(self) -> list:
         return self._get("products", "products")
 
     def decisions(self, run_id: Optional[str]) -> dict:
         return self._get(f"decisions:{run_id}", "optimization-decisions", {"run_id": run_id})
+
+    def kitchen(self) -> list:
+        """ความจุครัววันนี้ถึงพรุ่งนี้ (GET /kitchen-capacity)"""
+        return self._get("kitchen", "kitchen-capacity", {"days_ahead": 1})
+
+    def task(self, task_id: str) -> dict:
+        return self._get(f"task:{task_id}", f"tasks/{task_id}")
 
     def pipeline_runs(self, limit: int = 1) -> list:
         return self._get(f"pipeline_runs:{limit}", "ai/pipeline-runs", {"limit": limit})

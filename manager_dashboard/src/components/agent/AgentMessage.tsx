@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { formatTime } from '../../lib/format'
 import type { AgentArtifact, ChatMessage } from '../../types/agent'
 import { LotExplainCard } from './LotExplainCard'
+import { ProposalCard, UnsavedProposal } from './ProposalCard'
 import { WhatIfCard } from './WhatIfCard'
 
 const TOOL_LABELS: Record<string, string> = {
@@ -66,6 +67,8 @@ function ArtifactView({ a }: { a: AgentArtifact }) {
           ดู {a.lot_id} ในหน้า Inventory →
         </Link>
       )
+    case 'proposal':
+      return a.proposal ? <ProposalCard proposal={a.proposal} /> : <UnsavedProposal title={a.title} />
     case 'sources':
       return a.docs.length ? <p className="text-[12px] text-slate-500">อ้างอิง: {a.docs.join(', ')}</p> : null
     default:

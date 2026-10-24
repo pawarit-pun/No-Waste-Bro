@@ -88,6 +88,13 @@ export interface ReviewItem {
   review_note: string | null
   task_id: string | null
   created_at: string
+  /** Phase 4: Manager Agent อนุมัติเองตามกติกา Auto-approve (reviewer = ผู้จัดการเจ้าของกติกา) */
+  approved_by_agent?: boolean
+  agent_run_id?: string | null
+  /** ผู้จัดการย้อนการอนุมัติของ agent แล้ว agent จะไม่อนุมัติ plan นี้อีก */
+  agent_undone_at?: string | null
+  /** ย้อนได้ถึงเวลานี้ (เวลาจริง) เฉพาะ approved_by_agent */
+  undo_until?: string | null
   decision: PendingDecision | null
   lot: ReviewLot | null
   lot_expired: boolean

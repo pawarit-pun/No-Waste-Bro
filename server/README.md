@@ -201,7 +201,36 @@ dashboard ─► POST /agent/ask ─► ManagerAgentFunction (sync, ≤ 25 s)
                                    └─ guard: numbers, dates, times, lot IDs must come from tool results
 ```
 
-Tools: store snapshot, at-risk lots, one lot, tasks, Optimizer plan summary, explain a lot's decision, what-if (no markdown / force a discount level / partner unavailable / kitchen hours / demand × 0.5–1.5) and SOP search (Knowledge Base). Answers that fail the guard are revised once, then retried on the fallback model, then replaced by a short template with the data cards (`model_used = TEMPLATE`). Locally (`fastapi dev`) the route answers `503`; run `python -m manager_agent "คำถาม"` from the `AI` folder instead.
+Tools: store snapshot, at-risk lots, one lot, tasks, Optimizer plan summary, explain a lot's decision, what-if (no markdown / force a discount level / partner unavailable / kitchen hours / demand × 0.5–1.5), SOP search (Knowledge Base) and `propose_action` (a card the manager confirms, see below). Answers that fail the guard are revised once, then retried on the fallback model, then replaced by a short template with the data cards (`model_used = TEMPLATE`). Locally (`fastapi dev`) the route answers `503`; run `python -m manager_agent "คำถาม"` from the `AI` folder instead.
+
+### Phase 2: notifications and proposals
+
+The agent never changes store data by itself. It writes **notifications** (bell in the dashboard) and **proposals**; the server carries out a proposal only when a manager presses confirm (`POST /agent/proposals/{id}/execute`), checking the current data again first.
+
+| Trigger | Sent by | Agent does |
+| --- | --- | --- |
+| `TASK_REJECTED` | `POST /tasks/{id}/reject` | notify; propose `RUN_PIPELINE` if the lot is `IDLE` again, or `BLOCK_KITCHEN` (+ re-plan) when a kitchen task was rejected for a kitchen reason |
+| `KITCHEN_FULL` | `POST /pending-tasks/approve` (409 kitchen) | notify with a what-if of the plan without that kitchen today |
+| `PIPELINE_FAILED` | `PATCH /ai/pipeline-runs/{id}` to `FAILED` (and stale runs) | notify; propose `RELEASE_LOTS` for stuck lots, otherwise `RUN_PIPELINE` |
+| `WATCH` | EventBridge every hour 07:00–22:00, or `POST /agent/watch` (Run demo page) | overdue tasks, plans near / past their review deadline, lots stuck in `PROCESSING` |
+
+| Proposal | When confirmed |
+| --- | --- |
+| `RUN_PIPELINE` | starts a pipeline run (`409` while one is running) |
+| `RELEASE_LOTS` | `release_lot_if_idle` per lot (only lots with no open task and no waiting decision) |
+| `BLOCK_KITCHEN` | books the kitchen's remaining hours for that day, then optionally starts a pipeline run |
+
+Events are sent async (`InvocationType=Event`); a failed send never breaks the original request. Each notification has a `dedupe_key`, so the same event or the next hourly check does not notify twice. Proposals expire at the end of the system day. Tables: `agent_runs` (audit of every chat / event / watch run), `agent_notifications`, `agent_proposals` (`scripts/agent_tables.sql`, also updates `demo_reset()` to clear notifications and proposals).
+
+### Phase 3: daily routine
+
+| When | Trigger | Agent does |
+| --- | --- | --- |
+| 07:30 | EventBridge `MORNING_RUN` | starts the day's pipeline run itself if lots are `IDLE` and no run is active (plans still go to the review queue). `AgentAutoRun=false` = notify with a `RUN_PIPELINE` proposal instead |
+| pipeline `SUCCEEDED` | `PATCH /ai/pipeline-runs/{id}` sends `PIPELINE_SUCCEEDED` | **Morning brief**: decisions per action (units, kg), rescued / recycled / disposal kg, expected net profit vs the "regular price then landfill" baseline (Optimizer dry-run of the same scan), kitchen hours, plans waiting; anomalies: stuck lots, disposal > 1.5x the 7-report average, waiting kitchen plans over the hours left, plan worse than baseline, plans due within 60 min |
+| 21:30 | EventBridge `EVENING_SUMMARY` | **Evening summary**: tasks completed / rejected / open / overdue per action, units and kg really handled, expected profit of completed tasks, compared with the Morning brief |
+
+Reports are saved in `daily_reports` (one row per day and kind, re-runs overwrite; `scripts/daily_reports.sql`) and shown on the dashboard Overview page. `POST /agent/daily/{morning|evening}` makes one now (Run demo page). Profit figures are the Optimizer's estimates; there is no POS data yet.
 
 ## API Endpoints
 
@@ -233,6 +262,7 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/v1/kitchen-capacity?days_ahead=1` | Kitchen capacity from today to +`days_ahead` days (0–30) |
+| `GET` | `/api/v1/kitchen-overview?days_ahead=1` | Dashboard Kitchen page: departments with daily capacity, kitchen jobs (staff tasks + plans waiting for approval, with hours computed like the booking) and menu demand of the latest forecast run (read-only) |
 | `POST` | `/api/v1/kitchen-bookings` | Book kitchen hours |
 
 ### AI Pipeline
@@ -250,6 +280,15 @@ All endpoints are under the `/api/v1` prefix. Interactive docs at `/docs` group 
 | --- | --- | --- |
 | `POST` | `/api/v1/agent/ask` | Ask the AI assistant (Thai). Body `{"question", "history": [{"role", "text"}], "context": {"page", "lot_id"}}`. Returns `answer`, `model_used`, `tool_calls`, `artifacts` (cards), `warnings`, `latency_ms`. `503` when `AGENT_FUNCTION_NAME` is empty, `504` when the agent runs out of time |
 | `POST` | `/api/v1/agent/warmup` | Wake the agent Lambda (async, no wait). Call it when the chat panel opens |
+| `POST` | `/api/v1/agent/daily/{morning\|evening}` | Make the Morning brief (latest succeeded pipeline run, no new run) or Evening summary now (async) |
+| `GET` | `/api/v1/daily-reports?days=7` | Daily reports (Morning brief / Evening summary) newest first, `metrics` + `anomalies` + `message`. Realtime: table `daily_reports` |
+| `POST` | `/api/v1/agent/watch` | Run the agent's check now (async), same as the hourly schedule but also outside store hours |
+| `GET` | `/api/v1/agent/notifications?unread=false&limit=30` | Notifications, newest first, each with its `proposal`. `unread` = total unread. Realtime: tables `agent_notifications`, `agent_proposals` |
+| `POST` | `/api/v1/agent/notifications/{id}/read`, `/api/v1/agent/notifications/read-all` | Mark as read |
+| `GET` | `/api/v1/agent/proposals/{id}` | One proposal |
+| `POST` | `/api/v1/agent/proposals/{id}/execute` | Body `{"staff_id"}` (a MANAGER). Server does the proposal; `409` if it is no longer `PROPOSED` or cannot be done now (then `FAILED` + `result.error`) |
+| `POST` | `/api/v1/agent/proposals/{id}/dismiss` | Body `{"staff_id"}` |
+| `POST` | `/api/v1/agent/runs` | Internal: the agent saves one event / watch run (run + proposals + notifications). No auth, like `PATCH /ai/pipeline-runs` |
 
 ### AI
 
@@ -357,7 +396,7 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 
 ## Review Queue and Task Rules
 
-**There is no auto-approval.** The LLM never creates staff tasks directly: it sends plans to `pending_tasks`, and a task is created only when a manager approves the plan in the dashboard.
+The LLM never creates staff tasks directly: it sends plans to `pending_tasks`, and a task is created only when the plan is approved: by a manager in the dashboard, or by the Manager Agent under the manager's **Auto-approve** rules (off by default, see below).
 
 `POST /api/v1/pending-tasks` accepts only `decision_id` (required), `priority` (1–5, default 3), `ai_reasoning`, `staff_instructions`, `instruction_steps` (optional list of 1–8 `{title, detail}` objects, shown step by step in the mobile app's "How to do it" section; when it is missing the app shows `staff_instructions` instead), and `model_used` (the model that wrote the text, or `TEMPLATE` when the LLM failed validation). Any other field is ignored.
 
@@ -370,6 +409,14 @@ All decisions require `assessment_id` and `action_quantity` (> 0). The server fi
 - `manager_id` must be an active `MANAGER`; every `review_id` must still be `WAITING`. Several plans (for example every plan of one lot) can be sent in one request, all or nothing.
 - Approve creates the tasks with the rules below, then sets each plan to `APPROVED` with `task_id`, `reviewed_by`, and `reviewed_at`. If a kitchen is full (`409`) or any step fails, the new tasks are deleted, the kitchen hours are released, and the plans stay `WAITING`.
 - Reject requires `review_note`. No task is created. If a lot has no other plan waiting or approved in that run and the lot is `CHECKED`, it goes back to `IDLE` so the next pipeline run can plan it again.
+
+**Auto-approve (Phase 4, `scripts/auto_approve.sql`)**
+
+- `GET` / `PUT /agent/policies/auto-approve` (`manager_id`, `enabled`, `params`). The manager who saves becomes the owner; approved plans get `reviewed_by` = owner and `approved_by_agent = true` (`reviewed_by` is an FK to `staff` and roles are only MANAGER / STAFF).
+- Defaults: `actions` = MARKDOWN (allowed: MARKDOWN, DONATE, ANIMAL_FEED, COMPOST, ANAEROBIC_DIGESTION; never kitchen, landfill or discard), `max_discount_pct` 30, `max_value_thb` 2000 (`action_quantity × current_selling_price`), `min_minutes_before_deadline` 30, `daily_limit` 30, `undo_minutes` 15.
+- A plan passes only if the optimizer has no feasible alternative with a higher expected profit, the text is not `TEMPLATE`, the lot is not expired, and the new price is not below `min_allowed_price`. Every waiting plan of the lot must pass (whole lots only).
+- `POST /agent/auto-approve` (internal, used by the agent) re-checks every rule against fresh data and approves lot by lot with the normal approve flow; failures are listed in `skipped` (`AA_*` codes) and `errors`.
+- `POST /pending-tasks/{review_id}/undo-auto` (`staff_id` = a manager) within `undo_minutes` while the task is still `PENDING`: deletes the task and puts every plan of that lot from the same approval back to `WAITING` with `agent_undone_at`, so the agent never approves them again. List / detail responses include `approved_by_agent`, `agent_undone_at`, `undo_until`.
 
 The rules below apply when a plan is approved.
 
@@ -392,6 +439,20 @@ The rules below apply when a plan is approved.
 - Hours for tasks that use the same kitchen on the same day are added together and booked once.
 - Kitchen hours are booked when the plan is approved, not when the decision or the plan is saved.
 - If any kitchen is full, or saving the tasks fails, every booking made by this approval is released and no task is created.
+
+## Task Log
+
+`GET /api/v1/task-log` lists approved tasks for the dashboard's **Task log** page: tasks created since `created_from` (default: today's midnight, Thailand time) plus every task that is still open, newest first. Filters: `status` (several values, including `OVERDUE`), `action_type`, `staff_id`. `counts` is computed before the status filter.
+
+Each item is a task (same context as `GET /tasks`) plus `events` (timeline), `review` (who approved it, or `approved_by_agent`), `is_overdue` / `minutes_late` (against the system time, DEMO_DATE + current clock), `started_at`, `finished_at`, `wait_minutes` (approval → start) and `work_minutes` (start → done).
+
+History comes from `task_events` (`scripts/task_events.sql`): a trigger on `ai_recommended_tasks` writes `CREATED` on insert and `STARTED` / `COMPLETED` (with `quantity`) / `REJECTED` (with `note`) when `task_status` changes, so the mobile app needs no change. Existing tasks are backfilled from `created_at` / `completed_at`. Events are deleted with their task (undo of an AI approval, `demo_reset()`). Without the script the route still works with `events_available = false`.
+
+## Pickup Schedule
+
+`GET /api/v1/pickup-schedule?days_ahead=6` powers the dashboard's **Pickups** page. Each active partner in `donation_partners` gives one slot per day in its `pickup_days` (1 = Monday … 7 = Sunday, the same convention as the Optimizer) between `pickup_time_start` and `pickup_time_end`, from the system date (DEMO_DATE) for `days_ahead` days.
+
+A slot's `items` are the approved tasks for that partner whose `due_by` falls on that day (`source = TASK`, with task status and staff) and the plans still waiting in the Review queue (`source = PLAN`). `kg_confirmed` / `kg_waiting` use each product's `net_content` (G / ML ÷ 1000) and are compared with `max_capacity_kg_per_pickup` and `min_kg_per_pickup`. `costs` uses the Optimizer's dedicated-trip formula (fixed + travel, donation = fixed only, + handling per kg − buyback per kg). `alerts`: `OVER_CAPACITY`, `BELOW_MIN`, `NOT_READY` (the window is open or over and a task is not done), `WAITING_APPROVAL`. Provisional trips the Optimizer plans for later days are not stored, so they are not shown. Read-only, no new table.
 
 ## Task Lifecycle
 
@@ -542,11 +603,13 @@ server/
 │   └── responses.py            # Response shapes shown in Swagger
 ├── services/                   # Business logic shared by routers
 │   ├── kitchen.py              # department_exists, book_hours, release_hours
+│   ├── kitchen_overview.py     # Dashboard Kitchen page (capacity + jobs + menu demand)
 │   ├── decisions.py            # Decision checks against real data, listing with context
 │   ├── pending_tasks.py        # Review queue: save plans, list with context, approve (creates tasks) / reject (resets lots)
 │   ├── tasks.py                # Task creation on approval (auto-assign, kitchen booking, rollback), task queue and detail
 │   ├── task_actions.py         # Accept, reject (releases kitchen hours), complete (calls the complete_task DB function)
-│   └── agent.py                # Invoke the Manager Agent Lambda (sync ask, async warm-up)
+│   ├── agent.py                # Manager Agent: chat, notifications, proposals (execute / dismiss)
+│   └── agent_events.py         # Send events to the Manager Agent (async, never raises)
 └── requirements.txt
 ```
 

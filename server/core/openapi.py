@@ -58,6 +58,21 @@ staff ทำงานตามลำดับ: `POST /tasks/{id}/accept` → `PO
 
 TAGS_METADATA = [
     {
+        "name": "Pickups",
+        "description": "ตารางรอบรับของของ partner (บริจาค / อาหารสัตว์ / ปุ๋ย / ก๊าซชีวภาพ / ฝังกลบ) และของที่ต้องส่งมอบแต่ละรอบ "
+                       "ใช้กับหน้า Pickups ของ dashboard",
+    },
+    {
+        "name": "Task Log",
+        "description": "task ที่อนุมัติแล้วทุกสถานะพร้อมประวัติ (สร้าง / รับงาน / เสร็จ / ปฏิเสธ) จาก task_events "
+                       "ที่ trigger บันทึก ใช้กับหน้า Task log ของ dashboard",
+    },
+    {
+        "name": "Daily Reports",
+        "description": "รายงานประจำวันของ Manager Agent: Morning brief (แผนของวัน + ความผิดปกติ) และ Evening summary "
+                       "(งานที่ทำจริง) ตัวเลขกำไรเป็นค่าที่ Optimizer คาด",
+    },
+    {
         "name": "Manager Agent",
         "description": "ผู้ช่วย AI ของผู้จัดการ (แชทภาษาไทย) อ่านข้อมูลอย่างเดียว อธิบายเหตุผลของ Optimizer "
                        "และจำลอง what-if แบบไม่บันทึก",

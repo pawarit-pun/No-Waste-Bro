@@ -10,6 +10,7 @@ from db.supabase import supabase
 from schemas.enums import ActionType, DecisionStatus, StaffRole, TaskStatus
 from schemas.task import TaskCreate
 from services.decisions import STATUS_VIEW
+from services.agent_events import emit_event
 from services.kitchen import book_hours, release_hours
 
 # field ที่คัดลอกจาก decision ไปเป็น task (LLM แก้ไม่ได้)
@@ -132,6 +133,13 @@ def insert_tasks(tasks: list[TaskCreate],
     for (department_id, on), hours in hours_needed.items():
         if not book_hours(department_id, on, hours):
             _release_all(booked)
+            # Manager Agent (ไม่รอผล): แจ้งผู้จัดการว่าครัวไหนเต็ม + ผลจำลองถ้าไม่มีครัวนั้น
+            emit_event("KITCHEN_FULL", {
+                "department_id": department_id, "date": on.isoformat(), "hours_needed": hours,
+                "lot_ids": sorted({str(d["lot_id"]) for d in decisions.values()
+                                   if d["action_type"] == ActionType.KITCHEN_REPURPOSE.value}),
+                "decision_ids": sorted(str(k) for k in decisions),
+            })
             raise HTTPException(409, f"Kitchen '{department_id}' does not have {hours} hours available on {on}")
         booked.append({"department_id": department_id, "date": on.isoformat(), "hours": hours})
 

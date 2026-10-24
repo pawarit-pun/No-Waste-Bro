@@ -1,5 +1,6 @@
 """Review queue: plan จาก LLM เข้าคิว pending_tasks (WAITING) แล้วรอผู้จัดการอนุมัติ/ปฏิเสธ
-ไม่มีการอนุมัติอัตโนมัติ task ใน ai_recommended_tasks ถูกสร้างตอนผู้จัดการกดอนุมัติเท่านั้น"""
+task ใน ai_recommended_tasks ถูกสร้างตอนอนุมัติเท่านั้น: ผู้จัดการกดเอง หรือ Manager Agent อนุมัติตามกติกา
+Auto-approve ที่ผู้จัดการเปิดไว้ (services/auto_approve.py, approved_by_agent = true)"""
 from datetime import date, datetime, time, timezone
 from typing import Optional
 from uuid import UUID
@@ -13,6 +14,7 @@ from db.supabase import supabase
 from schemas.enums import DecisionStatus, LotAIStatus, ReviewStatus, StaffRole
 from schemas.pending_task import PendingTaskCreate
 from schemas.task import TaskCreate
+from services.auto_approve import attach_undo
 from services.decisions import STATUS_VIEW
 from services.tasks import delete_tasks, insert_tasks
 
@@ -150,14 +152,14 @@ def list_pending(statuses: list[str], reviewed_from: Optional[datetime]) -> dict
         "approved": _count(ReviewStatus.APPROVED.value, since),
         "rejected": _count(ReviewStatus.REJECTED.value, since),
     }
-    return {"reference_date": today_bkk().isoformat(), "counts": counts, "items": _attach_context(rows)}
+    return {"reference_date": today_bkk().isoformat(), "counts": counts, "items": attach_undo(_attach_context(rows))}
 
 
 def get_pending(review_id: str) -> dict:
     res = supabase.table(TABLE).select("*").eq("review_id", review_id).execute().data
     if not res:
         raise HTTPException(404, f"review_id '{review_id}' not found")
-    return _attach_context(res, detail=True)[0]
+    return attach_undo(_attach_context(res, detail=True))[0]
 
 
 # ---------- ผู้จัดการอนุมัติ / ปฏิเสธ ----------
@@ -188,16 +190,19 @@ def _load_waiting(review_ids: list[UUID]) -> list[dict]:
     return rows
 
 
-def _revert_to_waiting(review_ids: list[str]) -> None:
+def _revert_to_waiting(review_ids: list[str], agent: bool = False) -> None:
     if review_ids:
+        extra = {"approved_by_agent": False} if agent else {}
         (supabase.table(TABLE)
            .update({"review_status": WAITING, "task_id": None, "reviewed_by": None,
-                    "reviewed_at": None, "review_note": None})
+                    "reviewed_at": None, "review_note": None, **extra})
            .in_("review_id", review_ids).execute())
 
 
-def approve(review_ids: list[UUID], manager_id: str, note: Optional[str]) -> dict:
-    """สร้าง task จริง (มอบหมาย staff + จองครัว) แล้วตั้ง plan เป็น APPROVED ทั้งหมดหรือไม่ทำเลย"""
+def approve(review_ids: list[UUID], manager_id: str, note: Optional[str],
+            approved_by_agent: bool = False, agent_run_id: Optional[str] = None) -> dict:
+    """สร้าง task จริง (มอบหมาย staff + จองครัว) แล้วตั้ง plan เป็น APPROVED ทั้งหมดหรือไม่ทำเลย
+    approved_by_agent: เรียกจาก Auto-approve (manager_id = ผู้จัดการเจ้าของกติกา)"""
     _check_manager(manager_id)
     reviews = _load_waiting(review_ids)
     items = [TaskCreate(decision_id=r["decision_id"], priority=r["priority"], ai_reasoning=r.get("ai_reasoning"),
@@ -207,13 +212,17 @@ def approve(review_ids: list[UUID], manager_id: str, note: Optional[str]) -> dic
     task_by_decision = {str(t["decision_id"]): t["task_id"] for t in created["tasks"]}
 
     reviewed_at = _now_iso()
+    fields = {"review_status": ReviewStatus.APPROVED.value, "reviewed_by": manager_id,
+              "reviewed_at": reviewed_at, "review_note": note}
+    if approved_by_agent:           # ใส่เฉพาะตอน agent อนุมัติ: DB ที่ยังไม่รัน auto_approve.sql ยังอนุมัติปกติได้
+        fields["approved_by_agent"] = True
+        if agent_run_id:
+            fields["agent_run_id"] = agent_run_id
     done: list[dict] = []
     try:
         for r in reviews:
             res = (supabase.table(TABLE)
-                     .update({"review_status": ReviewStatus.APPROVED.value,
-                              "task_id": task_by_decision[str(r["decision_id"])],
-                              "reviewed_by": manager_id, "reviewed_at": reviewed_at, "review_note": note})
+                     .update({**fields, "task_id": task_by_decision[str(r["decision_id"])]})
                      .eq("review_id", r["review_id"]).eq("review_status", WAITING)
                      .execute())
             if not res.data:
@@ -221,7 +230,7 @@ def approve(review_ids: list[UUID], manager_id: str, note: Optional[str]) -> dic
             done.append(res.data[0])
     except Exception as e:
         # ย้อนทั้งหมด: plan กลับเป็น WAITING ก่อน (ปลด task_id) แล้วลบ task + คืนชั่วโมงครัว
-        _revert_to_waiting([str(x["review_id"]) for x in done])
+        _revert_to_waiting([str(x["review_id"]) for x in done], agent=approved_by_agent)
         delete_tasks(list(task_by_decision.values()), created["kitchen_bookings"])
         if isinstance(e, HTTPException):
             raise

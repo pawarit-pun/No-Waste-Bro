@@ -9,7 +9,7 @@ const OPEN_KEY = 'nwb.agent.open'
 const MAX_TURNS = 10
 
 const PAGE_BY_PATH: [string, AgentPage][] = [
-  ['/overview', 'overview'], ['/inventory', 'inventory'], ['/risk-monitor', 'risk-monitor'],
+  ['/overview', 'overview'], ['/inventory', 'inventory'], ['/kitchen', 'kitchen'],
   ['/review-queue', 'review'], ['/run-demo', 'run-demo'], ['/pipeline-runs', 'pipeline-runs'],
 ]
 

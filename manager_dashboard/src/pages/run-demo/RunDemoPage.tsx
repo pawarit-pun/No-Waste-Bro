@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { AgentWatchCard } from '../../components/agent/AgentWatchCard'
 import { RunSteps } from '../../components/RunSteps'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -127,6 +128,8 @@ export function RunDemoPage() {
             {startError && <p className="mt-2 text-sm text-red-600">{startError}</p>}
           </Card>
 
+          <AgentWatchCard />
+
           <Card title="Demo data">
             <p className="text-sm text-slate-600">
               Put every lot back to its starting state (IDLE) so the agent can scan them again.
@@ -143,6 +146,7 @@ export function RunDemoPage() {
                   <li>every plan in the review queue</li>
                   <li>every staff task, decision and scan result</li>
                   <li>lots created by the demo, and all kitchen bookings</li>
+                  <li>Manager Agent notifications and proposals</li>
                 </ul>
                 <div className="mt-3 flex gap-2">
                   <Button size="sm" className="flex-1" disabled={resetting} onClick={() => setConfirmReset(false)}>Cancel</Button>

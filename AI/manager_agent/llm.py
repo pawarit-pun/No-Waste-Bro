@@ -17,7 +17,8 @@ class BedrockLLM:
                                    config=Config(connect_timeout=3, read_timeout=20, retries={"max_attempts": 1}))
 
     def converse(self, model_id: str, system: str, messages: list, tools: dict, timeout_s: float) -> dict:
-        r = self.client.converse(modelId=model_id, system=[{"text": system}], messages=messages, toolConfig=tools,
+        kwargs = {"toolConfig": tools} if tools else {}      # tools=None: เขียนข้อความอย่างเดียว (แจ้งเตือน)
+        r = self.client.converse(modelId=model_id, system=[{"text": system}], messages=messages, **kwargs,
                                  inferenceConfig={"maxTokens": settings.MAX_TOKENS, "temperature": settings.TEMPERATURE})
         return {"content": r["output"]["message"]["content"], "stop_reason": r.get("stopReason"),
                 "usage": r.get("usage") or {}}

@@ -35,6 +35,9 @@ class Settings:
     MAX_TOOL_CALLS: int = int(_env("AGENT_MAX_TOOL_CALLS", "8"))
     BUDGET_S: float = float(_env("AGENT_BUDGET_S", "25"))
     HISTORY_TURNS: int = 10
+
+    # Phase 3: รอบเช้า 07:30 ให้ agent เริ่ม pipeline เอง (plan ยังต้องผ่านผู้จัดการ) false = แจ้งเตือนอย่างเดียว
+    AUTO_MORNING_RUN: bool = (_env("AUTO_MORNING_RUN", "true") or "true").lower() in ("1", "true", "yes")
     MAX_QUESTION_CHARS: int = 1000
     KB_RESULTS: int = 4
 

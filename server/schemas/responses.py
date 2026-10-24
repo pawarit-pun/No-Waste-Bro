@@ -512,6 +512,10 @@ class PendingTaskRow(_Row):
     review_note: Optional[str] = Field(None, description="เหตุผลตอนปฏิเสธ หรือหมายเหตุตอนอนุมัติ")
     task_id: Optional[UUID] = Field(None, description="task ที่สร้างหลังอนุมัติ")
     created_at: datetime = Field(..., description="เวลาที่ LLM ส่ง plan เข้าคิว")
+    approved_by_agent: bool = Field(False, description="true = Manager Agent อนุมัติเองตามกติกา Auto-approve")
+    agent_run_id: Optional[UUID] = Field(None, description="รอบของ agent ที่อนุมัติ")
+    agent_undone_at: Optional[datetime] = Field(None, description="ผู้จัดการย้อนการอนุมัติของ agent แล้ว (agent จะไม่อนุมัติ plan นี้อีก)")
+    undo_until: Optional[datetime] = Field(None, description="ย้อนการอนุมัติของ agent ได้ถึงเวลานี้ (เฉพาะ approved_by_agent)")
 
 
 class PendingDecision(_Row):
@@ -589,3 +593,64 @@ class ReviewRejectResponse(BaseModel):
     rejected: int = Field(..., description="จำนวน plan ที่ปฏิเสธ")
     reviews: list[PendingTaskRow]
     lots_reset: list[str] = Field(..., description="lot ที่ไม่เหลือ plan ที่รอหรืออนุมัติในรอบนั้น จึงตั้งกลับเป็น IDLE ให้สแกนใหม่")
+
+
+# ---------- หน้า Kitchen (GET /kitchen-overview) ----------
+
+_Date = date   # KitchenJob มี field ชื่อ date ทับชื่อ type
+
+class KitchenDayRow(_Row):
+    department_id: str
+    capacity_date: date
+    available_hrs: float
+    booked_hrs: float
+    remaining_hrs: Optional[float] = None
+    workload_status: Optional[str] = Field(None, description="AVAILABLE / BUSY / FULL")
+
+
+class KitchenDepartment(_Row):
+    department_id: str
+    department_name: Optional[str] = None
+    daily_processing_capacity_hrs: Optional[float] = None
+    days: list[KitchenDayRow] = Field(default_factory=list, description="ความจุรายวัน วันนี้ถึง +days_ahead")
+
+
+class KitchenJob(_Row):
+    kind: str = Field(..., description="TASK = task ของพนักงาน, WAITING_APPROVAL = plan ที่รอผู้จัดการอนุมัติ (ยังไม่จองครัว)")
+    id: str = Field(..., description="task_id หรือ review_id")
+    status: str = Field(..., description="PENDING / IN_PROGRESS / COMPLETED / REJECTED / WAITING")
+    department_id: Optional[str] = None
+    department_name: Optional[str] = None
+    date: Optional[_Date] = Field(None, description="วันที่ใช้ครัว (วันของ due_by)")
+    hours: Optional[float] = Field(None, description="ชั่วโมงครัว = เวลาทำต่อ batch x batch_count (กติกาเดียวกับตอนจอง)")
+    due_by: Optional[datetime] = None
+    recipe_id: Optional[str] = None
+    recipe_name: Optional[str] = None
+    batch_count: Optional[int] = None
+    expected_output: Optional[int] = Field(None, description="จำนวนที่คาดว่าจะได้ = output_quantity x batch_count")
+    lot_id: Optional[str] = None
+    ingredient_name: Optional[str] = None
+    ingredient_quantity: Optional[int] = None
+    staff: Optional[StaffRef] = None
+
+
+class MenuDemandRow(_Row):
+    recipe_id: str
+    recipe_name: Optional[str] = None
+    department_id: Optional[str] = None
+    window_from: date
+    window_to: date
+    gross_demand: float = Field(..., description="ความต้องการเมนูทั้งช่วง (Forecaster)")
+    current_stock: int = Field(..., description="ของเมนูที่มีบนชั้นแล้ว")
+    menu_qty: float = Field(..., description="ควรผลิตเพิ่ม")
+    low_qty: float
+    high_qty: float
+    expected_revenue: float
+
+
+class KitchenOverviewResponse(BaseModel):
+    reference_date: date = Field(..., description="วันที่ของระบบ (DEMO_DATE หรือวันนี้)")
+    departments: list[KitchenDepartment]
+    jobs: list[KitchenJob] = Field(..., description="งานครัววันนี้ถึง +days_ahead เรียงตามวันและเวลาที่ต้องเสร็จ")
+    menu_demand: list[MenuDemandRow] = Field(..., description="ความต้องการเมนูของรอบพยากรณ์ล่าสุด เรียงตามรายได้ที่คาด")
+    menu_demand_run: Optional[dict] = Field(None, description="รอบพยากรณ์ที่ใช้ (run_id, reference_date, created_at)")

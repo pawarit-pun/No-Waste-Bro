@@ -1,21 +1,25 @@
 import { SparklesIcon } from '../ui/icons'
 import { useAgent } from './AgentProvider'
 
-/** ปุ่ม "ถาม AI" ข้าง lot: เปิดแผงแชทแล้วถามเรื่อง lot นี้ทันที */
+/** ปุ่ม "ถาม AI": เปิดแผงแชทแล้วถามทันที (มี lotId = คุยเรื่อง lot นั้น, ไม่มี = คำถามทั่วไป เช่น เรื่องครัว) */
 export function AskAgentButton({ lotId, question, label = 'ถาม AI', compact = false }: {
-  lotId: string
+  lotId?: string
   question: string
   label?: string
   compact?: boolean
 }) {
-  const { askAbout, pending } = useAgent()
+  const { askAbout, ask, setOpen, pending } = useAgent()
   return (
     <button
       type="button"
       disabled={pending}
       onClick={(e) => {
         e.stopPropagation()
-        askAbout(lotId, question)
+        if (lotId) askAbout(lotId, question)
+        else {
+          setOpen(true)
+          ask(question, null)
+        }
       }}
       title={`${label}: ${question}`}
       className={`inline-flex items-center gap-1 rounded-md font-semibold text-brand hover:bg-orange-50 disabled:cursor-wait disabled:opacity-50 ${

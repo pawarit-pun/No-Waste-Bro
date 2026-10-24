@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { useEffect, useRef } from 'react'
 
-// ใช้เฉพาะ Realtime และนับจำนวนแบบเบาๆ (anon อ่านได้แค่ pending_tasks, ai_recommended_tasks, pipeline_runs)
+// ใช้เฉพาะ Realtime และนับจำนวนแบบเบาๆ (anon อ่านได้แค่ pending_tasks, ai_recommended_tasks, pipeline_runs,
+// agent_runs, agent_notifications, agent_proposals, daily_reports)
 // ข้อมูลหลักทั้งหมดดึงผ่าน FastAPI
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY

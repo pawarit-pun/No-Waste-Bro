@@ -4,6 +4,7 @@ from postgrest.exceptions import APIError
 from core.dates import today_bkk
 from db.supabase import supabase
 from schemas.enums import ActionType, TaskStatus
+from services.agent_events import emit_event
 from services.kitchen import release_hours
 from services.tasks import RECIPE_BOOKING_COLUMNS, get_task, kitchen_booking_of
 
@@ -49,14 +50,23 @@ def reject_task(task_id: str, staff_id: str, reason: str) -> dict:
                 {"task_status": TaskStatus.REJECTED.value, "rejection_reason": reason})
 
     # งานครัว: คืนชั่วโมงที่จองไว้ตอนสร้าง task (คำนวณด้วยกติกาเดียวกับตอนจอง)
+    department_id = None
     if task["action_type"] == ActionType.KITCHEN_REPURPOSE.value:
         recipe = (supabase.table("recipes").select(RECIPE_BOOKING_COLUMNS)
                     .eq("recipe_id", task["target_recipe_id"]).execute().data)
         department_id, on, hours = kitchen_booking_of(task, recipe[0] if recipe else None)
         release_hours(department_id, on, round(hours, 2))
     # lot ที่ยังมีของและไม่มีงานค้างแล้ว -> IDLE ให้ pipeline รอบหน้าวางแผนใหม่ (ฟังก์ชันจาก scripts/lot_lifecycle.sql)
-    supabase.rpc("release_lot_if_idle", {"p_lot_id": task["lot_id"]}).execute()
-    return get_task(task_id)
+    released = supabase.rpc("release_lot_if_idle", {"p_lot_id": task["lot_id"]}).execute().data
+    detail = get_task(task_id)
+    # Manager Agent (ไม่รอผล): แจ้งผู้จัดการ + เสนอวางแผนใหม่ ส่งไม่ได้ก็ไม่กระทบการปฏิเสธ
+    emit_event("TASK_REJECTED", {
+        "task_id": task_id, "lot_id": task["lot_id"], "action_type": task["action_type"],
+        "action_quantity": task["action_quantity"], "reason": reason, "staff_id": staff_id,
+        "staff_name": (detail.get("assigned_staff") or {}).get("full_name"), "department_id": department_id,
+        "lot_released": bool(released),
+    })
+    return detail
 
 
 def complete_task(task_id: str, staff_id: str, actual_quantity: int) -> dict:

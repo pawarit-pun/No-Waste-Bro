@@ -45,5 +45,10 @@ export function apiPost<T>(path: string, body: unknown, init?: RequestInit): Pro
   return request<T>(path, { ...init, method: 'POST', body: JSON.stringify(body) })
 }
 
+/** PUT JSON ไป FastAPI */
+export function apiPut<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  return request<T>(path, { ...init, method: 'PUT', body: JSON.stringify(body) })
+}
+
 export const errorMessage = (err: unknown, fallback = 'Something went wrong.') =>
   err instanceof ApiError ? err.message : err instanceof Error ? err.message : fallback

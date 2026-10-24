@@ -47,13 +47,63 @@ class FakeServer:
              "product": {"name": "กล้วยหอม"}, "assigned_staff": {"staff_id": "STF-004", "full_name": "สมหญิง ขยัน"}},
         ]
         self.calls: list[str] = []
+        self.reviews: list[dict] = []
+        self.runs: list[dict] = [{"status": "SUCCEEDED", "current_step": "LLM", "started_at": f"{REF}T08:00:00+07:00",
+                                  "finished_at": f"{REF}T08:04:00+07:00"}]
+        self.kitchen = [{"department_id": d, "capacity_date": REF.isoformat(), "available_hrs": 8.0, "booked_hrs": 2.0,
+                         "remaining_hrs": 6.0, "workload_status": "AVAILABLE"} for d in ("BAKERY_DEPT", "KITCHEN_DELI")]
+        self.notifications: list[dict] = []     # ที่ "บันทึก" แล้ว (dedupe)
+        self.posted: list[dict] = []            # body ของ POST /agent/runs
+        self.decisions: list[dict] = []
+        self.daily_reports: list[dict] = []
+        self.policy = None                      # Phase 4: GET /agent/policies/auto-approve (None = ยังไม่รัน SQL)
+        self.auto_requests: list[dict] = []
+        self.auto_server_refuses: list[str] = []
+        self.kitchen_overview = {"departments": [{"department_id": "KITCHEN_DELI", "department_name": "ครัวเดลี่",
+                                                  "days": [self.kitchen[1]]}], "jobs": []}
 
     def __call__(self, method, url, body, headers, timeout):
-        assert method == "GET", f"agent ต้องอ่านอย่างเดียว แต่เรียก {method} {url}"
         parsed = urllib.parse.urlparse(url)
         route = parsed.path.split("/api/v1/")[-1]
         q = urllib.parse.parse_qs(parsed.query)
-        self.calls.append(route)
+        # agent เขียนได้ที่เดียว: route ภายในของ Phase 2 ที่บันทึกแจ้งเตือน / ข้อเสนอ (ยังไม่ได้ทำอะไรกับข้อมูลร้าน)
+        # Phase 3: รอบเช้าเริ่ม pipeline เองได้ (plan ยังต้องผ่านผู้จัดการ) นอกนั้นห้ามเขียน
+        # Phase 4: Auto-approve อนุมัติผ่าน route ภายในที่ server ตรวจกติกาซ้ำ (เปิดเมื่อผู้จัดการตั้ง policy เท่านั้น)
+        assert method == "GET" or (method == "POST" and route in ("agent/runs", "ai/pipeline-runs", "agent/auto-approve")), \
+            f"agent ห้ามเขียน {method} {url}"
+        self.calls.append(route if method == "GET" else f"{method} {route}")
+        if method == "POST" and route == "ai/pipeline-runs":
+            self.runs = [{"pipeline_run_id": "pr-new", "status": "QUEUED"}] + self.runs
+            return 202, json.dumps(self.runs[0])
+        if method == "POST" and route == "agent/auto-approve":
+            req = json.loads(body)
+            self.auto_requests.append(req)
+            ids = set(req["review_ids"]) - set(self.auto_server_refuses)
+            done = [dict(r, review_status="APPROVED", approved_by_agent=True) for r in self.reviews if r["review_id"] in ids]
+            self.reviews = [r for r in self.reviews if r["review_id"] not in ids]
+            self.policy["today"]["approved"] += len(done)
+            return 200, json.dumps({"approved": len(done), "lots": sorted({r["lot_id"] for r in done}), "reviews": done,
+                                    "tasks": [], "skipped": [], "errors": [], "undo_minutes": 15,
+                                    "today": self.policy["today"]}, ensure_ascii=False)
+        if method == "POST":
+            batch = json.loads(body)
+            self.posted.append(batch)
+            self.notifications += batch["notifications"]
+            return 201, json.dumps({"agent_run_id": "r1", "notifications": len(batch["notifications"]),
+                                    "proposals": len(batch["proposals"])})
+        if route == "agent/policies/auto-approve":
+            if self.policy is None:
+                return 404, json.dumps({"detail": "not found"})
+            return 200, json.dumps(self.policy, ensure_ascii=False)
+        if route == "agent/notifications":
+            key = q.get("dedupe_key", [None])[0]
+            return 200, json.dumps({"items": [n for n in self.notifications if n["dedupe_key"] == key]})
+        if route == "kitchen-overview":
+            return 200, json.dumps(self.kitchen_overview)
+        if route == "daily-reports":
+            return 200, json.dumps({"items": self.daily_reports})
+        if route == "kitchen-capacity":
+            return 200, json.dumps(self.kitchen)
         if route == "inventory-lots":
             out = {"reference_date": REF.isoformat(), "items": self.items}
         elif route == "tasks":
@@ -61,7 +111,7 @@ class FakeServer:
             out = [t for t in self.tasks if t["task_status"] in st]
         elif route == "pending-tasks":
             out = {"reference_date": REF.isoformat(), "counts": {"waiting": 3, "approved": 0, "rejected": 0},
-                   "items": []}
+                   "items": self.reviews}
         elif route == "ai/optimize-runs":
             out = {"suggested_run_id": self.inputs["run_id"], "runs": []}
         elif route == "ai/optimize-inputs":
@@ -69,10 +119,9 @@ class FakeServer:
         elif route == "products":
             out = self.products
         elif route == "optimization-decisions":
-            out = {"run_id": self.inputs["run_id"], "decisions": []}
+            out = {"run_id": self.inputs["run_id"], "decisions": self.decisions}
         elif route == "ai/pipeline-runs":
-            out = [{"status": "SUCCEEDED", "current_step": "LLM", "started_at": f"{REF}T08:00:00+07:00",
-                    "finished_at": f"{REF}T08:04:00+07:00"}]
+            out = self.runs
         else:
             return 404, json.dumps({"detail": "not found"})
         return 200, json.dumps(out, ensure_ascii=False, default=str)

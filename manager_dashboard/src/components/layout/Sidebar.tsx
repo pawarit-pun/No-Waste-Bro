@@ -3,17 +3,19 @@ import { NavLink } from 'react-router-dom'
 import { formatTime } from '../../lib/format'
 import { STORE_LABEL } from '../../lib/labels'
 import { LogoMark } from '../Logo'
-import { AlertIcon, BoxIcon, GridIcon, ListIcon, PlayIcon, ShieldIcon } from '../ui/icons'
+import { BoxIcon, ChefHatIcon, ClipboardCheckIcon, GridIcon, ListIcon, PlayIcon, ShieldIcon, TruckIcon } from '../ui/icons'
 import { NAV_ITEMS, SECTIONS, type NavItem } from './nav'
 import { useSidebarStatus, type PipelineStatus } from './useSidebarStatus'
 
 const ICONS: Record<NavItem['icon'], (p: { className?: string }) => JSX.Element> = {
   grid: GridIcon,
   box: BoxIcon,
-  alert: AlertIcon,
+  chef: ChefHatIcon,
   shield: ShieldIcon,
   play: PlayIcon,
   list: ListIcon,
+  check: ClipboardCheckIcon,
+  truck: TruckIcon,
 }
 
 /** Sidebar ธีมส้ม (ไล่สีเดียวกับฝั่งซ้ายของหน้า login) */

@@ -1,5 +1,7 @@
-import type { AgentAnswer, AgentContext, AgentTurn } from '../types/agent'
-import { ApiError, apiPost } from './api'
+import type {
+  AgentAnswer, AgentContext, AgentProposal, AgentTurn, AutoApproveParams, AutoApprovePolicy, NotificationList, UndoAutoResult,
+} from '../types/agent'
+import { ApiError, apiGet, apiPost, apiPut } from './api'
 
 // agent ตอบภายใน ~25 วินาที (API Gateway ตัดที่ 29) เผื่อเครือข่ายอีกนิด
 const ASK_TIMEOUT_MS = 35_000
@@ -42,3 +44,29 @@ export function agentErrorText(err: unknown): string {
   }
   return 'ผู้ช่วยทำงานไม่สำเร็จ ลองใหม่อีกครั้ง'
 }
+
+// ---------- Phase 2 ----------
+
+export const listNotifications = (limit = 30) => apiGet<NotificationList>(`/agent/notifications?limit=${limit}`)
+export const markNotificationRead = (id: string) => apiPost<{ updated: number }>(`/agent/notifications/${id}/read`, {})
+export const markAllNotificationsRead = () => apiPost<{ updated: number }>('/agent/notifications/read-all', {})
+export const executeProposal = (id: string, staffId: string) =>
+  apiPost<AgentProposal>(`/agent/proposals/${id}/execute`, { staff_id: staffId })
+export const dismissProposal = (id: string, staffId: string) =>
+  apiPost<AgentProposal>(`/agent/proposals/${id}/dismiss`, { staff_id: staffId })
+/** สั่ง agent ตรวจงานค้างตอนนี้ (ไม่รอผล แจ้งเตือนขึ้นในกระดิ่งภายในไม่กี่วินาที) */
+export const watchNow = () => apiPost<{ started: boolean }>('/agent/watch', {})
+
+// ---------- Phase 3 ----------
+
+/** ทำรายงานประจำวันตอนนี้ (ไม่รอผล) morning = Morning brief ของ pipeline รอบล่าสุดที่สำเร็จ, evening = Evening summary */
+export const runDailyReport = (kind: 'morning' | 'evening') => apiPost<{ started: boolean }>(`/agent/daily/${kind}`, {})
+
+// ---------- Phase 4: Auto-approve ----------
+
+export const getAutoApprovePolicy = () => apiGet<AutoApprovePolicy>('/agent/policies/auto-approve')
+export const saveAutoApprovePolicy = (managerId: string, enabled: boolean, params: AutoApproveParams) =>
+  apiPut<AutoApprovePolicy>('/agent/policies/auto-approve', { manager_id: managerId, enabled, params })
+/** ย้อนการอนุมัติของ agent (ทั้งชุดของ lot นั้น) ภายใน undo_minutes ถ้า staff ยังไม่เริ่มงาน */
+export const undoAutoApprove = (reviewId: string, staffId: string) =>
+  apiPost<UndoAutoResult>(`/pending-tasks/${reviewId}/undo-auto`, { staff_id: staffId })

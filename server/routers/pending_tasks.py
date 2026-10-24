@@ -8,6 +8,8 @@ from schemas.enums import ReviewStatus
 from schemas.pending_task import PendingTaskBatchCreate, ReviewApprove, ReviewReject
 from schemas.responses import (PendingTaskCreateResponse, PendingTaskDetail, PendingTaskListResponse,
                                ReviewApproveResponse, ReviewRejectResponse)
+from schemas.agent import UndoAutoRequest, UndoAutoResponse
+from services import auto_approve
 from services import pending_tasks as service
 
 router = APIRouter(prefix="/pending-tasks", tags=["Review Queue"])
@@ -27,7 +29,7 @@ REVIEW_ERRORS = {
     summary="LLM ส่ง plan เข้าคิวรออนุมัติ",
     description="""
 **ขั้นที่ 7 ของ AI Pipeline** LLM เปลี่ยน decision จาก Optimizer เป็น plan ของ task แล้วส่งเข้าคิว `pending_tasks`
-ทุก plan เริ่มที่ `WAITING` **ไม่มีการอนุมัติอัตโนมัติ** staff จะยังไม่เห็นงานจนกว่าผู้จัดการจะกดอนุมัติ
+ทุก plan เริ่มที่ `WAITING` **staff จะยังไม่เห็นงานจนกว่าจะอนุมัติ** (ผู้จัดการกด หรือ Manager Agent อนุมัติเองถ้าเปิด Auto-approve และ plan เข้าเกณฑ์)
 (`POST /pending-tasks/approve`) ซึ่งตอนนั้น server จะสร้าง task มอบหมาย staff และจองชั่วโมงครัว
 
 ### LLM ส่ง
@@ -122,6 +124,22 @@ decision ที่ถูกปฏิเสธจะเป็น `REJECTED` แ�
 )
 def reject_pending_tasks(payload: ReviewReject):
     return service.reject(payload.review_ids, payload.manager_id, payload.review_note)
+
+
+@router.post(
+    "/{review_id}/undo-auto",
+    response_model=UndoAutoResponse,
+    summary="ผู้จัดการย้อนการอนุมัติของ AI (Auto-approve)",
+    description="""
+ใช้ได้กับ plan ที่ `approved_by_agent = true` ภายใน `undo_minutes` ของกติกา (ดู `undo_until`) และ task ยังเป็น `PENDING`
+ย้อนทั้งชุดของ lot นั้นที่ agent อนุมัติพร้อมกัน: ลบ task (staff app เห็นงานหายไปทันที) แล้ว plan กลับเป็น `WAITING`
+ให้ผู้จัดการตัดสินเอง และ agent จะไม่อนุมัติ plan นี้อีก (`agent_undone_at`)
+""",
+    responses={403: {"description": "ไม่ใช่ MANAGER ที่ active"}, 404: {"description": "ไม่พบ `review_id`"},
+               409: {"description": "ไม่ได้อนุมัติโดย agent, เกินเวลาย้อน หรือ staff เริ่มงานแล้ว"}},
+)
+def undo_auto_approve(review_id: UUID, body: UndoAutoRequest):
+    return auto_approve.undo(str(review_id), body.staff_id)
 
 
 @router.get(

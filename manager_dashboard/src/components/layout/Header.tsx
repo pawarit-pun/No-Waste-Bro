@@ -3,6 +3,7 @@ import { managerRoleLabel } from '../../lib/labels'
 import { useSession } from '../../lib/session'
 import { StaffAvatar } from '../StaffAvatar'
 import { useAgent } from '../agent/AgentProvider'
+import { NotificationBell } from '../agent/NotificationBell'
 import { LogOutIcon, SparklesIcon } from '../ui/icons'
 import { NAV_ITEMS } from './nav'
 
@@ -22,6 +23,7 @@ export function Header() {
 
       {manager && (
         <div className="flex items-center gap-3">
+          <NotificationBell />
           <button type="button" onClick={agent.toggle} aria-pressed={agent.open}
             className={`mr-2 inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors ${
               agent.open ? 'border-brand bg-brand text-white' : 'border-orange-200 bg-white text-brand hover:bg-orange-50'

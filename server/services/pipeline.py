@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from configs.config import db_env
 from db.supabase import supabase
 from schemas.pipeline import FINAL_STATUSES, PipelineRunUpdate, PipelineStatus, PipelineStep
+from services.agent_events import emit_event
 
 TABLE = "pipeline_runs"
 ACTIVE_STATUSES = (PipelineStatus.QUEUED.value, PipelineStatus.RUNNING.value)
@@ -50,12 +51,13 @@ def _close_stale_runs() -> None:
                 .in_("status", ACTIVE_STATUSES).execute()).data
     for run in active:
         if _now() - datetime.fromisoformat(run["requested_at"]) > STALE_AFTER:
-            _update(run["pipeline_run_id"], {
+            failed = _update(run["pipeline_run_id"], {
                 "status": PipelineStatus.FAILED.value,
                 "error": f"worker ไม่ได้อัปเดตสถานะภายใน {int(STALE_AFTER.total_seconds() // 60)} นาที "
                          "(timeout หรือ crash ดู CloudWatch Logs ของ PipelineWorkerFunction)",
                 "finished_at": _now().isoformat(),
             })
+            _emit_failed(failed)
 
 
 def start_run(stop_after: PipelineStep) -> dict:
@@ -106,4 +108,17 @@ def update_run(pipeline_run_id: UUID, body: PipelineRunUpdate) -> dict:
         fields["finished_at"] = _now().isoformat()
     if not fields:
         return run
-    return _update(str(pipeline_run_id), fields)
+    updated = _update(str(pipeline_run_id), fields)
+    if body.status == PipelineStatus.FAILED:
+        _emit_failed(updated)
+    elif body.status == PipelineStatus.SUCCEEDED and updated.get("run_id"):
+        # Manager Agent (ไม่รอผล): Morning brief ของรอบนี้ (สรุปแผน + ตรวจความผิดปกติ -> daily_reports + กระดิ่ง)
+        emit_event("PIPELINE_SUCCEEDED", {k: updated.get(k) for k in ("pipeline_run_id", "run_id", "stop_after",
+                                                                       "at_risk_lots", "decisions_created",
+                                                                       "tasks_created")})
+    return updated
+
+
+def _emit_failed(run: dict) -> None:
+    """Manager Agent (ไม่รอผล): แจ้งสาเหตุ + เสนอคืน lot ที่ค้าง หรือรันใหม่"""
+    emit_event("PIPELINE_FAILED", {k: run.get(k) for k in ("pipeline_run_id", "run_id", "current_step", "error")})
